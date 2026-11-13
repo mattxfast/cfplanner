@@ -103,3 +103,19 @@ header{height:62px;margin-bottom:24px}
 .programbody .wodrow{background:#f0f2f6!important;border-color:#e1e5ec!important}
 button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){.weekbar{align-items:flex-start!important;flex-direction:row!important}.weeknav{gap:5px}.weekdate-label{font-size:10px}.weekdate-label input{width:120px}.weeknav button{padding:6px 8px}}
+
+
+/* Ajustements demandés : historique clair et ajout placé avec les compteurs */
+#sessionlist .session-entry{background:#f0f2f6!important;border-color:#e1e5ec!important}
+.weekstats{display:flex;align-items:center;gap:0}
+.weekstats .weekstat{flex:1}
+.weekstats #addsession{margin-left:12px;align-self:center;width:34px;height:34px;padding:0;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+#sessiontoolbar{justify-content:flex-start}
+.program-section{background:#f0f2f6;border:1px solid #e1e5ec;border-radius:10px;padding:0 10px 8px;margin:10px 0}
+.program-section-heading{background:#d5dce8;color:#26344d;font:800 13px Manrope;padding:8px 11px;margin:0 -10px 8px;border-radius:9px 9px 0 0}
+.program-section .wodlist{margin:0}
+.program-section .wodrow{background:#f0f2f6!important;border-color:#e1e5ec!important}
+.program-section.movement-editor{margin-top:12px;padding:0 10px 10px}
+.program-section.movement-editor .program-section-heading{margin-bottom:8px}
+.program-section.movement-editor h4{display:none}
+@media(max-width:650px){.weekstats #addsession{margin-left:8px;flex:0 0 34px}.weekstat span{font-size:10px}}
