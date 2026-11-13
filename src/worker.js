@@ -20,12 +20,12 @@ function unb64(s) {
 async function sha256(s) { return b64(await crypto.subtle.digest("SHA-256", encoder.encode(s))); }
 async function passwordHash(password, salt = crypto.getRandomValues(new Uint8Array(16))) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({name:"PBKDF2", hash:"SHA-256", salt, iterations:210000}, key, 256);
+  const bits = await crypto.subtle.deriveBits({name:"PBKDF2", hash:"SHA-256", salt, iterations:100000}, key, 256);
   return `pbkdf2$210000$${b64(salt)}$${b64(bits)}`;
 }
 async function verifyPassword(password, stored) {
   const [kind, rounds, salt, expected] = stored.split("$");
-  if (kind !== "pbkdf2" || Number(rounds) !== 210000) return false;
+  if (kind !== "pbkdf2" || Number(rounds) !== 100000) return false;
   const actual = await passwordHash(password, unb64(salt));
   return actual.split("$")[3] === expected;
 }
