@@ -119,3 +119,11 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .program-section.movement-editor .program-section-heading{margin-bottom:8px}
 .program-section.movement-editor h4{display:none}
 @media(max-width:650px){.weekstats #addsession{margin-left:8px;flex:0 0 34px}.weekstat span{font-size:10px}}
+
+
+/* Sélecteur de semaine : occupe toute la largeur avec un libellé plus lisible. */
+#weekboard .weekbar{width:100%;padding:13px 16px}
+#weekboard .weeknav{width:100%;justify-content:space-between;gap:12px}
+#weekboard .weekdate-label{font-size:15px;font-weight:700;color:#26344d;gap:10px;flex:1}
+#weekboard .weekdate-label input{width:auto;flex:1;max-width:230px;padding:9px 10px;font-size:14px;font-weight:600}
+@media(max-width:650px){#weekboard .weekdate-label{font-size:14px}#weekboard .weekdate-label input{max-width:none;min-width:0}}
