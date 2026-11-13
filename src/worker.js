@@ -14,7 +14,10 @@ const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
 // First-launch schema bootstrap. The D1 V1 database already contains users,
 // sessions, programs and weekly_entries (migration 0001). V2 creates its own
 // tables here so no manual Wrangler migration command is required.
+let schemaReady;
 async function ensureV2Schema(env) {
+  if(schemaReady) return schemaReady;
+  schemaReady=(async()=>{
   await env.DB.exec(`
     CREATE TABLE IF NOT EXISTS app_migrations (
       version TEXT PRIMARY KEY,
@@ -57,6 +60,8 @@ async function ensureV2Schema(env) {
     env.DB.prepare("DELETE FROM users WHERE EXISTS (SELECT 1 FROM app_migrations WHERE version='v2-clean-start-20261113' AND status='running')"),
     env.DB.prepare("UPDATE app_migrations SET status='done', applied_at=CURRENT_TIMESTAMP WHERE version='v2-clean-start-20261113' AND status='running'")
   ]);
+  })().catch(err=>{schemaReady=null;throw err});
+  return schemaReady;
 }
 async function api(r,e,p){
  if(r.method==="POST"&&p==="/api/register"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),pw=String(b.password||"");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Adresse e-mail invalide."},400);if(pw.length<12)return json({error:"Mot de passe : 12 caractères minimum."},400);if(await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return json({error:"Ce compte existe déjà."},409);const id=uid();await e.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,await hashPass(pw)).run();return session(id,email,e)}
