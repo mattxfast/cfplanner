@@ -66,3 +66,23 @@ header{height:62px;margin-bottom:24px}
 /* Historique des séances : liste plus légère, sans cartes individuelles */
 #sessionlist{gap:0;border-top:1px solid var(--line)}.session-entry{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:12px 4px;gap:12px}.session-entry .entryactions{align-self:center}.session-entry h3{font-size:15px}
 @media(max-width:650px){.programhead{align-items:center}.program-title{gap:7px}.programhead .entryactions{flex:0 0 auto}.session-entry{padding:12px 2px}.session-entry .entryactions{justify-content:flex-end}}
+
+
+/* Corrections demandées : hiérarchie des couleurs et historique */
+/* Le bouton d'ajout reste dans la barre de l'historique, toujours visible. */
+#sessiontoolbar{display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;gap:12px}
+#sessiontoolbar #addsession{display:inline-flex!important;visibility:visible!important;opacity:1!important;position:static!important;flex:0 0 auto}
+/* Programme : seul le nom et la période sont en orange ; le contenu est gris. */
+.program{padding:0;overflow:hidden;background:#f0f2f6;border-color:#dfe4ec;box-shadow:none}
+.programhead{background:#fff1df;border-bottom:1px solid #f2d5b2;padding:14px 16px}
+.programbody{padding:12px 16px 16px;background:#f0f2f6}
+.programbody .wodrow{background:#e2e6ed;border:1px solid #d3d9e3;border-radius:10px}
+.programbody .movement-editor{background:#e2e6ed;border:1px solid #d3d9e3;border-radius:10px;padding:12px;margin-top:12px}
+.programbody .program-actions{margin:8px 0 10px}
+/* Historique : date jj/mm/aaaa avant le WOD, chaque séance dans un bloc gris. */
+#sessionlist{display:grid;gap:8px;border:0}
+#sessionlist .session-entry{display:grid;grid-template-columns:1fr auto;align-items:center;background:#e2e6ed;border:1px solid #d3d9e3;border-radius:11px;box-shadow:none;padding:12px 14px}
+#sessionlist .session-title-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 5px}
+#sessionlist .session-title-line .sessiondate{order:0;margin:0;white-space:nowrap;font-size:12px;color:#647087}
+#sessionlist .session-title-line h3{order:1;margin:0}
+@media(max-width:650px){#sessiontoolbar{align-items:center!important;flex-direction:row!important}#sessiontoolbar #addsession{max-width:155px;white-space:normal;text-align:center;line-height:1.2}#sessionlist .session-entry{grid-template-columns:1fr;gap:8px}#sessionlist .session-entry .entryactions{justify-content:flex-end}}
