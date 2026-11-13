@@ -11,6 +11,53 @@ const setCookie=(v,age)=>`cfplanner_session=${encodeURIComponent(v)}; Path=/; Ht
 async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
 async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();return json({ok:true,user:{id,email}},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
 const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
+// First-launch schema bootstrap. The D1 V1 database already contains users,
+// sessions, programs and weekly_entries (migration 0001). V2 creates its own
+// tables here so no manual Wrangler migration command is required.
+async function ensureV2Schema(env) {
+  await env.DB.exec(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      version TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('pending','running','done')),
+      applied_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS program_wods (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      planned_comment TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(program_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS program_wods_user_program
+      ON program_wods(user_id, program_id, sort_order);
+    CREATE TABLE IF NOT EXISTS training_sessions (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+      wod_id TEXT NOT NULL REFERENCES program_wods(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      session_date TEXT NOT NULL,
+      actual_comment TEXT NOT NULL DEFAULT '',
+      session_count INTEGER NOT NULL DEFAULT 1 CHECK(session_count >= 1),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS training_sessions_user_date
+      ON training_sessions(user_id, session_date DESC);
+    CREATE INDEX IF NOT EXISTS training_sessions_wod_date
+      ON training_sessions(wod_id, session_date DESC);
+  `);
+  // D1 batch is transactional. Only the request that changes pending -> running
+  // performs the one-time reset; concurrent first requests cannot repeat it.
+  await env.DB.batch([
+    env.DB.prepare("INSERT OR IGNORE INTO app_migrations(version,status) VALUES('v2-clean-start-20261113','pending')"),
+    env.DB.prepare("UPDATE app_migrations SET status='running' WHERE version='v2-clean-start-20261113' AND status='pending'"),
+    env.DB.prepare("DELETE FROM users WHERE EXISTS (SELECT 1 FROM app_migrations WHERE version='v2-clean-start-20261113' AND status='running')"),
+    env.DB.prepare("UPDATE app_migrations SET status='done', applied_at=CURRENT_TIMESTAMP WHERE version='v2-clean-start-20261113' AND status='running'")
+  ]);
+}
 async function api(r,e,p){
  if(r.method==="POST"&&p==="/api/register"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),pw=String(b.password||"");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Adresse e-mail invalide."},400);if(pw.length<12)return json({error:"Mot de passe : 12 caractères minimum."},400);if(await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return json({error:"Ce compte existe déjà."},409);const id=uid();await e.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,await hashPass(pw)).run();return session(id,email,e)}
  if(r.method==="POST"&&p==="/api/login"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),u=await e.DB.prepare("SELECT id,email,password_hash FROM users WHERE email=?").bind(email).first();if(!u||!(await verify(String(b.password||""),u.password_hash)))return json({error:"Identifiants incorrects."},401);return session(u.id,u.email,e)}
@@ -32,4 +79,4 @@ async function api(r,e,p){
  if(r.method==="GET"&&p==="/api/stats"){const x=await e.DB.prepare("SELECT w.id,w.name,w.planned_comment,COUNT(s.id) AS sessions_count,COALESCE(SUM(s.session_count),0) AS total_sessions FROM program_wods w LEFT JOIN training_sessions s ON s.wod_id=w.id AND s.user_id=w.user_id WHERE w.user_id=? GROUP BY w.id ORDER BY total_sessions DESC,w.name").bind(u.id).all();return json({stats:x.results})}
  return json({error:"Route inconnue."},404)
 }
-export default {async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner",err);return json({error:"Erreur serveur. Réessaie."},500)}}};
+export default {async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner",err);return json({error:"Erreur serveur. Réessaie."},500)}}};
