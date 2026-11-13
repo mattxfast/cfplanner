@@ -18,40 +18,17 @@ let schemaReady;
 async function ensureV2Schema(env) {
   if(schemaReady) return schemaReady;
   schemaReady=(async()=>{
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS app_migrations (
-      version TEXT PRIMARY KEY,
-      status TEXT NOT NULL CHECK(status IN ('pending','running','done')),
-      applied_at TEXT
-    );
-    CREATE TABLE IF NOT EXISTS program_wods (
-      id TEXT PRIMARY KEY,
-      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      planned_comment TEXT NOT NULL DEFAULT '',
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(program_id, name)
-    );
-    CREATE INDEX IF NOT EXISTS program_wods_user_program
-      ON program_wods(user_id, program_id, sort_order);
-    CREATE TABLE IF NOT EXISTS training_sessions (
-      id TEXT PRIMARY KEY,
-      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-      wod_id TEXT NOT NULL REFERENCES program_wods(id) ON DELETE CASCADE,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      session_date TEXT NOT NULL,
-      actual_comment TEXT NOT NULL DEFAULT '',
-      session_count INTEGER NOT NULL DEFAULT 1 CHECK(session_count >= 1),
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS training_sessions_user_date
-      ON training_sessions(user_id, session_date DESC);
-    CREATE INDEX IF NOT EXISTS training_sessions_wod_date
-      ON training_sessions(wod_id, session_date DESC);
-  `);
+  const schemaStatements = [
+    "CREATE TABLE IF NOT EXISTS app_migrations (version TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('pending','running','done')), applied_at TEXT)",
+    "CREATE TABLE IF NOT EXISTS program_wods (id TEXT PRIMARY KEY, program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, planned_comment TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(program_id, name))",
+    "CREATE INDEX IF NOT EXISTS program_wods_user_program ON program_wods(user_id, program_id, sort_order)",
+    "CREATE TABLE IF NOT EXISTS training_sessions (id TEXT PRIMARY KEY, program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE, wod_id TEXT NOT NULL REFERENCES program_wods(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, session_date TEXT NOT NULL, actual_comment TEXT NOT NULL DEFAULT '', session_count INTEGER NOT NULL DEFAULT 1 CHECK(session_count >= 1), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+    "CREATE INDEX IF NOT EXISTS training_sessions_user_date ON training_sessions(user_id, session_date DESC)",
+    "CREATE INDEX IF NOT EXISTS training_sessions_wod_date ON training_sessions(wod_id, session_date DESC)"
+  ];
+  for (const statement of schemaStatements) {
+    await env.DB.prepare(statement).run();
+  }
   // V2 schema is additive. Never reset user accounts during application startup.
   // The migration ledger is retained for diagnostics only; no D1 batch is needed.
   await env.DB.prepare(
