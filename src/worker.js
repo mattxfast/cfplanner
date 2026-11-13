@@ -52,14 +52,11 @@ async function ensureV2Schema(env) {
     CREATE INDEX IF NOT EXISTS training_sessions_wod_date
       ON training_sessions(wod_id, session_date DESC);
   `);
-  // D1 batch is transactional. Only the request that changes pending -> running
-  // performs the one-time reset; concurrent first requests cannot repeat it.
-  await env.DB.batch([
-    env.DB.prepare("INSERT OR IGNORE INTO app_migrations(version,status) VALUES('v2-clean-start-20261113','pending')"),
-    env.DB.prepare("UPDATE app_migrations SET status='running' WHERE version='v2-clean-start-20261113' AND status='pending'"),
-    env.DB.prepare("DELETE FROM users WHERE EXISTS (SELECT 1 FROM app_migrations WHERE version='v2-clean-start-20261113' AND status='running')"),
-    env.DB.prepare("UPDATE app_migrations SET status='done', applied_at=CURRENT_TIMESTAMP WHERE version='v2-clean-start-20261113' AND status='running'")
-  ]);
+  // V2 schema is additive. Never reset user accounts during application startup.
+  // The migration ledger is retained for diagnostics only; no D1 batch is needed.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO app_migrations(version,status,applied_at) VALUES(?,?,CURRENT_TIMESTAMP)"
+  ).bind("v2-schema-20261113","done").run();
   })().catch(err=>{schemaReady=null;throw err});
   return schemaReady;
 }
@@ -84,4 +81,4 @@ async function api(r,e,p){
  if(r.method==="GET"&&p==="/api/stats"){const x=await e.DB.prepare("SELECT w.id,w.name,w.planned_comment,COUNT(s.id) AS sessions_count,COALESCE(SUM(s.session_count),0) AS total_sessions FROM program_wods w LEFT JOIN training_sessions s ON s.wod_id=w.id AND s.user_id=w.user_id WHERE w.user_id=? AND w.name<>'__AUTRES__' GROUP BY w.id ORDER BY total_sessions DESC,w.name").bind(u.id).all();return json({stats:x.results})}
  return json({error:"Route inconnue."},404)
 }
-export default {async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner",err);return json({error:"Erreur serveur. Réessaie."},500)}}};
+export default {async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner", {name:err?.name, message:err?.message, stack:err?.stack, cause:err?.cause});return json({error:"Erreur serveur. Réessaie."},500)}}};
