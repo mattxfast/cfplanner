@@ -100,6 +100,6 @@ header{height:62px;margin-bottom:24px}
 .wodrow>div:first-child{flex:1;text-align:left;min-width:0}
 .wodrow .entryactions{margin-left:auto;flex:0 0 auto}
 .program-actions{justify-content:flex-start!important}
-.programbody .wodrow{background:#e9edf5!important;border-color:#dce3ed!important}
+.programbody .wodrow{background:#f0f2f6!important;border-color:#e1e5ec!important}
 button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){.weekbar{align-items:flex-start!important;flex-direction:row!important}.weeknav{gap:5px}.weekdate-label{font-size:10px}.weekdate-label input{width:120px}.weeknav button{padding:6px 8px}}
