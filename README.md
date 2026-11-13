@@ -1,30 +1,27 @@
-# CFPlanner — Cloudflare Workers + D1
+# CFPlanner V2 — Cloudflare Workers + D1
 
-Prototype V1 pour usage personnel. Application web responsive, comptes avec mot de passe hashé PBKDF2, sessions HttpOnly/Secure, isolation des données par utilisateur, programmes non chevauchants et suivi hebdomadaire.
+Application web responsive de suivi CrossFit : programmes, WOD réutilisables par programme, séances datées, notes prévues/réalisées et statistiques par WOD.
 
-## Déploiement (une seule configuration initiale)
+## Premier lancement
 
-1. Créer une base D1 nommée `cfplanner` dans Cloudflare ou avec Wrangler.
-2. Copier son identifiant dans `wrangler.toml` à la place de `REPLACE_WITH_D1_DATABASE_ID`.
-3. Appliquer la migration `0001_init.sql` à la base D1.
-4. Déployer le Worker avec les assets statiques `public/`.
+La base D1 doit déjà contenir le socle V1 initial (migrations/0001_init.sql : utilisateurs, sessions, programmes et anciennes entrées hebdomadaires).
 
-Commandes avec Wrangler :
-```bash
-npm install -g wrangler
-wrangler login
-wrangler d1 create cfplanner
-# Copier le database_id retourné dans wrangler.toml
-wrangler d1 migrations apply cfplanner --remote
-wrangler deploy
-```
+Au premier appel API de la V2, le Worker :
+1. crée automatiquement les tables V2 et leurs index ;
+2. inscrit une migration dans app_migrations ;
+3. vide une seule fois les comptes et données V1, comme demandé pour le démarrage propre ;
+4. ne répète plus jamais cette remise à zéro aux appels suivants.
 
-## Sécurité / limites connues de cette V1
+Aucune commande Wrangler ni intervention manuelle dans le tableau de bord Cloudflare n'est nécessaire pour la mise à niveau V2. Le bootstrap est exécuté côté Worker et le reset est transactionnel/idempotent.
 
-- Le premier compte créé est un compte normal ; aucune restriction d'inscription n'est encore prévue. À utiliser pour des essais, pas pour des données sensibles.
-- L'inscription ne comporte pas de confirmation e-mail et la récupération de mot de passe n'est pas encore implémentée. Ne pas perdre le mot de passe.
-- Ajouter une protection anti-abus/rate limiting et un flux de récupération sécurisé avant une mise en production ouverte.
-- La session dure 30 jours et le cookie est HttpOnly, Secure, SameSite=Lax.
-- Les secrets ne doivent jamais être ajoutés au dépôt.
-- D1 n'est pas un fichier SQLite local téléchargeable : c'est une base SQLite gérée par Cloudflare.
-- Cette version ne comprend pas encore la saisie détaillée des séries/répétitions/charges, les notifications, ni la génération automatique des catégories sur toutes les semaines.
+## Déploiement
+
+Le dépôt est configuré pour Cloudflare Workers avec les assets statiques dans public/ et la base D1 cfplanner. Le déploiement du Worker déclenche le bootstrap au premier appel API.
+
+## Sécurité et limites
+
+- Prototype personnel ; ne pas utiliser pour des données sensibles.
+- Authentification PBKDF2-SHA256 à 100 000 itérations, contrainte de compatibilité WebCrypto observée sur Cloudflare Workers.
+- Pas encore de récupération de mot de passe, validation d'e-mail ni limitation anti-abus.
+- Sessions de 30 jours avec cookie HttpOnly, Secure et SameSite=Lax.
+- Ne jamais committer de secrets.
