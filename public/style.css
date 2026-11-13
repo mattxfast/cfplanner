@@ -55,3 +55,6 @@ header{height:62px;margin-bottom:24px}
 
 /* Historique : nom du WOD et date sur une seule ligne */
 .session-title-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:6px}.session-title-line h3{margin:0}.session-title-line .sessiondate{margin:0;white-space:nowrap}
+
+/* Rubriques plus contrastées et bouton d’ajout près du compteur */
+.weekheading,.section-toolbar{background:#d5dce8;border-color:#c3ccda}.weekstat-sessions{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center}.weekstat-sessions strong{grid-row:1 / span 2}.weekstat-sessions #weekaddsession{grid-column:2;justify-content:flex-start;margin-top:3px}
