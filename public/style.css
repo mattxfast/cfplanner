@@ -86,3 +86,20 @@ header{height:62px;margin-bottom:24px}
 #sessionlist .session-title-line .sessiondate{order:0;margin:0;white-space:nowrap;font-size:12px;color:#647087}
 #sessionlist .session-title-line h3{order:1;margin:0}
 @media(max-width:650px){#sessiontoolbar{align-items:center!important;flex-direction:row!important}#sessiontoolbar #addsession{max-width:155px;white-space:normal;text-align:center;line-height:1.2}#sessionlist .session-entry{grid-template-columns:1fr;gap:8px}#sessionlist .session-entry .entryactions{justify-content:flex-end}}
+
+
+/* Navigation hebdomadaire, icônes d'action et alignements */
+.weekbar{justify-content:space-between}
+.weeknav{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.weekdate-label{display:flex;align-items:center;gap:6px;margin:0;font-size:11px;color:var(--muted);white-space:nowrap}
+.weekdate-label input{width:132px;margin:0;padding:7px 8px;font-size:12px}
+.weeknav button{font-size:20px;line-height:1;padding:6px 11px}
+.weekcount .smallbtn{width:30px;height:30px;padding:0;font-size:20px;line-height:1}
+.smallbtn[aria-label="Modifier"]{width:32px;height:32px;padding:0;font-size:18px;line-height:1}
+.wodrow{align-items:center!important;justify-content:flex-start!important}
+.wodrow>div:first-child{flex:1;text-align:left;min-width:0}
+.wodrow .entryactions{margin-left:auto;flex:0 0 auto}
+.program-actions{justify-content:flex-start!important}
+.programbody .wodrow{background:#e9edf5!important;border-color:#dce3ed!important}
+button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:650px){.weekbar{align-items:flex-start!important;flex-direction:row!important}.weeknav{gap:5px}.weekdate-label{font-size:10px}.weekdate-label input{width:120px}.weeknav button{padding:6px 8px}}
