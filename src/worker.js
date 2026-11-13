@@ -1,172 +1,87 @@
-const SESSION_DAYS = 30;
-const encoder = new TextEncoder();
-
-function json(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }
-  });
+const SESSION_DAYS=30, enc=new TextEncoder();
+const json=(d,s=200,h={})=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...h}});
+const uid=()=>crypto.randomUUID();
+const b64=b=>{let s="";for(const x of new Uint8Array(b))s+=String.fromCharCode(x);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")};
+const unb64=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+const sha=async s=>b64(await crypto.subtle.digest("SHA-256",enc.encode(s)));
+async function hashPass(p,salt=crypto.getRandomValues(new Uint8Array(16))){const k=await crypto.subtle.importKey("raw",enc.encode(p),"PBKDF2",false,["deriveBits"]);const b=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:100000},k,256);return `pbkdf2$100000$${b64(salt)}$${b64(b)}`}
+async function verify(p,stored){const [kind,n,s,e]=stored.split("$");if(kind!=="pbkdf2"||n!=="100000")return false;return (await hashPass(p,unb64(s))).split("$")[3]===e}
+const cookie=(r,n)=>{const v=(r.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(n+"="));return v?decodeURIComponent(v.slice(n.length+1)):null};
+const setCookie=(v,age)=>`cfplanner_session=${encodeURIComponent(v)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${age}`;
+async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
+async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();return json({ok:true,user:{id,email}},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
+const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
+// First-launch schema bootstrap. The D1 V1 database already contains users,
+// sessions, programs and weekly_entries (migration 0001). V2 creates its own
+// tables here so no manual Wrangler migration command is required.
+let schemaReady;
+async function ensureV2Schema(env) {
+  if(schemaReady) return schemaReady;
+  schemaReady=(async()=>{
+  await env.DB.exec(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      version TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('pending','running','done')),
+      applied_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS program_wods (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      planned_comment TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(program_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS program_wods_user_program
+      ON program_wods(user_id, program_id, sort_order);
+    CREATE TABLE IF NOT EXISTS training_sessions (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+      wod_id TEXT NOT NULL REFERENCES program_wods(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      session_date TEXT NOT NULL,
+      actual_comment TEXT NOT NULL DEFAULT '',
+      session_count INTEGER NOT NULL DEFAULT 1 CHECK(session_count >= 1),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS training_sessions_user_date
+      ON training_sessions(user_id, session_date DESC);
+    CREATE INDEX IF NOT EXISTS training_sessions_wod_date
+      ON training_sessions(wod_id, session_date DESC);
+  `);
+  // D1 batch is transactional. Only the request that changes pending -> running
+  // performs the one-time reset; concurrent first requests cannot repeat it.
+  await env.DB.batch([
+    env.DB.prepare("INSERT OR IGNORE INTO app_migrations(version,status) VALUES('v2-clean-start-20261113','pending')"),
+    env.DB.prepare("UPDATE app_migrations SET status='running' WHERE version='v2-clean-start-20261113' AND status='pending'"),
+    env.DB.prepare("DELETE FROM users WHERE EXISTS (SELECT 1 FROM app_migrations WHERE version='v2-clean-start-20261113' AND status='running')"),
+    env.DB.prepare("UPDATE app_migrations SET status='done', applied_at=CURRENT_TIMESTAMP WHERE version='v2-clean-start-20261113' AND status='running'")
+  ]);
+  })().catch(err=>{schemaReady=null;throw err});
+  return schemaReady;
 }
-function uid() { return crypto.randomUUID(); }
-function b64(bytes) {
-  let s = ""; for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+async function api(r,e,p){
+ if(r.method==="POST"&&p==="/api/register"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),pw=String(b.password||"");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Adresse e-mail invalide."},400);if(pw.length<12)return json({error:"Mot de passe : 12 caractères minimum."},400);if(await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return json({error:"Ce compte existe déjà."},409);const id=uid();await e.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,await hashPass(pw)).run();return session(id,email,e)}
+ if(r.method==="POST"&&p==="/api/login"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),u=await e.DB.prepare("SELECT id,email,password_hash FROM users WHERE email=?").bind(email).first();if(!u||!(await verify(String(b.password||""),u.password_hash)))return json({error:"Identifiants incorrects."},401);return session(u.id,u.email,e)}
+ if(r.method==="POST"&&p==="/api/logout"){const t=cookie(r,"cfplanner_session");if(t)await e.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(await sha(t)).run();return json({ok:true},200,{"set-cookie":setCookie("",0)})}
+ if(r.method==="GET"&&p==="/api/me"){const u=await me(r,e);return json({user:u||null})}
+ const u=await me(r,e);if(!u)return json({error:"Connexion requise."},401);
+ if(r.method==="GET"&&p==="/api/programs"){const x=await e.DB.prepare("SELECT * FROM programs WHERE user_id=? ORDER BY start_monday DESC").bind(u.id).all();return json({programs:x.results})}
+ if(r.method==="POST"&&p==="/api/programs"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100),start=b.start,end=b.end;if(!name||!validDate(start)||!validDate(end)||start>end)return json({error:"Vérifie le nom et les dates."},400);const overlap=await e.DB.prepare("SELECT id FROM programs WHERE user_id=? AND NOT(end_monday<? OR start_monday>?)").bind(u.id,start,end).first();if(overlap)return json({error:"Les dates chevauchent un autre programme."},409);const id=uid();await e.DB.prepare("INSERT INTO programs(id,user_id,name,start_monday,end_monday) VALUES(?,?,?,?,?)").bind(id,u.id,name,start,end).run();return json({ok:true,id})}
+ let m=p.match(/^\/api\/programs\/([\w-]+)$/);if(m&&r.method==="PUT"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100);if(!name)return json({error:"Nom requis."},400);await e.DB.prepare("UPDATE programs SET name=? WHERE id=? AND user_id=?").bind(name,m[1],u.id).run();return json({ok:true})}
+ if(m&&r.method==="DELETE"){await e.DB.prepare("DELETE FROM programs WHERE id=? AND user_id=?").bind(m[1],u.id).run();return json({ok:true})}
+ m=p.match(/^\/api\/programs\/([\w-]+)\/wods$/);if(m&&r.method==="GET"){const x=await e.DB.prepare("SELECT * FROM program_wods WHERE program_id=? AND user_id=? ORDER BY sort_order,created_at").bind(m[1],u.id).all();return json({wods:x.results})}
+ if(m&&r.method==="POST"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100),comment=String(b.planned_comment||"").slice(0,3000);if(!name)return json({error:"Nom du WOD requis."},400);const pid=m[1],ok=await e.DB.prepare("SELECT id FROM programs WHERE id=? AND user_id=?").bind(pid,u.id).first();if(!ok)return json({error:"Programme introuvable."},404);const id=uid();try{await e.DB.prepare("INSERT INTO program_wods(id,program_id,user_id,name,planned_comment,sort_order) VALUES(?,?,?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM program_wods WHERE program_id=?),0))").bind(id,pid,u.id,name,comment,pid).run()}catch{return json({error:"Un WOD porte déjà ce nom dans ce programme."},409)}return json({ok:true,id})}
+ m=p.match(/^\/api\/wods\/([\w-]+)$/);if(m&&r.method==="PUT"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100);if(!name)return json({error:"Nom requis."},400);try{await e.DB.prepare("UPDATE program_wods SET name=?,planned_comment=? WHERE id=? AND user_id=?").bind(name,String(b.planned_comment||"").slice(0,3000),m[1],u.id).run()}catch{return json({error:"Ce nom de WOD existe déjà dans le programme."},409)}return json({ok:true})}
+ if(m&&r.method==="DELETE"){await e.DB.prepare("DELETE FROM program_wods WHERE id=? AND user_id=?").bind(m[1],u.id).run();return json({ok:true})}
+ if(r.method==="GET"&&p==="/api/sessions"){const q=new URL(r.url).searchParams,from=q.get("from"),to=q.get("to");let sql="SELECT s.*,w.name AS wod_name,w.planned_comment,p.name AS program_name FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id WHERE s.user_id=?";const args=[u.id];if(validDate(from)){sql+=" AND s.session_date>=?";args.push(from)}if(validDate(to)){sql+=" AND s.session_date<=?";args.push(to)}sql+=" ORDER BY s.session_date DESC,s.created_at DESC";const x=await e.DB.prepare(sql).bind(...args).all();return json({sessions:x.results})}
+ if(r.method==="POST"&&p==="/api/sessions"){const b=await r.json(),date=b.session_date,pid=b.program_id,wid=b.wod_id;if(!validDate(date))return json({error:"Date invalide."},400);const w=await e.DB.prepare("SELECT id,program_id FROM program_wods WHERE id=? AND user_id=?").bind(wid,u.id).first();if(!w||w.program_id!==pid)return json({error:"WOD ou programme invalide."},400);const id=uid();await e.DB.prepare("INSERT INTO training_sessions(id,program_id,wod_id,user_id,session_date,actual_comment) VALUES(?,?,?,?,?,?)").bind(id,pid,wid,u.id,date,String(b.actual_comment||"").slice(0,3000)).run();return json({ok:true,id})}
+ m=p.match(/^\/api\/sessions\/([\w-]+)$/);if(m&&r.method==="PUT"){const b=await r.json();if(!validDate(b.session_date))return json({error:"Date invalide."},400);const w=await e.DB.prepare("SELECT id,program_id FROM program_wods WHERE id=? AND user_id=?").bind(b.wod_id,u.id).first();if(!w||w.program_id!==b.program_id)return json({error:"WOD ou programme invalide."},400);await e.DB.prepare("UPDATE training_sessions SET program_id=?,wod_id=?,session_date=?,actual_comment=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(b.program_id,b.wod_id,b.session_date,String(b.actual_comment||"").slice(0,3000),m[1],u.id).run();return json({ok:true})}
+ if(m&&r.method==="DELETE"){await e.DB.prepare("DELETE FROM training_sessions WHERE id=? AND user_id=?").bind(m[1],u.id).run();return json({ok:true})}
+ if(r.method==="GET"&&p==="/api/stats"){const x=await e.DB.prepare("SELECT w.id,w.name,w.planned_comment,COUNT(s.id) AS sessions_count,COALESCE(SUM(s.session_count),0) AS total_sessions FROM program_wods w LEFT JOIN training_sessions s ON s.wod_id=w.id AND s.user_id=w.user_id WHERE w.user_id=? GROUP BY w.id ORDER BY total_sessions DESC,w.name").bind(u.id).all();return json({stats:x.results})}
+ return json({error:"Route inconnue."},404)
 }
-function unb64(s) {
-  s = s.replace(/-/g, "+").replace(/_/g, "/");
-  while (s.length % 4) s += "=";
-  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
-}
-async function sha256(s) { return b64(await crypto.subtle.digest("SHA-256", encoder.encode(s))); }
-async function passwordHash(password, salt = crypto.getRandomValues(new Uint8Array(16))) {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({name:"PBKDF2", hash:"SHA-256", salt, iterations:100000}, key, 256);
-  return `pbkdf2$100000$${b64(salt)}$${b64(bits)}`;
-}
-async function verifyPassword(password, stored) {
-  const [kind, rounds, salt, expected] = stored.split("$");
-  if (kind !== "pbkdf2" || Number(rounds) !== 100000) return false;
-  const actual = await passwordHash(password, unb64(salt));
-  return actual.split("$")[3] === expected;
-}
-function cookie(request, name) {
-  const raw = request.headers.get("Cookie") || "";
-  const part = raw.split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="));
-  return part ? decodeURIComponent(part.slice(name.length+1)) : null;
-}
-function setCookie(value, maxAge) {
-  return `cfplanner_session=${encodeURIComponent(value)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
-}
-async function currentUser(request, env) {
-  const token = cookie(request, "cfplanner_session");
-  if (!token) return null;
-  const hash = await sha256(token);
-  const row = await env.DB.prepare(
-    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?"
-  ).bind(hash, Math.floor(Date.now()/1000)).first();
-  return row || null;
-}
-async function requireUser(request, env) {
-  const user = await currentUser(request, env);
-  return user ? { user } : { response: json({error:"Connexion requise."}, 401) };
-}
-function validEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254; }
-function mondayOf(date) {
-  const d = new Date(`${date}T12:00:00Z`);
-  const day = (d.getUTCDay()+6)%7;
-  d.setUTCDate(d.getUTCDate()-day);
-  return d.toISOString().slice(0,10);
-}
-async function api(request, env, path) {
-  if (request.method === "POST" && path === "/api/register") {
-    const body = await request.json();
-    const email = String(body.email||"").trim().toLowerCase();
-    const password = String(body.password||"");
-    if (!validEmail(email)) return json({error:"Adresse e-mail invalide."},400);
-    if (password.length < 12) return json({error:"Choisis un mot de passe d'au moins 12 caractères."},400);
-    const exists = await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
-    if (exists) return json({error:"Un compte existe déjà avec cette adresse."},409);
-    const id = uid(), hash = await passwordHash(password);
-    await env.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,hash).run();
-    return createSession(id, email, env);
-  }
-  if (request.method === "POST" && path === "/api/login") {
-    const body = await request.json();
-    const email = String(body.email||"").trim().toLowerCase();
-    const row = await env.DB.prepare("SELECT id,email,password_hash FROM users WHERE email=?").bind(email).first();
-    if (!row || !(await verifyPassword(String(body.password||""), row.password_hash)))
-      return json({error:"Adresse e-mail ou mot de passe incorrect."},401);
-    return createSession(row.id,row.email,env);
-  }
-  if (request.method === "POST" && path === "/api/logout") {
-    const token = cookie(request,"cfplanner_session");
-    if (token) await env.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(await sha256(token)).run();
-    return json({ok:true},200,{ "set-cookie": setCookie("",0) });
-  }
-  if (request.method === "GET" && path === "/api/me") {
-    const user = await currentUser(request,env);
-    return user ? json({user}) : json({user:null});
-  }
-  const auth = await requireUser(request,env);
-  if (auth.response) return auth.response;
-  const user = auth.user;
-
-  if (request.method === "GET" && path === "/api/programs") {
-    const {results} = await env.DB.prepare("SELECT * FROM programs WHERE user_id=? ORDER BY start_monday DESC").bind(user.id).all();
-    return json({programs:results});
-  }
-  if (request.method === "POST" && path === "/api/programs") {
-    const b = await request.json();
-    const name = String(b.name||"").trim().slice(0,100);
-    const start = mondayOf(String(b.start||""));
-    const end = mondayOf(String(b.end||""));
-    if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start>end)
-      return json({error:"Vérifie le nom et les dates du programme."},400);
-    const overlap = await env.DB.prepare(
-      "SELECT id FROM programs WHERE user_id=? AND NOT(end_monday<? OR start_monday>?)"
-    ).bind(user.id,start,end).first();
-    if (overlap) return json({error:"Un autre programme couvre déjà au moins une de ces semaines."},409);
-    const id=uid();
-    await env.DB.prepare("INSERT INTO programs(id,user_id,name,start_monday,end_monday) VALUES(?,?,?,?,?)")
-      .bind(id,user.id,name,start,end).run();
-    return json({ok:true,id});
-  }
-  const programMatch = path.match(/^\/api\/programs\/([a-f0-9-]+)$/);
-  if (programMatch && request.method==="DELETE") {
-    await env.DB.prepare("DELETE FROM programs WHERE id=? AND user_id=?").bind(programMatch[1],user.id).run();
-    return json({ok:true});
-  }
-  if (request.method==="GET" && path==="/api/week") {
-    const week=mondayOf(new URL(request.url).searchParams.get("date") || new Date().toISOString().slice(0,10));
-    const {results}=await env.DB.prepare(
-      "SELECT e.*,p.name AS program_name FROM weekly_entries e JOIN programs p ON p.id=e.program_id WHERE e.user_id=? AND e.week_monday=? ORDER BY e.rowid"
-    ).bind(user.id,week).all();
-    const programs=await env.DB.prepare("SELECT * FROM programs WHERE user_id=? AND start_monday<=? AND end_monday>=?").bind(user.id,week,week).all();
-    return json({week,entries:results,programs:programs.results});
-  }
-  if (request.method==="POST" && path==="/api/entries") {
-    const b=await request.json();
-    const program=await env.DB.prepare("SELECT id FROM programs WHERE id=? AND user_id=?").bind(b.program_id,user.id).first();
-    if(!program) return json({error:"Programme introuvable."},404);
-    const week=mondayOf(String(b.week||""));
-    const category=String(b.category||"").trim().slice(0,60);
-    const target=Math.max(0,Math.min(99,Number(b.target_count)||0));
-    const done=Math.max(0,Math.min(999,Number(b.done_count)||0));
-    if(!category) return json({error:"Indique une catégorie de WOD."},400);
-    const id=uid();
-    await env.DB.prepare(`INSERT INTO weekly_entries(id,program_id,user_id,week_monday,category,target_count,done_count,planned_comment,actual_comment)
-      VALUES(?,?,?,?,?,?,?,?,?)
-      ON CONFLICT(program_id,week_monday,category) DO UPDATE SET target_count=excluded.target_count,done_count=excluded.done_count,planned_comment=excluded.planned_comment,actual_comment=excluded.actual_comment`)
-      .bind(id,program.id,user.id,week,category,target,done,String(b.planned_comment||"").slice(0,2000),String(b.actual_comment||"").slice(0,2000)).run();
-    return json({ok:true});
-  }
-  const entryMatch=path.match(/^\/api\/entries\/([a-f0-9-]+)$/);
-  if(entryMatch && request.method==="DELETE") {
-    await env.DB.prepare("DELETE FROM weekly_entries WHERE id=? AND user_id=?").bind(entryMatch[1],user.id).run();
-    return json({ok:true});
-  }
-  return json({error:"Route inconnue."},404);
-}
-async function createSession(userId,email,env) {
-  const token=b64(crypto.getRandomValues(new Uint8Array(32)));
-  const expires=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;
-  await env.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha256(token),userId,expires).run();
-  return json({ok:true,user:{id:userId,email}},200,{"set-cookie":setCookie(token,SESSION_DAYS*86400)});
-}
-export default {
-  async fetch(request,env) {
-    const url=new URL(request.url);
-    if(url.pathname.startsWith("/api/")) {
-      if(request.method==="OPTIONS") return new Response(null,{status:204,headers:{
-        "access-control-allow-origin":url.origin,"access-control-allow-credentials":"true",
-        "access-control-allow-methods":"GET,POST,DELETE,OPTIONS","access-control-allow-headers":"content-type"
-      }});
-      try { return await api(request,env,url.pathname); }
-      catch(e) {
-  console.error("CFPlanner API error:", e);
-  return json({error:"Erreur serveur. Réessaie."},500);
-}
-    }
-    return env.ASSETS.fetch(request);
-  }
-};
+export default {async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner",err);return json({error:"Erreur serveur. Réessaie."},500)}}};
