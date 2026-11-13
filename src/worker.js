@@ -162,7 +162,10 @@ export default {
         "access-control-allow-methods":"GET,POST,DELETE,OPTIONS","access-control-allow-headers":"content-type"
       }});
       try { return await api(request,env,url.pathname); }
-      catch(e) { return json({error:"Erreur serveur. Réessaie."},500); }
+      catch(e) {
+  console.error("CFPlanner API error:", e);
+  return json({error:"Erreur serveur. Réessaie."},500);
+}
     }
     return env.ASSETS.fetch(request);
   }
