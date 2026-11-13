@@ -11,6 +11,7 @@ const setCookie=(v,age)=>`cfplanner_session=${encodeURIComponent(v)}; Path=/; Ht
 async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
 async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();return json({ok:true,user:{id,email}},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
 const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
+const localToday=()=>{const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v=Object.fromEntries(parts.map(p=>[p.type,p.value]));return `${v.year}-${v.month}-${v.day}`};
 // First-launch schema bootstrap. The D1 V1 database already contains users,
 // sessions, programs and weekly_entries (migration 0001). V2 creates its own
 // tables here so no manual Wrangler migration command is required.
