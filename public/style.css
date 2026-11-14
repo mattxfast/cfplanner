@@ -373,3 +373,36 @@ button:disabled{opacity:.35;cursor:not-allowed}
   #sessionform .session-time-row label{font-size:12px}
   #sessionform .session-time-row input{padding:8px;font-size:14px}
 }
+
+
+/* Champs heure/durée : largeur volontairement réduite pour éviter le débordement iOS. */
+#sessionform .session-time-row{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:start!important;
+  column-gap:16px!important;
+}
+#sessionform .session-time-row label{
+  width:100%!important;
+  max-width:220px!important;
+  min-width:0!important;
+  overflow:hidden;
+}
+#sessionform .session-time-row input,
+#sessionform .session-time-row input[type="time"],
+#sessionform .session-time-row input[type="number"]{
+  width:100%!important;
+  max-width:220px!important;
+  min-width:0!important;
+  height:48px!important;
+  padding:7px 10px!important;
+  font-size:15px!important;
+  box-sizing:border-box!important;
+}
+@media(max-width:650px){
+  #sessionform .session-time-row{column-gap:10px!important}
+  #sessionform .session-time-row label{max-width:190px!important}
+  #sessionform .session-time-row input,
+  #sessionform .session-time-row input[type="time"],
+  #sessionform .session-time-row input[type="number"]{max-width:190px!important;height:44px!important}
+}
