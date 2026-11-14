@@ -139,3 +139,14 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .movement-row{padding:8px 2px}
 #view-programs .program-actions{justify-content:flex-end!important;margin:6px 0 0}
 #view-programs .inline-add{margin-top:8px}
+
+
+/* Programmation : aucun cadre autour des rubriques, comme dans l’onglet Séances. */
+#view-programs .program-section,
+#view-programs .program-section.movement-editor{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:16px 0!important}
+#view-programs .program-section-heading{background:#d5dce8!important;color:#26344d!important;border:1px solid #c3ccda!important;border-radius:11px!important;padding:10px 13px!important;margin:0 0 9px!important}
+#view-programs .program-section .wodlist,
+#view-programs .program-section .program-movement-list{background:transparent!important;border:0!important;padding:0!important;margin:0!important}
+#view-programs .program-section .wodrow{background:#f0f2f6!important;border:1px solid #e1e5ec!important;border-radius:11px!important;padding:10px 12px!important;margin:0 0 7px!important}
+#view-programs .program-section .movement-row{background:#f0f2f6!important;border:0!important;border-bottom:1px solid #e1e5ec!important;border-radius:0!important;padding:9px 4px!important}
+#view-programs .program-section .inline-add{margin-top:9px}
