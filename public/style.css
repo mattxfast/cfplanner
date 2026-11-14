@@ -193,3 +193,52 @@ button:disabled{opacity:.35;cursor:not-allowed}
  #sessionlist .session-history-heading .entryactions{gap:6px}
  #view-programs .programhead{border-radius:11px!important}
 }
+
+
+/* WOD de l’onglet Programmes : reprendre exactement la carte WOD de l’onglet Séances. */
+#view-programs .program-section .wodlist{
+  display:grid!important;
+  gap:6px!important;
+}
+#view-programs .program-section .wodrow{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:9px 12px!important;
+  background:#f0f2f6!important;
+  border:1px solid #e1e5ec!important;
+  border-radius:11px!important;
+  box-shadow:none!important;
+  text-align:left!important;
+}
+#view-programs .program-section .wodrow>div:first-child{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  text-align:left!important;
+}
+#view-programs .program-section .wodrow b{
+  display:block!important;
+  font:700 13px Manrope!important;
+  text-align:left!important;
+}
+#view-programs .program-section .wodrow p{
+  margin:5px 0 0!important;
+  font-size:12px!important;
+  color:var(--muted)!important;
+  text-align:left!important;
+}
+#view-programs .program-section .wodrow .entryactions{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin-left:auto!important;
+  flex:0 0 auto!important;
+}
+@media(max-width:650px){
+  #view-programs .program-section .wodrow{padding:8px 10px!important}
+  #view-programs .program-section .wodrow .entryactions{gap:6px!important}
+}
