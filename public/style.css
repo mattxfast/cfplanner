@@ -260,3 +260,14 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .profile-card label:first-child{margin-top:0}
 .profile-card .primary{margin-top:8px}
 @media(max-width:650px){#userbar{gap:5px}#userbar .user-name{font-size:11px;max-width:120px}#userbar .account-icon,#userbar .logout-icon{width:32px;height:32px}}
+
+
+/* Réorganisation des WOD et mouvements dans la programmation. */
+#view-programs .reorder-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+#view-programs .reorder-btn{width:27px;height:29px;min-width:27px;padding:0;font-size:15px;line-height:1;border-radius:7px}
+#view-programs .reorder-btn:disabled{opacity:.22;cursor:default}
+#view-programs .program-section .movement-row{gap:10px}
+@media(max-width:650px){
+ #view-programs .reorder-actions{gap:2px}
+ #view-programs .reorder-btn{width:25px;height:27px;min-width:25px}
+}
