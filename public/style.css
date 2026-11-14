@@ -328,3 +328,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 #userbar .settings-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:650px){#userbar .settings-icon{width:32px;height:32px}#userbar .settings-icon svg{width:17px;height:17px}}
+
+
+/* Séance : heure de démarrage et durée côte à côte. */
+#sessionform .session-time-row{grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+#sessionform .session-time-row label{min-width:0}
+@media(max-width:420px){#sessionform .session-time-row{gap:8px}}
