@@ -8,8 +8,8 @@ async function hashPass(p,salt=crypto.getRandomValues(new Uint8Array(16))){const
 async function verify(p,stored){const [kind,n,s,e]=stored.split("$");if(kind!=="pbkdf2"||n!=="100000")return false;return (await hashPass(p,unb64(s))).split("$")[3]===e}
 const cookie=(r,n)=>{const v=(r.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(n+"="));return v?decodeURIComponent(v.slice(n.length+1)):null};
 const setCookie=(v,age)=>`cfplanner_session=${encodeURIComponent(v)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${age}`;
-async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
-async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();return json({ok:true,user:{id,email}},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
+async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email,u.first_name,u.last_name FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>?").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
+async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();const profile=await e.DB.prepare("SELECT first_name,last_name FROM users WHERE id=?").bind(id).first();return json({ok:true,user:{id,email,first_name:profile?.first_name||"",last_name:profile?.last_name||""}},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
 const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
 const localToday=()=>{const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v=Object.fromEntries(parts.map(p=>[p.type,p.value]));return `${v.year}-${v.month}-${v.day}`};
 // First-launch schema bootstrap. The D1 V1 database already contains users,
@@ -35,6 +35,10 @@ async function ensureV2Schema(env) {
   }
   // V2 schema is additive. Never reset user accounts during application startup.
   // The migration ledger is retained for diagnostics only; no D1 batch is needed.
+  const userColumns = await env.DB.prepare("PRAGMA table_info(users)").all();
+  const existingColumns = new Set(userColumns.results.map(column => column.name));
+  if (!existingColumns.has("first_name")) await env.DB.prepare("ALTER TABLE users ADD COLUMN first_name TEXT NOT NULL DEFAULT ''").run();
+  if (!existingColumns.has("last_name")) await env.DB.prepare("ALTER TABLE users ADD COLUMN last_name TEXT NOT NULL DEFAULT ''").run();
   await env.DB.prepare(
     "INSERT OR IGNORE INTO app_migrations(version,status,applied_at) VALUES(?,?,CURRENT_TIMESTAMP)"
   ).bind("v2-schema-20261113","done").run();
@@ -54,6 +58,7 @@ async function api(r,e,p){
  if(r.method==="POST"&&p==="/api/logout"){const t=cookie(r,"cfplanner_session");if(t)await e.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(await sha(t)).run();return json({ok:true},200,{"set-cookie":setCookie("",0)})}
  if(r.method==="GET"&&p==="/api/me"){const u=await me(r,e);return json({user:u||null})}
  const u=await me(r,e);if(!u)return json({error:"Connexion requise."},401);
+ if(r.method==="PUT"&&p==="/api/profile"){const b=await r.json(),first=String(b.first_name||"").trim().slice(0,80),last=String(b.last_name||"").trim().slice(0,80);if(!first||!last)return json({error:"Prénom et nom sont obligatoires."},400);await e.DB.prepare("UPDATE users SET first_name=?,last_name=? WHERE id=?").bind(first,last,u.id).run();return json({ok:true,user:{...u,first_name:first,last_name:last}})}
  if(r.method==="GET"&&p==="/api/programs"){const x=await e.DB.prepare("SELECT * FROM programs WHERE user_id=? ORDER BY start_monday DESC").bind(u.id).all();return json({programs:x.results})}
  if(r.method==="POST"&&p==="/api/programs"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100),start=b.start,end=b.end;if(!name||!validDate(start)||!validDate(end)||start>end)return json({error:"Vérifie le nom et les dates."},400);const overlap=await e.DB.prepare("SELECT id FROM programs WHERE user_id=? AND NOT(end_monday<? OR start_monday>?)").bind(u.id,start,end).first();if(overlap)return json({error:"Les dates chevauchent un autre programme."},409);const id=uid();await e.DB.prepare("INSERT INTO programs(id,user_id,name,start_monday,end_monday) VALUES(?,?,?,?,?)").bind(id,u.id,name,start,end).run();return json({ok:true,id})}
  let m=p.match(/^\/api\/programs\/([\w-]+)\/movements$/);if(m&&r.method==="GET"){const x=await e.DB.prepare("SELECT * FROM program_movements WHERE program_id=? AND user_id=? ORDER BY sort_order,created_at").bind(m[1],u.id).all();return json({movements:x.results})}
