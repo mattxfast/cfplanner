@@ -172,3 +172,24 @@ button:disabled{opacity:.35;cursor:not-allowed}
   padding:10px 12px!important;
   margin:0 0 7px!important;
 }
+
+
+/* Finitions demandées : historique compact et rubriques programmes. */
+#sessionlist .session-entry{display:block!important}
+#sessionlist .session-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#sessionlist .session-title-line{margin:0!important;min-width:0}
+#sessionlist .session-history-heading .entryactions{flex:0 0 auto}
+#sessionlist .session-history-content>p{margin:5px 0 0}
+#view-programs .programhead{border:1px solid #e7bd91!important;border-radius:11px!important;margin:0 0 10px!important}
+#view-programs .program-section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#view-programs .program-section-toolbar .addwod{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+#view-programs .program-actions{display:none!important}
+#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:5px!important;min-height:34px}
+#view-programs .program-section .wodrow{justify-content:flex-start!important;text-align:left!important}
+#view-programs .program-section .wodrow>div:first-child{text-align:left!important;flex:1;min-width:0}
+#view-programs .program-section .wodrow .entryactions{margin-left:auto;flex:0 0 auto}
+@media(max-width:650px){
+ #sessionlist .session-history-heading{align-items:center}
+ #sessionlist .session-history-heading .entryactions{gap:6px}
+ #view-programs .programhead{border-radius:11px!important}
+}
