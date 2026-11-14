@@ -342,3 +342,34 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #statstoolbar .stats-export-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #statstoolbar .stats-export-icon:hover{background:#dfe6f0}
 @media(max-width:650px){#statstoolbar .stats-export-icon{width:34px;height:34px}}
+
+
+/* Séance : champs heure et durée compacts, sans chevauchement. */
+#sessionform .session-time-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:12px!important;
+  width:100%;
+  min-width:0;
+}
+#sessionform .session-time-row label{
+  display:block;
+  width:100%;
+  min-width:0!important;
+  margin:10px 0;
+  font-size:13px;
+}
+#sessionform .session-time-row input{
+  display:block;
+  box-sizing:border-box;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%;
+  padding:9px 10px;
+  font-size:15px;
+}
+@media(max-width:420px){
+  #sessionform .session-time-row{gap:8px!important}
+  #sessionform .session-time-row label{font-size:12px}
+  #sessionform .session-time-row input{padding:8px;font-size:14px}
+}
