@@ -127,3 +127,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #weekboard .weekdate-label{font-size:15px;font-weight:700;color:#26344d;gap:10px;flex:1}
 #weekboard .weekdate-label input{width:auto;flex:1;max-width:230px;padding:9px 10px;font-size:14px;font-weight:600}
 @media(max-width:650px){#weekboard .weekdate-label{font-size:14px}#weekboard .weekdate-label input{max-width:none;min-width:0}}
+
+
+/* Page Programmation : hiérarchie visuelle identique à la page Séances. */
+#view-programs .programhead{background:#fff1df;border-bottom:1px solid #f2d5b2;padding:14px 16px}
+#view-programs .programhead h3{color:#633f1c}
+#view-programs .programhead small{color:#94632f}
+#view-programs .program-section{background:#f0f2f6;border-color:#e1e5ec}
+#view-programs .program-section-heading{background:#aeb9c9;color:#26344d;font:800 14px Manrope;padding:9px 12px;margin:0 -10px 8px;border-radius:9px 9px 0 0}
+#view-programs .program-section .wodrow,#view-programs .program-section .movement-row{background:#f0f2f6!important;border-color:#e1e5ec!important}
+#view-programs .movement-row{padding:8px 2px}
+#view-programs .program-actions{justify-content:flex-end!important;margin:6px 0 0}
+#view-programs .inline-add{margin-top:8px}
