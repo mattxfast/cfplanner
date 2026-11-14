@@ -242,3 +242,21 @@ button:disabled{opacity:.35;cursor:not-allowed}
   #view-programs .program-section .wodrow{padding:8px 10px!important}
   #view-programs .program-section .wodrow .entryactions{gap:6px!important}
 }
+
+
+/* Derniers ajustements : rubriques compactes, compte et commandes d'en-tête. */
+#view-programs .programhead{margin-bottom:0!important}
+#view-programs .programbody{padding-top:0!important}
+#view-programs .program-section,
+#view-programs .program-section.movement-editor{margin-top:6px!important;margin-bottom:12px!important}
+#view-programs .program-section-toolbar{display:flex!important;align-items:center!important;justify-content:space-between!important}
+#view-programs .program-section-toolbar .addmovement{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+#view-programs .program-section .inline-add{display:none!important}
+#userbar{display:flex;align-items:center;gap:8px;min-width:0}
+#userbar .user-name{font:700 13px Manrope;color:#26344d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#userbar .account-icon,#userbar .logout-icon{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;background:#eef2f7;border:1px solid #dce3ed;border-radius:10px;color:#34435c;padding:0;font-size:19px;flex:0 0 auto}
+#userbar .logout-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-card{max-width:560px;padding:18px 20px;box-shadow:none}
+.profile-card label:first-child{margin-top:0}
+.profile-card .primary{margin-top:8px}
+@media(max-width:650px){#userbar{gap:5px}#userbar .user-name{font-size:11px;max-width:120px}#userbar .account-icon,#userbar .logout-icon{width:32px;height:32px}}
