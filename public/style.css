@@ -150,3 +150,25 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section .wodrow{background:#f0f2f6!important;border:1px solid #e1e5ec!important;border-radius:11px!important;padding:10px 12px!important;margin:0 0 7px!important}
 #view-programs .program-section .movement-row{background:#f0f2f6!important;border:0!important;border-bottom:1px solid #e1e5ec!important;border-radius:0!important;padding:9px 4px!important}
 #view-programs .program-section .inline-add{margin-top:9px}
+
+
+/* Programmes : supprimer le cadre global et le fond gris du conteneur. */
+#view-programs .program{
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+#view-programs .programbody{
+  background:transparent!important;
+  padding:12px 0 16px!important;
+}
+/* Mouvements : une carte individuelle par mouvement, comme les WOD. */
+#view-programs .program-section .movement-row{
+  background:#f0f2f6!important;
+  border:1px solid #e1e5ec!important;
+  border-radius:11px!important;
+  padding:10px 12px!important;
+  margin:0 0 7px!important;
+}
