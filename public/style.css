@@ -282,3 +282,39 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .weekstats{display:flex;align-items:center;gap:12px}.competition-toggle{display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}.competition-toggle input{width:18px;height:18px;margin:0;accent-color:var(--accent)}@media(max-width:520px){.weekstats{gap:9px}.competition-toggle{font-size:12px}.weekstat span{font-size:10px}}
 
 #sessiontoolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}#exportcsv{white-space:nowrap}@media(max-width:480px){#sessiontoolbar{align-items:center}#exportcsv{font-size:12px;padding:9px 10px}}
+
+
+/* Résumé des séances : chiffres au-dessus des libellés, compétition empilée. */
+#weekboard .weekstats .weekstat{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:2px!important;
+  text-align:center!important;
+}
+#weekboard .weekstats .weekstat strong{
+  display:block!important;
+  grid-row:auto!important;
+  line-height:1.15!important;
+}
+#weekboard .weekstats .weekstat span{
+  display:block!important;
+  line-height:1.25!important;
+}
+#weekboard .competition-toggle{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-width:42px;
+  font-size:12px!important;
+}
+#weekboard .competition-toggle input{order:2}
+@media(max-width:520px){
+  #weekboard .weekstats{gap:6px!important}
+  #weekboard .weekstats .weekstat{padding:2px 5px!important}
+  #weekboard .weekstats .weekstat span{font-size:9px!important}
+  #weekboard .competition-toggle{font-size:11px!important}
+}
