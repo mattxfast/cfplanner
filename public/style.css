@@ -318,3 +318,13 @@ button:disabled{opacity:.35;cursor:not-allowed}
   #weekboard .weekstats .weekstat span{font-size:9px!important}
   #weekboard .competition-toggle{font-size:11px!important}
 }
+
+
+/* Icône Administration dans la barre supérieure, réservée aux administrateurs. */
+#userbar .settings-icon{
+  width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
+  background:#eef2f7;border:1px solid #dce3ed;border-radius:10px;color:#34435c;
+  padding:0;flex:0 0 auto;
+}
+#userbar .settings-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:650px){#userbar .settings-icon{width:32px;height:32px}#userbar .settings-icon svg{width:17px;height:17px}}
