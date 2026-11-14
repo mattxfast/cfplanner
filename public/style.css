@@ -271,3 +271,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
  #view-programs .reorder-actions{gap:2px}
  #view-programs .reorder-btn{width:25px;height:27px;min-width:25px}
 }
+
+
+/* Programmes : même respiration sous le bandeau de titre que dans Séances. */
+#view-programs .programbody{padding-top:20px}
+#view-programs .program-section:first-child{margin-top:16px!important}
