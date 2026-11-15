@@ -133,7 +133,7 @@ function syncPrForm(){
  $("#prvalue").step=load?"0.5":"1";
  $("#prvalue").min=load?"0.5":"1";
  $("#prvalue").placeholder=load?"Ex. 80":"Ex. 15";
- $("#prrmfield").hidden=!load;
+ $("#prrmfield").hidden=!load;f.elements.rep_count.required=load;f.elements.rep_count.disabled=!load;
 }
 function openPrForm(){
  const f=$("#prform");f.reset();f.elements.record_date.value=today();
