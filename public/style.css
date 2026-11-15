@@ -414,3 +414,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
   line-height:1!important;
   font-weight:500!important;
 }
+
+
+/* Croix de suppression encore légèrement agrandie, sans toucher au bouton. */
+.smallbtn.delete{font-size:24px!important}
