@@ -778,3 +778,115 @@ button:disabled{opacity:.35;cursor:not-allowed}
   font:700 12px Manrope,sans-serif;
   margin:0 0 7px;
 }
+
+
+/* Harmonisation stricte des bandeaux et commandes entre Paramétrages, PR et WOD. */
+#view-admin .admin-group-title,
+#view-prs .pr-section-title{
+  min-height:52px!important;
+  box-sizing:border-box!important;
+  padding:9px 14px!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+#view-admin .admin-group-title .admin-collapse-indicator,
+#view-prs .pr-section-title .pr-section-toggle{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  flex:0 0 20px!important;
+  margin:0!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border:1px solid #cbd0d8!important;
+  border-radius:5px!important;
+  background:#e5e7eb!important;
+  color:#374151!important;
+  font:700 12px/1 Manrope!important;
+}
+#view-admin .admin-group-title>span:nth-child(2),
+#view-prs .pr-section-title h2{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  margin:0!important;
+  text-align:left!important;
+}
+#view-admin .admin-group-title .admin-add,
+#view-prs .pr-section-title .addpr{
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  flex:0 0 34px!important;
+  margin:0 0 0 auto!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border-radius:8px!important;
+  font-size:21px!important;
+  line-height:1!important;
+}
+
+/* Le bandeau WOD reprend le même contrôle de repli encadré et la même géométrie. */
+#view-programs .program-section-toolbar{
+  min-height:52px!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:10px!important;
+  padding:9px 14px!important;
+}
+#view-programs .program-section-toolbar .program-section-toggle{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  flex:0 0 20px!important;
+  margin:0!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border:1px solid #cbd0d8!important;
+  border-radius:5px!important;
+  background:#e5e7eb!important;
+  color:#374151!important;
+  font:700 12px/1 Manrope!important;
+}
+#view-programs .program-section-toolbar>span{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  text-align:left!important;
+}
+#view-programs .program-section-toolbar .addwod,
+#view-programs .program-section-toolbar .addmovement{
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  flex:0 0 34px!important;
+  margin:0!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border-radius:8px!important;
+  font-size:21px!important;
+  line-height:1!important;
+}
+#view-programs .program-section-toolbar .entryactions{
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  margin:0 0 0 auto!important;
+}
+@media(max-width:650px){
+  #view-programs .program-section-toolbar{min-height:48px!important;padding:7px 10px!important}
+}
