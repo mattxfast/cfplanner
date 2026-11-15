@@ -637,3 +637,44 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-prs .pr-category-body .pr-chart-card{margin:0}
 @media(max-width:760px){#view-prs .pr-category-body{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}}
 @media(max-width:480px){#view-prs .pr-category-body{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}#view-prs .pr-category-body .pr-card{padding:9px 7px}#view-prs .pr-category-body .pr-card h3{font-size:11px}#view-prs .pr-category-body .pr-best{font-size:15px}#view-prs .pr-category-body .pr-rm{font-size:9px;padding:2px 5px}#view-prs .pr-category-body .pr-chart-card{padding:8px 6px}}
+
+
+/* PR : catégories empilées verticalement et graphiques sur une seule colonne. */
+#view-prs #prcards.pr-grid,
+#view-prs #prevolution.pr-evolution-grid{
+  display:block!important;
+  width:100%;
+}
+#view-prs .pr-category-group{
+  display:block;
+  width:100%;
+  margin:10px 0 18px;
+}
+#view-prs #prcards .pr-category-body{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+#view-prs #prevolution .pr-category-body{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:10px;
+}
+#view-prs #prevolution .pr-chart-card{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+}
+#view-prs .addpr{
+  width:34px;
+  height:34px;
+  min-width:34px;
+  padding:0;
+  margin:0;
+  border-radius:8px;
+  font-size:21px;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
