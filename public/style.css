@@ -485,3 +485,27 @@ button:disabled{opacity:.35;cursor:not-allowed}
   border-radius:11px!important;
 }
 #view-admin .admin-group-title>span{color:#633f1c!important}
+
+ 
+/* Hauteur compacte des lignes de rubriques et de l'historique des séances. */
+#view-admin .admin-row{
+  min-height:34px!important;
+  padding:6px 10px!important;
+  gap:10px!important;
+}
+#view-admin .admin-row-actions{gap:6px!important}
+#view-admin .admin-row-actions .smallbtn{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#sessionlist .session-entry{
+  padding:8px 10px!important;
+}
+#sessionlist .session-history-content>p{
+  margin:4px 0 0!important;
+}
