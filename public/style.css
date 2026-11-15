@@ -475,3 +475,13 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #movementcatalogdialog .primary,#activitydialog .primary{width:100%;margin-top:14px}
 #activitydialog .admin-default{display:flex;align-items:center;gap:8px}
 #activitydialog .admin-default input{width:auto;margin:0}
+
+
+/* Administration : reprendre exactement le bandeau orange clair des WOD et programmes. */
+#view-admin .admin-group-title{
+  background:#fff1df!important;
+  color:#633f1c!important;
+  border:1px solid #e7bd91!important;
+  border-radius:11px!important;
+}
+#view-admin .admin-group-title>span{color:#633f1c!important}
