@@ -111,6 +111,7 @@ function renderPrChart(records){
  const poly=points.map(p=>p.x+","+p.y).join(" ");
  return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
 }
+window.cfPrSections=window.cfPrSections||{records:false,evolution:false};
 function renderPrs(){
  const groups=new Map();
  for(const r of prRecords){const key=prKey(r);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r)}
@@ -118,6 +119,8 @@ function renderPrs(){
  $("#prcards").innerHTML=items.length?items.map(x=>'<article class="pr-card card"><div class="pr-card-head"><h3>'+esc(x.movement_name)+'</h3><span class="pr-rm">'+(x.measurement_method==="load"?x.rep_count+" RM":"Répétitions")+'</span></div><strong class="pr-best">'+prValue(x.best)+'</strong><small class="muted">Meilleur record · '+fmt(x.best.record_date)+'</small></article>').join(""):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
  $("#prevolution").innerHTML=items.length?items.map(x=>'<button type="button" class="pr-chart-card card" data-pr-key="'+esc(x.key)+'"><span class="pr-chart-title">'+esc(x.movement_name)+' · '+(x.measurement_method==="load"?x.rep_count+" RM":"Répétitions")+'</span><strong>'+prValue(x.best)+'</strong>'+renderPrChart(x.records)+'</button>').join(""):'<div class="card empty">Les graphiques apparaîtront après tes premiers PR.</div>';
  $("#prevolution").querySelectorAll("[data-pr-key]").forEach(b=>b.onclick=()=>openPrHistory(b.dataset.prKey));
+ ["records","evolution"].forEach(key=>{const body=$("#pr"+(key==="records"?"cards":"evolution")),toggle=document.querySelector('[data-toggle-pr-section="'+key+'"]'),collapsed=!!window.cfPrSections[key];body.hidden=collapsed;toggle.setAttribute("aria-expanded",String(!collapsed));toggle.querySelector(".pr-collapse-indicator").textContent=collapsed?"+":"−"});
+ document.querySelectorAll("[data-toggle-pr-section]").forEach(button=>{button.onclick=()=>{const key=button.dataset.togglePrSection;window.cfPrSections[key]=!window.cfPrSections[key];const body=$("#pr"+(key==="records"?"cards":"evolution")),collapsed=window.cfPrSections[key];body.hidden=collapsed;button.setAttribute("aria-expanded",String(!collapsed));button.querySelector(".pr-collapse-indicator").textContent=collapsed?"+":"−"}});
 }
 function openPrHistory(key){
  const records=prRecords.filter(r=>prKey(r)===key).sort((a,b)=>b.record_date.localeCompare(a.record_date)||b.created_at.localeCompare(a.created_at));
