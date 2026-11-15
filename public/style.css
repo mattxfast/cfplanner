@@ -895,3 +895,43 @@ button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){
   #view-programs .program-section-toolbar{min-height:52px!important;padding:9px 14px!important}
 }
+
+
+/* Actions : dimensions communes pour tous les boutons icônes. */
+.entryactions > .smallbtn,
+#prhistorylist .entryactions > .smallbtn{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  min-height:32px!important;
+  flex:0 0 32px!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  font-size:17px!important;
+  line-height:1!important;
+}
+#prhistorylist .entryactions{align-items:center!important}
+#view-programs .program-title .collapse-program{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  min-height:20px!important;
+  flex:0 0 20px!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border:1px solid #cbd0d8!important;
+  border-radius:5px!important;
+  background:#e5e7eb!important;
+  color:#374151!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+#view-prs .pr-section-title{justify-content:space-between!important}
+#view-prs .pr-section-title h2{flex:1 1 auto!important}
+#view-prs #prcards[hidden]{display:block!important}

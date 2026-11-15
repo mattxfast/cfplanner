@@ -112,7 +112,6 @@ function renderPrChart(records){
  const poly=points.map(p=>p.x+","+p.y).join(" ");
  return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
 }
-window.cfPrSections=window.cfPrSections||{records:false};
 window.cfPrCategorySections=window.cfPrCategorySections||{};
 const prCategoryOrder=["load","force","reps","distance"];
 const prCategoryLabel=method=>method==="load"?"LIFT":method==="force"?"FORCE":method==="reps"?"GYM":"ENGINE";
@@ -127,9 +126,8 @@ function renderPrs(){
  const catalogOrder=new Map(movementCatalog.map((m,i)=>[m.id,i]));
  const items=[...groups.entries()].map(([key,records])=>{records.sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));const best=records.reduce((a,b)=>Number(b.value)>Number(a.value)?b:a);return {key,records,best,movement_name:best.movement_name,movement_id:best.movement_id,measurement_method:best.measurement_method,rep_count:best.rep_count}}).sort((a,b)=>(catalogOrder.get(a.movement_id)??Number.MAX_SAFE_INTEGER)-(catalogOrder.get(b.movement_id)??Number.MAX_SAFE_INTEGER)||(isLoadBased(a.measurement_method)?Number(a.rep_count):0)-(isLoadBased(b.measurement_method)?Number(b.rep_count):0));
  $("#prcards").innerHTML=items.length?prCategoryOrder.map(method=>{const subset=items.filter(x=>x.measurement_method===method);return subset.length?renderPrCategory(method,subset):""}).join(""):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
- const body=$("#prcards"),toggle=document.querySelector('[data-toggle-pr-section="records"]'),collapsed=!!window.cfPrSections.records;
- body.hidden=collapsed;toggle.setAttribute("aria-expanded",String(!collapsed));toggle.querySelector(".pr-collapse-indicator").textContent=collapsed?"＋":"−";
- toggle.onclick=()=>{window.cfPrSections.records=!window.cfPrSections.records;const isCollapsed=window.cfPrSections.records;body.hidden=isCollapsed;toggle.setAttribute("aria-expanded",String(!isCollapsed));toggle.querySelector(".pr-collapse-indicator").textContent=isCollapsed?"＋":"−"};
+ const body=$("#prcards");
+ body.hidden=false;
  body.querySelectorAll("[data-toggle-pr-category]").forEach(button=>button.onclick=()=>{const key=button.dataset.togglePrCategory,isCollapsed=!window.cfPrCategorySections[key];window.cfPrCategorySections[key]=isCollapsed;const group=button.closest(".pr-category-group");group.classList.toggle("collapsed",isCollapsed);button.setAttribute("aria-expanded",String(!isCollapsed));button.querySelector(".pr-category-indicator").textContent=isCollapsed?"＋":"−"});
  body.querySelectorAll("[data-pr-key]").forEach(button=>button.onclick=()=>openPrHistory(button.dataset.prKey));
 }
