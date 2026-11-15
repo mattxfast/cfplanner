@@ -406,3 +406,11 @@ button:disabled{opacity:.35;cursor:not-allowed}
   #sessionform .session-time-row input[type="time"],
   #sessionform .session-time-row input[type="number"]{max-width:190px!important;height:44px!important}
 }
+
+
+/* Suppression : agrandir uniquement la croix, sans modifier le bouton rose. */
+.smallbtn.delete{
+  font-size:20px!important;
+  line-height:1!important;
+  font-weight:500!important;
+}
