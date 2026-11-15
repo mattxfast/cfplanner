@@ -463,3 +463,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-admin .admin-add-form[hidden]{display:none!important}
 #view-admin .admin-add-form label{margin:0}
 @media(max-width:650px){#view-admin .admin-group-body{padding-top:15px}#view-admin .admin-add-form{grid-template-columns:1fr}#view-admin .admin-add-form button{width:100%}}
+
+
+/* Administration : bouton d'ajout bleu et formulaires dans des fenêtres modales. */
+#view-admin .admin-add{background:var(--blue);color:#fff}
+#view-admin .admin-add:hover{background:#3458d5}
+#view-admin .admin-group-title{cursor:pointer}
+#view-admin .admin-group-title:focus-visible{outline:3px solid #4268e855;outline-offset:3px}
+#view-admin .admin-group-title .admin-add{cursor:pointer}
+#movementcatalogdialog form,#activitydialog form{display:block}
+#movementcatalogdialog .primary,#activitydialog .primary{width:100%;margin-top:14px}
+#activitydialog .admin-default{display:flex;align-items:center;gap:8px}
+#activitydialog .admin-default input{width:auto;margin:0}
