@@ -107,8 +107,8 @@ function prKey(record){return record.movement_id+":"+(isLoadBased(record.measure
 function prValue(record){return isLoadBased(record.measurement_method)?Number(record.value).toLocaleString("fr-FR")+" kg":record.measurement_method==="distance"?Number(record.value).toLocaleString("fr-FR")+" m":Number(record.value).toLocaleString("fr-FR")+" reps"}
 function renderPrChart(records){
  const sorted=[...records].sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));
- const width=320,height=112,pad=16,values=sorted.map(x=>Number(x.value)),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
- const points=sorted.map((x,i)=>({x:pad+(sorted.length===1?(width-2*pad)/2:i*(width-2*pad)/(sorted.length-1)),y:height-pad-((Number(x.value)-min)/range)*(height-2*pad),date:x.record_date,value:x.value}));
+ const width=320,height=112,pad=16,values=sorted.map(x=>Number(x.value)),max=Math.max(...values),range=max||1;
+ const points=sorted.map((x,i)=>({x:pad+(sorted.length===1?(width-2*pad)/2:i*(width-2*pad)/(sorted.length-1)),y:height-pad-(Number(x.value)/range)*(height-2*pad),date:x.record_date,value:x.value}));
  const poly=points.map(p=>p.x+","+p.y).join(" ");
  return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
 }
