@@ -545,3 +545,20 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .program-subsection .program-section-heading>span{flex:1;text-align:left}
 .program-section-toggle{width:20px!important;height:20px!important;min-width:20px!important;flex:0 0 20px!important;padding:0!important;font-size:12px!important;line-height:1!important;background:#e5e7eb!important;border:1px solid #cbd0d8!important;color:#374151!important}
 .program-subsection.collapsed .program-subsection-body{display:none!important}
+
+
+/* Historique des séances : verrouiller l'alignement du titre à gauche. */
+#view-sessions #sessiontoolbar{
+  display:flex!important;
+  flex-direction:row!important;
+  justify-content:flex-start!important;
+  align-items:center!important;
+  text-align:left!important;
+}
+#view-sessions #sessiontoolbar h2{
+  display:block!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  margin:0 auto 0 0!important;
+  text-align:left!important;
+}
