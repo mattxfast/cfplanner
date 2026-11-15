@@ -599,3 +599,41 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-prs #prcards .pr-best{display:inline;font-size:17px;line-height:1.1;margin:0}
 #view-prs #prcards .pr-rm{font-size:10px;padding:2px 6px}
 @media(max-width:650px){#view-prs #prcards.pr-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#view-prs #prcards .pr-card{padding:7px 8px}#view-prs #prcards .pr-card h3{font-size:11px}#view-prs #prcards .pr-best{font-size:16px}}
+
+
+/* CFPlanner — rubriques PR : bandeau principal orange identique à la semaine en cours. */
+#view-prs .pr-section-title{
+  min-height:52px!important;
+  box-sizing:border-box;
+  padding:10px 14px!important;
+  background:#fff1df!important;
+  border:1px solid #f2d5b2!important;
+  border-radius:11px!important;
+  box-shadow:none!important;
+  color:#633f1c!important;
+}
+#view-prs .pr-section-title h2{color:#633f1c!important;font-size:15px!important;font-weight:800!important}
+#view-prs .pr-collapse-indicator{background:#e5e7eb;border:1px solid #cbd0d8;color:#374151}
+#view-prs .pr-category-group{margin:10px 0 18px}
+#view-prs .pr-category-title{
+  width:100%;min-height:38px;box-sizing:border-box;
+  display:flex;align-items:center;gap:9px;
+  padding:7px 11px;background:#e5e7eb;
+  border:1px solid #cbd0d8;border-radius:9px;
+  color:#374151;text-align:left;cursor:pointer;
+  font:700 12px Manrope,sans-serif;
+}
+#view-prs .pr-category-title strong{flex:1}
+#view-prs .pr-category-title small{font:600 11px Manrope;color:#6b7280}
+#view-prs .pr-category-indicator{
+  width:19px;height:19px;flex:0 0 19px;
+  display:grid;place-items:center;
+  background:#f8fafc;border:1px solid #cbd0d8;border-radius:5px;
+  color:#374151;font:700 13px/1 Manrope;
+}
+#view-prs .pr-category-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:8px 0 0}
+#view-prs .pr-category-group.collapsed .pr-category-body{display:none}
+#view-prs .pr-category-body .pr-card{margin:0}
+#view-prs .pr-category-body .pr-chart-card{margin:0}
+@media(max-width:760px){#view-prs .pr-category-body{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}}
+@media(max-width:480px){#view-prs .pr-category-body{grid-template-columns:repeat(2,minmax(0,1fr))}}
