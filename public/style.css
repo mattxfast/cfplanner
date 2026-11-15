@@ -701,3 +701,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #prhistorylist .pr-history-row strong{font-size:14px;white-space:nowrap}
 #prhistorylist .entryactions{gap:5px}
 @media(max-width:480px){#prhistorydialog{padding:18px}#prhistorylist .pr-history-row{gap:7px;padding:8px 7px}#prhistorylist .pr-history-row .smallbtn{padding:7px}}
+
+/* Les états repliés restent prioritaires sur les règles de grille historiques. */
+#view-prs #prcards[hidden]{display:none!important}
+#view-prs #prcards .pr-category-group.collapsed .pr-category-body{display:none!important}
