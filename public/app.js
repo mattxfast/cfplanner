@@ -1,4 +1,4 @@
-const $=s=>document.querySelector(s);let tab="login",user=null,selectedWeekStart=null,programs=[],wodsByProgram={},movementsByProgram={},movementChecks=[],sessions=[],stats=[],activities=[],movementCatalog=[],isAdmin=false,weekCompetition=false,weeklyPlans=[];
+const $=s=>document.querySelector(s);let tab="login",user=null,selectedWeekStart=null,programs=[],wodsByProgram={},movementsByProgram={},movementChecks=[],sessions=[],prRecords=[],activities=[],movementCatalog=[],isAdmin=false,weekCompetition=false,weeklyPlans=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 const fmt=s=>new Intl.DateTimeFormat("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(s+"T12:00:00"));
 const addDays=(s,n)=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
@@ -11,13 +11,13 @@ function renderUserbar(){$("#userbar").innerHTML=`<span class="user-name">${esc(
 function showApp(){$("#auth").hidden=true;$("#dashboard").hidden=false;renderUserbar();load()}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));$("#authsubmit").textContent=tab==="login"?"Se connecter":"Créer mon compte";$("#authhint").textContent=tab==="login"?"Connecte-toi pour retrouver tes programmes.":"Mot de passe de 12 caractères minimum."});
 $("#authform").onsubmit=async e=>{e.preventDefault();$("#autherror").textContent="";const f=new FormData(e.target);try{const d=await api(tab==="login"?"/login":"/register",{method:"POST",body:JSON.stringify({email:f.get("email"),password:f.get("password")})});user=d.user;showApp()}catch(x){$("#autherror").textContent=x.message}};
-async function load(){try{const meData=await api("/me");user=meData.user;isAdmin=!!meData.is_admin;renderUserbar();$("#profileform").elements.first_name.value=user.first_name||"";$("#profileform").elements.last_name.value=user.last_name||"";$("#profileemail").value=user.email||"";const a=await api("/activities");activities=a.activities;const mc=await api("/movement-catalog");movementCatalog=mc.movements;const p=await api("/programs");programs=p.programs;wodsByProgram={};movementsByProgram={};await Promise.all(programs.map(async p=>{const z=await Promise.all([api("/programs/"+p.id+"/wods"),api("/programs/"+p.id+"/movements")]);wodsByProgram[p.id]=z[0].wods;movementsByProgram[p.id]=z[1].movements}));movementChecks=(await api("/movement-checks")).checks;await Promise.all([loadSessions(),loadStats()]);renderPrograms();renderWeek();if(isAdmin)loadAdmin()}catch(e){toast(e.message)}}
+async function load(){try{const meData=await api("/me");user=meData.user;isAdmin=!!meData.is_admin;renderUserbar();$("#profileform").elements.first_name.value=user.first_name||"";$("#profileform").elements.last_name.value=user.last_name||"";$("#profileemail").value=user.email||"";const a=await api("/activities");activities=a.activities;const mc=await api("/movement-catalog");movementCatalog=mc.movements;const p=await api("/programs");programs=p.programs;wodsByProgram={};movementsByProgram={};await Promise.all(programs.map(async p=>{const z=await Promise.all([api("/programs/"+p.id+"/wods"),api("/programs/"+p.id+"/movements")]);wodsByProgram[p.id]=z[0].wods;movementsByProgram[p.id]=z[1].movements}));movementChecks=(await api("/movement-checks")).checks;await loadSessions();await loadPrs();renderPrograms();renderWeek();if(isAdmin)loadAdmin()}catch(e){toast(e.message)}}
 async function loadSessions(){const from=selectedWeekStart||mondayOf(today()),to=addDays(from,6);const [s,f,pl]=await Promise.all([api("/sessions?from="+from+"&to="+to),api("/weekly-flags?from="+from+"&to="+from),api("/weekly-plans?from="+from+"&to="+from)]);sessions=s.sessions;weeklyPlans=pl.plans;weekCompetition=!!f.flags.find(x=>x.week_start===from)?.competition;renderSessions();renderWeek()}
-async function loadStats(){stats=(await api("/stats")).stats;renderStats()}
-function switchView(v){document.querySelectorAll(".navtab").forEach(b=>b.classList.toggle("active",b.dataset.view===v));["sessions","programs","stats","account","admin"].forEach(x=>$("#view-"+x).hidden=x!==v)}
+async function loadPrs(){prRecords=(await api("/prs")).records;renderPrs()}
+function switchView(v){document.querySelectorAll(".navtab").forEach(b=>b.classList.toggle("active",b.dataset.view===v));["sessions","programs","prs","account","admin"].forEach(x=>$("#view-"+x).hidden=x!==v)}
 document.querySelectorAll(".navtab").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 function renderSessions(){$("#sessionlist").classList.toggle("session-list-collapsed",!!window.cfSessionHistoryCollapsed);const historyToggle=$("#toggle-session-history");if(historyToggle){historyToggle.textContent=window.cfSessionHistoryCollapsed?"＋":"−";historyToggle.setAttribute("aria-expanded",String(!window.cfSessionHistoryCollapsed));historyToggle.onclick=()=>{window.cfSessionHistoryCollapsed=!window.cfSessionHistoryCollapsed;renderSessions()}}$("#sessionlist").innerHTML=sessions.length?sessions.map(s=>`<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><div class="session-title-line"><span class="sessiondate">${fmt(s.session_date)}</span><h3>${esc(s.wod_name)}</h3></div><div class="entryactions"><button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier">✎</button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer">×</button></div></div>${(()=>{const names=movementChecks.filter(c=>c.session_id===s.id).map(c=>(movementsByProgram[s.program_id]||[]).find(m=>m.id===c.movement_id)?.name).filter(Boolean);return names.length?`<p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>Mouvements travaillés :</b> ${names.map(esc).join(" · ")}</p>`:""})()}${s.planned_comment?`<p><b>Prévu :</b> ${esc(s.planned_comment)}</p>`:""}<p><b>Activité :</b> ${esc(s.activity_name||"")} · ${s.duration_minutes} min · Départ ${esc(s.started_at?new Date(s.started_at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"")}</p>${s.actual_comment?`<p><b>Réalisé :</b> ${esc(s.actual_comment)}</p>`:""}</div></article>`).join(""):`<div class="card empty">Aucune séance enregistrée. Crée un programme et ses WOD, puis enregistre ta première séance.</div>`;
-$("#sessionlist").querySelectorAll("[data-edit-session]").forEach(b=>b.onclick=()=>openSession(sessions.find(s=>s.id===b.dataset.editSession)));$("#sessionlist").querySelectorAll("[data-del-session]").forEach(b=>b.onclick=async()=>{if(confirm("Supprimer cette séance ?")){await api("/sessions/"+b.dataset.delSession,{method:"DELETE"});movementChecks=(await api("/movement-checks")).checks;await loadSessions();await loadStats()}})}
+$("#sessionlist").querySelectorAll("[data-edit-session]").forEach(b=>b.onclick=()=>openSession(sessions.find(s=>s.id===b.dataset.editSession)));$("#sessionlist").querySelectorAll("[data-del-session]").forEach(b=>b.onclick=async()=>{if(confirm("Supprimer cette séance ?")){await api("/sessions/"+b.dataset.delSession,{method:"DELETE"});movementChecks=(await api("/movement-checks")).checks;await loadSessions()}})}
 function renderWeek(){
  const now=today();if(!selectedWeekStart)selectedWeekStart=mondayOf(now);
  const from=selectedWeekStart,to=addDays(from,6),future=from>mondayOf(now),dateInput=addDays(from,0);
@@ -57,7 +57,7 @@ function openMovement(pid){const f=$("#movementform");f.reset();f.elements.progr
 $("#closemovement").onclick=()=>$("#movementdialog").close();
 $("#movementform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),pid=f.get("program_id"),name=String(f.get("name")||"").trim();if(!name)return;try{await api("/programs/"+pid+"/movements",{method:"POST",body:JSON.stringify({name})});$("#movementdialog").close();await load();switchView("programs");toast("Mouvement ajouté au programme.")}catch(x){$("#movementerror").textContent=x.message}};
 $("#profileform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$("#profileerror").textContent="";try{const d=await api("/profile",{method:"PUT",body:JSON.stringify({first_name:f.get("first_name"),last_name:f.get("last_name")})});user=d.user;renderUserbar();toast("Profil mis à jour.")}catch(x){$("#profileerror").textContent=x.message}};
-function renderStats(){$("#statslist").innerHTML=stats.length?stats.map(s=>`<article class="entry card"><div><h3>${esc(s.name)}</h3>${s.planned_comment?`<p>${esc(s.planned_comment)}</p>`:""}</div><div class="statnumber"><strong>${s.total_sessions}</strong><small>séances</small></div></article>`).join(""):"<div class='card empty'>Les statistiques apparaîtront après tes premières séances.</div>"}
+
 function openProgram(p=null){const f=$("#programform");f.reset();f.elements.program_id.value=p?.id||"";f.elements.name.value=p?.name||"";f.elements.start.value=p?.start_monday||"";f.elements.end.value=p?.end_monday||"";$("#programtitle").textContent=p?"Modifier le programme":"Nouveau programme";$("#programsubmit").textContent=p?"Enregistrer les modifications":"Créer le programme";$("#programerror").textContent="";$("#programdialog").showModal()}
 $("#newprogram").onclick=()=>openProgram();$("#closeprogram").onclick=()=>$("#programdialog").close();
 $("#programform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get("program_id"),body={name:f.get("name"),start:f.get("start"),end:f.get("end")};try{await api(id?"/programs/"+id:"/programs",{method:id?"PUT":"POST",body:JSON.stringify(body)});$("#programdialog").close();e.target.reset();await load();switchView("programs");toast(id?"Programme modifié.":"Programme créé.")}catch(x){$("#programerror").textContent=x.message}};
@@ -101,6 +101,55 @@ function renderAdmin(users,movements=[]){
 $("#movementcatalogform").onsubmit=async e=>{e.preventDefault();const name=e.target.elements.name.value.trim(),method=e.target.elements.measurement_method.value,editing=e.target.dataset.editId;try{await api(editing?"/admin/movements/"+editing:"/admin/movements",{method:editing?"PUT":"POST",body:JSON.stringify({name,measurement_method:method})});e.target.reset();delete e.target.dataset.editId;$("#movementcatalogdialog").close();const d=await api("/movement-catalog");movementCatalog=d.movements;await loadAdmin();toast(editing?"Mouvement modifié.":"Mouvement ajouté au catalogue.")}catch(x){$("#movementcatalogerror").textContent=x.message}};
 $("#activityform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get("id");try{await api(id?"/admin/activities/"+id:"/admin/activities",{method:id?"PUT":"POST",body:JSON.stringify({name:f.get("name"),duration_minutes:Number(f.get("duration_minutes")),is_default:f.get("is_default")==="on"})});e.target.reset();$("#activitydialog").close();await loadAdmin();toast("Activité enregistrée.")}catch(x){toast(x.message)}};
 
-function csvCell(value){const s=String(value??"");return '"'+s.replace(/"/g,'""')+'"'}
-async function exportTrainingCsv(){try{const d=await api("/export-data");const wodNames=[...new Set([...d.wods,...d.sessions.map(s=>s.wod_name)])].sort((a,b)=>a.localeCompare(b,"fr"));const movementNames=[...new Set(d.movements)].sort((a,b)=>a.localeCompare(b,"fr"));const weeks=new Map();for(const s of d.sessions){const monday=mondayOf(s.session_date);if(!weeks.has(monday))weeks.set(monday,{wods:{},movements:{}});const row=weeks.get(monday);row.wods[s.wod_name]=(row.wods[s.wod_name]||0)+1}const sessionWeek=new Map(d.sessions.map(s=>[s.id,mondayOf(s.session_date)]));for(const check of d.checks){const monday=sessionWeek.get(check.session_id);if(!monday)continue;const row=weeks.get(monday);row.movements[check.movement_name]=(row.movements[check.movement_name]||0)+1}const headers=["Semaine",...wodNames,...movementNames];const rows=[headers,...[...weeks.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([monday,row])=>["Semaine du "+fmt(monday),...wodNames.map(n=>row.wods[n]||0),...movementNames.map(n=>row.movements[n]||0)])];const csv="\uFEFF"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cfplanner-seances-hebdomadaires.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast("Export CSV téléchargé.")}catch(e){toast("Export impossible : "+e.message)}}
-$("#exportcsv").onclick=exportTrainingCsv;
+
+function prKey(record){return record.movement_id+":"+(record.measurement_method==="load"?record.rep_count:"reps")}
+function prValue(record){return record.measurement_method==="load"?Number(record.value).toLocaleString("fr-FR")+" kg":Number(record.value).toLocaleString("fr-FR")+" reps"}
+function renderPrChart(records){
+ const sorted=[...records].sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));
+ const width=320,height=112,pad=16,values=sorted.map(x=>Number(x.value)),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
+ const points=sorted.map((x,i)=>({x:pad+(sorted.length===1?(width-2*pad)/2:i*(width-2*pad)/(sorted.length-1)),y:height-pad-((Number(x.value)-min)/range)*(height-2*pad),date:x.record_date,value:x.value}));
+ const poly=points.map(p=>p.x+","+p.y).join(" ");
+ return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
+}
+function renderPrs(){
+ const groups=new Map();
+ for(const r of prRecords){const key=prKey(r);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r)}
+ const items=[...groups.entries()].map(([key,records])=>{records.sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));const best=records.reduce((a,b)=>Number(b.value)>Number(a.value)?b:a);return {key,records,best,movement_name:best.movement_name,measurement_method:best.measurement_method,rep_count:best.rep_count}});
+ $("#prcards").innerHTML=items.length?items.map(x=>'<article class="pr-card card"><div class="pr-card-head"><h3>'+esc(x.movement_name)+'</h3><span class="pr-rm">'+(x.measurement_method==="load"?x.rep_count+" RM":"Répétitions")+'</span></div><strong class="pr-best">'+prValue(x.best)+'</strong><small class="muted">Meilleur record · '+fmt(x.best.record_date)+'</small></article>').join(""):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
+ $("#prevolution").innerHTML=items.length?items.map(x=>'<button type="button" class="pr-chart-card card" data-pr-key="'+esc(x.key)+'"><span class="pr-chart-title">'+esc(x.movement_name)+' · '+(x.measurement_method==="load"?x.rep_count+" RM":"Répétitions")+'</span><strong>'+prValue(x.best)+'</strong>'+renderPrChart(x.records)+'</button>').join(""):'<div class="card empty">Les graphiques apparaîtront après tes premiers PR.</div>';
+ $("#prevolution").querySelectorAll("[data-pr-key]").forEach(b=>b.onclick=()=>openPrHistory(b.dataset.prKey));
+}
+function openPrHistory(key){
+ const records=prRecords.filter(r=>prKey(r)===key).sort((a,b)=>b.record_date.localeCompare(a.record_date)||b.created_at.localeCompare(a.created_at));
+ if(!records.length)return;
+ const first=records[0],label=first.measurement_method==="load"?first.rep_count+" RM":"Répétitions";
+ $("#prhistorytitle").textContent=first.movement_name+" · "+label;
+ $("#prhistorylist").innerHTML=records.map(r=>'<div class="pr-history-row"><span>'+fmt(r.record_date)+'</span><strong>'+prValue(r)+'</strong></div>').join("");
+ $("#prhistorydialog").showModal();
+}
+function syncPrForm(){
+ const f=$("#prform"),movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value),load=movement?.measurement_method==="load";
+ $("#prvaluelabel").textContent=load?"Charge (kg)":"Nombre de répétitions";
+ $("#prvalue").step=load?"0.5":"1";
+ $("#prvalue").min=load?"0.5":"1";
+ $("#prvalue").placeholder=load?"Ex. 80":"Ex. 15";
+ $("#prrmfield").hidden=!load;
+}
+function openPrForm(){
+ const f=$("#prform");f.reset();f.elements.record_date.value=today();
+ f.elements.movement_id.innerHTML=movementCatalog.map(m=>'<option value="'+m.id+'">'+esc(m.name)+'</option>').join("");
+ $("#prformerror").textContent="";
+ syncPrForm();
+ if(!movementCatalog.length){toast("Aucun mouvement disponible dans le catalogue.");return}
+ $("#prdialog").showModal();
+}
+$("#newpr").onclick=openPrForm;
+$("#closepr").onclick=()=>$("#prdialog").close();
+$("#prform").elements.movement_id.onchange=syncPrForm;
+$("#prform").onsubmit=async e=>{
+ e.preventDefault();const f=e.target,movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value);
+ if(!movement){$("#prformerror").textContent="Sélectionne un mouvement.";return}
+ const body={movement_id:movement.id,record_date:f.elements.record_date.value,value:Number(f.elements.value.value),rep_count:movement.measurement_method==="load"?Number(f.elements.rep_count.value):null};
+ try{await api("/prs",{method:"POST",body:JSON.stringify(body)});$("#prdialog").close();await loadPrs();toast("PR enregistré.")}catch(err){$("#prformerror").textContent=err.message}
+};
+\n$("#closeprhistory").onclick=()=>$("#prhistorydialog").close();\n
