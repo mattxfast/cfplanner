@@ -533,3 +533,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sessionlist .session-history-heading .entryactions{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex:0 0 32px}
 #sessionlist .session-history-heading .entryactions .smallbtn{width:28px;height:28px;min-width:28px}
 @media(max-width:650px){#sessionlist .session-entry{grid-template-columns:1fr!important}#sessionlist .session-history-heading{align-items:center}#sessionlist .session-history-heading .entryactions{flex-direction:column;align-self:center}}
+
+
+/* Corrections d'alignement et accordéons des sous-rubriques. */
+#view-admin .admin-group-title .admin-collapse-indicator{background:#e5e7eb!important;border:1px solid #cbd0d8!important;color:#374151!important;border-radius:5px!important}
+#view-sessions #sessiontoolbar h2{text-align:left!important;margin-left:0!important}
+#sessionlist .session-history-heading{align-items:center!important}
+#sessionlist .session-history-heading .entryactions{flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:5px!important;flex:0 0 auto!important;margin-left:auto}
+#sessionlist .session-history-heading .entryactions .smallbtn{display:inline-flex!important;align-items:center!important;justify-content:center!important;vertical-align:middle}
+.program-subsection .program-section-heading{display:flex;align-items:center;gap:8px}
+.program-subsection .program-section-heading>span{flex:1;text-align:left}
+.program-section-toggle{width:20px!important;height:20px!important;min-width:20px!important;flex:0 0 20px!important;padding:0!important;font-size:12px!important;line-height:1!important;background:#e5e7eb!important;border:1px solid #cbd0d8!important;color:#374151!important}
+.program-subsection.collapsed .program-subsection-body{display:none!important}
