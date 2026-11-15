@@ -581,6 +581,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .pr-chart-card>strong{font:800 19px Manrope}
 .pr-sparkline{display:block;width:100%;height:112px;margin-top:7px;overflow:visible}
 .pr-axis{stroke:#cbd2dd;stroke-width:1}
+.pr-gridline{stroke:#e3e7ed;stroke-width:1;stroke-dasharray:2 3}
+.pr-y-axis{stroke:#cbd2dd;stroke-width:1.2}
+.pr-y-label{fill:var(--muted);font:9px Manrope, sans-serif}
 .pr-line{fill:none;stroke:#f28c28;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .pr-point{fill:#f28c28;stroke:#fff;stroke-width:2}
 .pr-chart-dates{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
