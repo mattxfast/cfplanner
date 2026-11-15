@@ -434,3 +434,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sessionform .session-time-row label{min-width:0!important;width:100%!important;max-width:none!important;font-size:12px}
 #sessionform .session-time-row input{width:100%!important;min-width:0!important;max-width:100%;box-sizing:border-box;padding:8px;font-size:14px}
 @media(max-width:420px){#sessionform .session-time-row{gap:6px!important}#sessionform .session-time-row label{font-size:11px}#sessionform .session-time-row input{padding:7px 5px;font-size:13px}}
+
+/* MyFitness brand identity */
+.mark{background:#17191e!important;color:#f28c28!important;font-weight:800!important;letter-spacing:-.5px}
+.brand .brand-name{font:800 19px Manrope,sans-serif;letter-spacing:-.55px;color:#17191e}
+.brand .brand-accent{color:#f28c28}
