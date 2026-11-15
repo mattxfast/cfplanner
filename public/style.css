@@ -567,7 +567,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* Module PR : cartes de records et graphiques d’évolution. */
 #view-prs .pr-section-title{background:#fff1df!important;border-color:#e7bd91!important;color:#633f1c!important;display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-prs .pr-section-title h2{color:#633f1c!important}
-#view-prs .pr-section-title .primary{padding:9px 13px;white-space:nowrap}
+#view-prs .pr-section-title{min-height:48px}\n.pr-section-toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:transparent;border:0;padding:0;color:inherit;text-align:left;cursor:pointer}\n.pr-section-toggle h2{margin:0}\n.pr-collapse-indicator{display:grid;place-items:center;width:23px;height:23px;border:1px solid #d9a875;border-radius:6px;font:700 17px/1 Manrope;color:#633f1c;flex:none}\n.pr-add{display:grid;place-items:center;width:34px;height:34px;flex:none;border:0;border-radius:8px;background:#f28c28;color:#fff;font:700 24px/1 Manrope;cursor:pointer}\n.pr-add:hover{background:#dc7716}
 .pr-grid,.pr-evolution-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 24px}
 .pr-card{padding:14px 15px;box-shadow:none;background:#f0f2f6;border-color:#e1e5ec;min-width:0}
 .pr-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -589,3 +589,4 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .pr-history-row strong{font:700 15px Manrope}
 @media(max-width:760px){.pr-grid,.pr-evolution-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pr-card{padding:12px}}
 @media(max-width:480px){.pr-grid,.pr-evolution-grid{grid-template-columns:1fr 1fr}.pr-card h3{font-size:12px}.pr-best{font-size:21px}.pr-chart-card{padding:10px}}
+\n#view-prs .pr-grid[hidden],#view-prs .pr-evolution-grid[hidden]{display:none}\n
