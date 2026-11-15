@@ -418,3 +418,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 
 /* Croix de suppression encore légèrement agrandie, sans toucher au bouton. */
 .smallbtn.delete{font-size:24px!important}
+
+
+/* Taille finale des croix de suppression. */
+.smallbtn.delete{font-size:28px!important}
