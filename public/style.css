@@ -434,3 +434,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sessionform .session-time-row label{min-width:0!important;width:100%!important;max-width:none!important;font-size:12px}
 #sessionform .session-time-row input{width:100%!important;min-width:0!important;max-width:100%;box-sizing:border-box;padding:8px;font-size:14px}
 @media(max-width:420px){#sessionform .session-time-row{gap:6px!important}#sessionform .session-time-row label{font-size:11px}#sessionform .session-time-row input{padding:7px 5px;font-size:13px}}
+
+/* Administration: accordion sections and compact grey data rows */
+.admin-group{padding:0;margin:14px 0;overflow:hidden}
+.admin-group-title{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#f28c28;color:#fff;text-align:left;border-radius:0;font:700 15px Manrope}
+.admin-group-title span{font-size:20px;line-height:1}
+.admin-group-body{padding:14px 16px 16px}
+.admin-group.collapsed .admin-group-body{display:none}
+.admin-group .admin-inline{margin-bottom:12px}
+.admin-data-list{display:grid;gap:7px}
+.admin-row{background:#f1f3f6;border:0;border-radius:10px;padding:10px 12px;margin:0;min-height:44px}
+.admin-row>span:first-child{min-width:0;overflow-wrap:anywhere}
+@media(max-width:650px){.admin-group-body{padding:12px}.admin-group .admin-inline{grid-template-columns:1fr}.admin-group .admin-inline button{grid-column:auto}}
