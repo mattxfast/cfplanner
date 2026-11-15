@@ -112,36 +112,36 @@ function renderPrChart(records){
  const poly=points.map(p=>p.x+","+p.y).join(" ");
  return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
 }
-window.cfPrSections=window.cfPrSections||{records:false,evolution:false};
+window.cfPrSections=window.cfPrSections||{records:false};
 window.cfPrCategorySections=window.cfPrCategorySections||{};
 const prCategoryOrder=["load","force","reps","distance"];
 const prCategoryLabel=method=>method==="load"?"LIFT":method==="force"?"FORCE":method==="reps"?"GYM":"ENGINE";
-function renderPrCategory(method,items,section){
- const key=section+":"+method,collapsed=!!window.cfPrCategorySections[key];
- const content=section==="records"
-  ?items.map(x=>'<article class="pr-card card"><h3>'+esc(x.movement_name)+'</h3><div class="pr-value-line"><strong class="pr-best">'+prValue(x.best)+'</strong>'+(isLoadBased(x.measurement_method)?'<span class="pr-rm">'+x.rep_count+' RM</span>':'')+'</div></article>').join("")
-  :items.map(x=>'<button type="button" class="pr-chart-card card" data-pr-key="'+esc(x.key)+'"><span class="pr-chart-title">'+esc(x.movement_name)+' · '+(isLoadBased(x.measurement_method)?x.rep_count+" RM":x.measurement_method==="distance"?"Distance":"Répétitions")+'</span><strong>'+prValue(x.best)+'</strong>'+renderPrChart(x.records)+'</button>').join("");
- return '<section class="pr-category-group '+(collapsed?"collapsed":"")+'" data-pr-category="'+key+'"><button type="button" class="pr-category-title" data-toggle-pr-category="'+key+'" aria-expanded="'+(!collapsed)+'"><span class="pr-category-indicator">'+(collapsed?"+":"−")+'</span><strong>'+prCategoryLabel(method)+'</strong><small>'+items.length+'</small></button><div class="pr-category-body">'+content+'</div></section>';
+function renderPrCategory(method,items){
+ const key="records:"+method,collapsed=!!window.cfPrCategorySections[key];
+ const content=items.map(x=>'<button type="button" class="pr-card card" data-pr-key="'+esc(x.key)+'"><h3>'+esc(x.movement_name)+'</h3><div class="pr-value-line"><strong class="pr-best">'+prValue(x.best)+'</strong>'+(isLoadBased(x.measurement_method)?'<span class="pr-rm">'+x.rep_count+' RM</span>':'')+'</div></button>').join("");
+ return '<section class="pr-category-group '+(collapsed?"collapsed":"")+'" data-pr-category="'+key+'"><button type="button" class="pr-category-title" data-toggle-pr-category="'+key+'" aria-expanded="'+(!collapsed)+'"><span class="pr-category-indicator">'+(collapsed?"＋":"−")+'</span><strong>'+prCategoryLabel(method)+'</strong><small>'+items.length+'</small></button><div class="pr-category-body">'+content+'</div></section>';
 }
 function renderPrs(){
  const groups=new Map();
  for(const r of prRecords){const key=prKey(r);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r)}
  const catalogOrder=new Map(movementCatalog.map((m,i)=>[m.id,i]));
  const items=[...groups.entries()].map(([key,records])=>{records.sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));const best=records.reduce((a,b)=>Number(b.value)>Number(a.value)?b:a);return {key,records,best,movement_name:best.movement_name,movement_id:best.movement_id,measurement_method:best.measurement_method,rep_count:best.rep_count}}).sort((a,b)=>(catalogOrder.get(a.movement_id)??Number.MAX_SAFE_INTEGER)-(catalogOrder.get(b.movement_id)??Number.MAX_SAFE_INTEGER)||(isLoadBased(a.measurement_method)?Number(a.rep_count):0)-(isLoadBased(b.measurement_method)?Number(b.rep_count):0));
- const renderSection=(section)=>prCategoryOrder.map(method=>{const subset=items.filter(x=>x.measurement_method===method);return subset.length?renderPrCategory(method,subset,section):""}).join("");
- $("#prcards").innerHTML=items.length?renderSection("records"):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
- $("#prevolution").innerHTML=items.length?renderSection("evolution"):'<div class="card empty">Les graphiques apparaîtront après tes premiers PR.</div>';
- $("#prevolution").querySelectorAll("[data-pr-key]").forEach(b=>b.onclick=()=>openPrHistory(b.dataset.prKey));
- document.querySelectorAll("[data-toggle-pr-category]").forEach(button=>{button.onclick=()=>{const key=button.dataset.togglePrCategory,collapsed=!window.cfPrCategorySections[key];window.cfPrCategorySections[key]=collapsed;const group=button.closest(".pr-category-group");group.classList.toggle("collapsed",collapsed);button.setAttribute("aria-expanded",String(!collapsed));button.querySelector(".pr-category-indicator").textContent=collapsed?"+":"−"}});
- ["records","evolution"].forEach(key=>{const body=$("#pr"+(key==="records"?"cards":"evolution")),toggle=document.querySelector('[data-toggle-pr-section="'+key+'"]'),collapsed=!!window.cfPrSections[key];body.hidden=collapsed;toggle.setAttribute("aria-expanded",String(!collapsed));toggle.querySelector(".pr-collapse-indicator").textContent=collapsed?"＋":"−"});
- document.querySelectorAll("[data-toggle-pr-section]").forEach(button=>{button.onclick=()=>{const key=button.dataset.togglePrSection;window.cfPrSections[key]=!window.cfPrSections[key];const body=$("#pr"+(key==="records"?"cards":"evolution")),collapsed=window.cfPrSections[key];body.hidden=collapsed;button.setAttribute("aria-expanded",String(!collapsed));button.querySelector(".pr-collapse-indicator").textContent=collapsed?"＋":"−"}});
+ $("#prcards").innerHTML=items.length?prCategoryOrder.map(method=>{const subset=items.filter(x=>x.measurement_method===method);return subset.length?renderPrCategory(method,subset):""}).join(""):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
+ const body=$("#prcards"),toggle=document.querySelector('[data-toggle-pr-section="records"]'),collapsed=!!window.cfPrSections.records;
+ body.hidden=collapsed;toggle.setAttribute("aria-expanded",String(!collapsed));toggle.querySelector(".pr-collapse-indicator").textContent=collapsed?"＋":"−";
+ toggle.onclick=()=>{window.cfPrSections.records=!window.cfPrSections.records;const isCollapsed=window.cfPrSections.records;body.hidden=isCollapsed;toggle.setAttribute("aria-expanded",String(!isCollapsed));toggle.querySelector(".pr-collapse-indicator").textContent=isCollapsed?"＋":"−"};
+ body.querySelectorAll("[data-toggle-pr-category]").forEach(button=>button.onclick=()=>{const key=button.dataset.togglePrCategory,isCollapsed=!window.cfPrCategorySections[key];window.cfPrCategorySections[key]=isCollapsed;const group=button.closest(".pr-category-group");group.classList.toggle("collapsed",isCollapsed);button.setAttribute("aria-expanded",String(!isCollapsed));button.querySelector(".pr-category-indicator").textContent=isCollapsed?"＋":"−"});
+ body.querySelectorAll("[data-pr-key]").forEach(button=>button.onclick=()=>openPrHistory(button.dataset.prKey));
 }
 function openPrHistory(key){
  const records=prRecords.filter(r=>prKey(r)===key).sort((a,b)=>b.record_date.localeCompare(a.record_date)||b.created_at.localeCompare(a.created_at));
  if(!records.length)return;
  const first=records[0],label=isLoadBased(first.measurement_method)?first.rep_count+" RM":first.measurement_method==="distance"?"Distance":"Répétitions";
  $("#prhistorytitle").textContent=first.movement_name+" · "+label;
- $("#prhistorylist").innerHTML=records.map(r=>'<div class="pr-history-row"><span>'+fmt(r.record_date)+'</span><strong>'+prValue(r)+'</strong></div>').join("");
+ $("#prhistorychart").innerHTML=renderPrChart(records);
+ $("#prhistorylist").innerHTML='<div class="pr-history-section-title">Liste des valeurs</div>'+records.map(r=>'<div class="pr-history-row"><span class="pr-history-date">'+fmt(r.record_date)+'</span><strong>'+prValue(r)+'</strong><div class="entryactions"><button type="button" class="smallbtn" data-edit-pr="'+r.id+'" aria-label="Modifier ce PR" title="Modifier">✎</button><button type="button" class="smallbtn delete" data-delete-pr="'+r.id+'" aria-label="Supprimer ce PR" title="Supprimer">×</button></div></div>').join("");
+ $("#prhistorylist").querySelectorAll("[data-edit-pr]").forEach(b=>b.onclick=()=>{const record=prRecords.find(x=>x.id===b.dataset.editPr);if(record){$("#prhistorydialog").close();openPrForm(record)}});
+ $("#prhistorylist").querySelectorAll("[data-delete-pr]").forEach(b=>b.onclick=async()=>{if(!confirm("Supprimer définitivement ce PR ?"))return;try{await api("/prs/"+b.dataset.deletePr,{method:"DELETE"});await loadPrs();const remaining=prRecords.filter(r=>prKey(r)===key);if(remaining.length)openPrHistory(key);else $("#prhistorydialog").close();toast("PR supprimé.")}catch(e){toast(e.message)}});
  $("#prhistorydialog").showModal();
 }
 function syncPrForm(){
@@ -167,7 +167,7 @@ $("#prform").onsubmit=async e=>{
  e.preventDefault();const f=e.target,movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value);
  if(!movement){$("#prformerror").textContent="Sélectionne un mouvement.";return}
  const body={movement_id:movement.id,record_date:f.elements.record_date.value,value:Number(f.elements.value.value),rep_count:isLoadBased(movement.measurement_method)?Number(f.elements.rep_count.value):null};
- try{await api("/prs",{method:"POST",body:JSON.stringify(body)});$("#prdialog").close();await loadPrs();toast("PR enregistré.")}catch(err){$("#prformerror").textContent=err.message}
+ try{await api(f.elements.pr_id.value?"/prs/"+f.elements.pr_id.value:"/prs",{method:f.elements.pr_id.value?"PUT":"POST",body:JSON.stringify(body)});$("#prdialog").close();await loadPrs();toast(f.elements.pr_id.value?"PR modifié.":"PR enregistré.")}catch(err){$("#prformerror").textContent=err.message}
 };
 
 $("#closeprhistory").onclick=()=>$("#prhistorydialog").close();
