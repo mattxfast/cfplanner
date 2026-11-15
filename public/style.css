@@ -705,3 +705,76 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* Les états repliés restent prioritaires sur les règles de grille historiques. */
 #view-prs #prcards[hidden]{display:none!important}
 #view-prs #prcards .pr-category-group.collapsed .pr-category-body{display:none!important}
+
+/* Harmonisation des titres PR avec l'en-tête des programmes. */
+#view-prs .pr-section-title{
+  background:#fff1df!important;
+  border:1px solid #e7bd91!important;
+  border-radius:11px!important;
+  color:#633f1c!important;
+  min-height:52px!important;
+  padding:10px 14px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+#view-prs .pr-section-title h2{
+  flex:1 1 auto;
+  margin:0!important;
+  color:#633f1c!important;
+  font-size:15px!important;
+  font-weight:800!important;
+}
+#view-prs .pr-section-title .pr-section-toggle{
+  display:grid!important;
+  place-items:center!important;
+  width:19px!important;
+  height:19px!important;
+  min-width:19px!important;
+  flex:0 0 19px!important;
+  padding:0!important;
+  border-radius:5px!important;
+  background:#e5e7eb!important;
+  border:1px solid #cbd0d8!important;
+  color:#374151!important;
+}
+#view-prs .pr-section-title .pr-collapse-indicator{
+  display:block!important;
+  width:auto!important;
+  height:auto!important;
+  border:0!important;
+  background:transparent!important;
+  border-radius:0!important;
+  color:inherit!important;
+  font:700 12px/1 Manrope!important;
+}
+#prhistorydialog .pr-history-page-title{
+  background:#fff1df!important;
+  border:1px solid #e7bd91!important;
+  border-radius:11px!important;
+  color:#633f1c!important;
+  padding:10px 14px!important;
+  margin:0 0 14px!important;
+  min-height:48px;
+}
+#prhistorydialog .pr-history-page-title h2{
+  color:#633f1c!important;
+  font-size:15px!important;
+  font-weight:800!important;
+}
+#prhistorylist .pr-history-section-title{
+  width:100%;
+  min-height:38px;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:7px 11px;
+  background:#e5e7eb;
+  border:1px solid #cbd0d8;
+  border-radius:9px;
+  color:#374151;
+  text-align:left;
+  font:700 12px Manrope,sans-serif;
+  margin:0 0 7px;
+}
