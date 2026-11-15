@@ -562,3 +562,30 @@ button:disabled{opacity:.35;cursor:not-allowed}
   margin:0 auto 0 0!important;
   text-align:left!important;
 }
+
+
+/* Module PR : cartes de records et graphiques d’évolution. */
+#view-prs .pr-section-title{background:#fff1df!important;border-color:#e7bd91!important;color:#633f1c!important;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#view-prs .pr-section-title h2{color:#633f1c!important}
+#view-prs .pr-section-title .primary{padding:9px 13px;white-space:nowrap}
+.pr-grid,.pr-evolution-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 24px}
+.pr-card{padding:14px 15px;box-shadow:none;background:#f0f2f6;border-color:#e1e5ec;min-width:0}
+.pr-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pr-card h3{font:700 14px Manrope;margin:0;min-width:0;overflow-wrap:anywhere}
+.pr-rm{font-size:11px;color:#633f1c;background:#fff1df;border:1px solid #e7bd91;border-radius:20px;padding:4px 8px;white-space:nowrap}
+.pr-best{display:block;font:800 25px Manrope;margin:12px 0 2px;color:#172033}
+.pr-card>small{font-size:11px}
+.pr-chart-card{display:block;text-align:left;width:100%;padding:12px 14px;background:#f0f2f6;border:1px solid #e1e5ec;border-radius:12px;box-shadow:none;color:var(--ink);min-width:0}
+.pr-chart-card:hover{border-color:#e7bd91;background:#fffaf4}
+.pr-chart-title{display:block;font:700 13px Manrope;margin-bottom:5px}
+.pr-chart-card>strong{font:800 19px Manrope}
+.pr-sparkline{display:block;width:100%;height:112px;margin-top:7px;overflow:visible}
+.pr-axis{stroke:#cbd2dd;stroke-width:1}
+.pr-line{fill:none;stroke:#f28c28;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.pr-point{fill:#f28c28;stroke:#fff;stroke-width:2}
+.pr-chart-dates{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.pr-history-list{display:grid;gap:0}
+.pr-history-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.pr-history-row strong{font:700 15px Manrope}
+@media(max-width:760px){.pr-grid,.pr-evolution-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pr-card{padding:12px}}
+@media(max-width:480px){.pr-grid,.pr-evolution-grid{grid-template-columns:1fr 1fr}.pr-card h3{font-size:12px}.pr-best{font-size:21px}.pr-chart-card{padding:10px}}
