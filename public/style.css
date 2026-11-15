@@ -890,3 +890,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){
   #view-programs .program-section-toolbar{min-height:48px!important;padding:7px 10px!important}
 }
+
+/* Les mêmes dimensions sont conservées sur mobile. */
+@media(max-width:650px){
+  #view-programs .program-section-toolbar{min-height:52px!important;padding:9px 14px!important}
+}
