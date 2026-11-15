@@ -422,3 +422,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 
 /* Taille finale des croix de suppression. */
 .smallbtn.delete{font-size:28px!important}
+
+/* Planification hebdomadaire : fond neutre, statut indiqué uniquement par le bord gauche. */
+.weekwod.done,.weekwod.planned{background:#f0f2f6!important;border-color:#e1e5ec!important;border-left-width:4px!important;border-left-style:solid!important}
+.weekwod.done{border-left-color:var(--green)!important}
+.weekwod.planned{border-left-color:#d97706!important}
+.weekwod.planned .weekcount strong{color:#b86a12}
+.wod-choice-modal .wod-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wod-choice-modal .wod-choice-actions button{width:100%;min-height:44px}
+#sessionform .session-time-row{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;width:100%;min-width:0}
+#sessionform .session-time-row label{min-width:0!important;width:100%!important;max-width:none!important;font-size:12px}
+#sessionform .session-time-row input{width:100%!important;min-width:0!important;max-width:100%;box-sizing:border-box;padding:8px;font-size:14px}
+@media(max-width:420px){#sessionform .session-time-row{gap:6px!important}#sessionform .session-time-row label{font-size:11px}#sessionform .session-time-row input{padding:7px 5px;font-size:13px}}
