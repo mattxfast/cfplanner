@@ -107,10 +107,17 @@ function prKey(record){return record.movement_id+":"+(isLoadBased(record.measure
 function prValue(record){return isLoadBased(record.measurement_method)?Number(record.value).toLocaleString("fr-FR")+" kg":record.measurement_method==="distance"?Number(record.value).toLocaleString("fr-FR")+" m":Number(record.value).toLocaleString("fr-FR")+" reps"}
 function renderPrChart(records){
  const sorted=[...records].sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));
- const width=320,height=112,pad=16,values=sorted.map(x=>Number(x.value)),max=Math.max(...values),range=max||1;
- const points=sorted.map((x,i)=>({x:pad+(sorted.length===1?(width-2*pad)/2:i*(width-2*pad)/(sorted.length-1)),y:height-pad-(Number(x.value)/range)*(height-2*pad),date:x.record_date,value:x.value}));
+ const width=340,height=150,left=46,right=8,top=8,bottom=22,values=sorted.map(x=>Number(x.value)),max=Math.max(...values);
+ const rawStep=(max||1)/4,magnitude=Math.pow(10,Math.floor(Math.log10(rawStep))),normalized=rawStep/magnitude;
+ const step=(normalized<=1?1:normalized<=2?2:normalized<=2.5?2.5:normalized<=5?5:10)*magnitude;
+ const axisMax=step*4,plotHeight=height-top-bottom,plotWidth=width-left-right;
+ const method=sorted[0].measurement_method,unit=method==="load"||method==="force"?"kg":method==="distance"?"m":"reps";
+ const formatTick=n=>Number(n.toFixed(6)).toLocaleString("fr-FR",{maximumFractionDigits:2})+" "+unit;
+ const yFor=value=>height-bottom-(Number(value)/axisMax)*plotHeight;
+ const grid=Array.from({length:5},(_,i)=>{const value=step*i,y=yFor(value);return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+'" class="pr-gridline"/><text x="'+(left-7)+'" y="'+(y+3)+'" text-anchor="end" class="pr-y-label">'+esc(formatTick(value))+'</text>'}).join("");
+ const points=sorted.map((x,i)=>({x:left+(sorted.length===1?plotWidth/2:i*plotWidth/(sorted.length-1)),y:yFor(x.value),date:x.record_date,value:x.value}));
  const poly=points.map(p=>p.x+","+p.y).join(" ");
- return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record"><line x1="'+pad+'" y1="'+(height-pad)+'" x2="'+(width-pad)+'" y2="'+(height-pad)+'" class="pr-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
+ return '<svg class="pr-sparkline" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Évolution du record en '+unit+', axe vertical de 0 à '+esc(formatTick(axisMax))+'">'+grid+'<line x1="'+left+'" y1="'+top+'" x2="'+left+'" y2="'+(height-bottom)+'" class="pr-y-axis"/>'+(points.length>1?'<polyline points="'+poly+'" class="pr-line"/>':'')+points.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" class="pr-point"><title>'+esc(p.date)+' : '+esc(p.value)+' '+unit+'</title></circle>').join("")+'</svg><div class="pr-chart-dates"><span>'+fmt(sorted[0].record_date)+'</span><span>'+fmt(sorted[sorted.length-1].record_date)+'</span></div>';
 }
 window.cfPrCategorySections=window.cfPrCategorySections||{};
 const prCategoryOrder=["load","force","reps","distance"];
