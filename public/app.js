@@ -86,7 +86,7 @@ document.querySelectorAll("#view-admin .admin-group-title").forEach(h=>{
  h.addEventListener("keydown",e=>{if(e.target!==h)return;if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle()}});
 });
 function renderAdmin(users,movements=[]){
- $("#movementcataloglist").innerHTML=movements.map((m,i)=>`<div class="admin-row"><span>${esc(m.name)} <small class="muted">· ${m.measurement_method==="reps"?"Gym":m.measurement_method==="distance"?"Engine":"Lift"}</small></span><span class="admin-row-actions"><button class="smallbtn admin-reorder" data-move-admin="movement" data-id="${m.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i===0?"disabled":""}>↑</button><button class="smallbtn admin-reorder" data-move-admin="movement" data-id="${m.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i===movements.length-1?"disabled":""}>↓</button><button class="smallbtn" data-edit-catalog-movement="${m.id}" aria-label="Modifier" title="Modifier">✎</button><button class="smallbtn delete" data-del-catalog-movement="${m.id}" aria-label="Supprimer" title="Supprimer">×</button></span></div>`).join("")||`<p class="muted">Aucun mouvement dans le catalogue.</p>`;
+ $("#movementcataloglist").innerHTML=movements.map((m,i)=>`<div class="admin-row"><span>${esc(m.name)} <small class="muted">· ${m.measurement_method==="force"?"Force":m.measurement_method==="reps"?"Gym":m.measurement_method==="distance"?"Engine":"Lift"}</small></span><span class="admin-row-actions"><button class="smallbtn admin-reorder" data-move-admin="movement" data-id="${m.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i===0?"disabled":""}>↑</button><button class="smallbtn admin-reorder" data-move-admin="movement" data-id="${m.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i===movements.length-1?"disabled":""}>↓</button><button class="smallbtn" data-edit-catalog-movement="${m.id}" aria-label="Modifier" title="Modifier">✎</button><button class="smallbtn delete" data-del-catalog-movement="${m.id}" aria-label="Supprimer" title="Supprimer">×</button></span></div>`).join("")||`<p class="muted">Aucun mouvement dans le catalogue.</p>`;
  $("#view-admin").querySelectorAll("[data-move-admin]").forEach(b=>b.onclick=async()=>{try{await api("/admin/"+(b.dataset.moveAdmin==="movement"?"movements":"activities")+"/order",{method:"PUT",body:JSON.stringify({id:b.dataset.id,direction:Number(b.dataset.direction)})});await loadAdmin()}catch(e){toast(e.message)}});
  $("#movementcataloglist").querySelectorAll("[data-edit-catalog-movement]").forEach(b=>b.onclick=()=>{const m=movements.find(x=>x.id===b.dataset.editCatalogMovement),f=$("#movementcatalogform");f.elements.name.value=m.name;f.elements.measurement_method.value=m.measurement_method||"load";f.dataset.editId=m.id;$("#movementcatalogdialogtitle").textContent="Modifier un mouvement";$("#movementcatalogdialog").showModal()});
  $("#movementcataloglist").querySelectorAll("[data-del-catalog-movement]").forEach(b=>b.onclick=async()=>{if(confirm("Supprimer ce mouvement du catalogue ? Les programmes qui l’utilisent le conserveront.")){await api("/admin/movements/"+b.dataset.delCatalogMovement,{method:"DELETE"});const d=await api("/movement-catalog");movementCatalog=d.movements;await loadAdmin()}});
@@ -102,8 +102,9 @@ $("#movementcatalogform").onsubmit=async e=>{e.preventDefault();const name=e.tar
 $("#activityform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get("id");try{await api(id?"/admin/activities/"+id:"/admin/activities",{method:id?"PUT":"POST",body:JSON.stringify({name:f.get("name"),duration_minutes:Number(f.get("duration_minutes")),is_default:f.get("is_default")==="on"})});e.target.reset();$("#activitydialog").close();await loadAdmin();toast("Activité enregistrée.")}catch(x){toast(x.message)}};
 
 
-function prKey(record){return record.movement_id+":"+(record.measurement_method==="load"?record.rep_count:record.measurement_method)}
-function prValue(record){return record.measurement_method==="load"?Number(record.value).toLocaleString("fr-FR")+" kg":record.measurement_method==="distance"?Number(record.value).toLocaleString("fr-FR")+" m":Number(record.value).toLocaleString("fr-FR")+" reps"}
+function isLoadBased(method){return method==="load"||method==="force"}
+function prKey(record){return record.movement_id+":"+(isLoadBased(record.measurement_method)?record.rep_count:record.measurement_method)}
+function prValue(record){return isLoadBased(record.measurement_method)?Number(record.value).toLocaleString("fr-FR")+" kg":record.measurement_method==="distance"?Number(record.value).toLocaleString("fr-FR")+" m":Number(record.value).toLocaleString("fr-FR")+" reps"}
 function renderPrChart(records){
  const sorted=[...records].sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));
  const width=320,height=112,pad=16,values=sorted.map(x=>Number(x.value)),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
@@ -113,20 +114,20 @@ function renderPrChart(records){
 }
 window.cfPrSections=window.cfPrSections||{records:false,evolution:false};
 window.cfPrCategorySections=window.cfPrCategorySections||{};
-const prCategoryOrder=["load","reps","distance"];
-const prCategoryLabel=method=>method==="load"?"LIFT":method==="reps"?"GYM":"ENGINE";
+const prCategoryOrder=["load","force","reps","distance"];
+const prCategoryLabel=method=>method==="load"?"LIFT":method==="force"?"FORCE":method==="reps"?"GYM":"ENGINE";
 function renderPrCategory(method,items,section){
  const key=section+":"+method,collapsed=!!window.cfPrCategorySections[key];
  const content=section==="records"
-  ?items.map(x=>'<article class="pr-card card"><h3>'+esc(x.movement_name)+'</h3><div class="pr-value-line"><strong class="pr-best">'+prValue(x.best)+'</strong>'+(x.measurement_method==="load"?'<span class="pr-rm">'+x.rep_count+' RM</span>':'')+'</div></article>').join("")
-  :items.map(x=>'<button type="button" class="pr-chart-card card" data-pr-key="'+esc(x.key)+'"><span class="pr-chart-title">'+esc(x.movement_name)+' · '+(x.measurement_method==="load"?x.rep_count+" RM":x.measurement_method==="distance"?"Distance":"Répétitions")+'</span><strong>'+prValue(x.best)+'</strong>'+renderPrChart(x.records)+'</button>').join("");
+  ?items.map(x=>'<article class="pr-card card"><h3>'+esc(x.movement_name)+'</h3><div class="pr-value-line"><strong class="pr-best">'+prValue(x.best)+'</strong>'+(isLoadBased(x.measurement_method)?'<span class="pr-rm">'+x.rep_count+' RM</span>':'')+'</div></article>').join("")
+  :items.map(x=>'<button type="button" class="pr-chart-card card" data-pr-key="'+esc(x.key)+'"><span class="pr-chart-title">'+esc(x.movement_name)+' · '+(isLoadBased(x.measurement_method)?x.rep_count+" RM":x.measurement_method==="distance"?"Distance":"Répétitions")+'</span><strong>'+prValue(x.best)+'</strong>'+renderPrChart(x.records)+'</button>').join("");
  return '<section class="pr-category-group '+(collapsed?"collapsed":"")+'" data-pr-category="'+key+'"><button type="button" class="pr-category-title" data-toggle-pr-category="'+key+'" aria-expanded="'+(!collapsed)+'"><span class="pr-category-indicator">'+(collapsed?"+":"−")+'</span><strong>'+prCategoryLabel(method)+'</strong><small>'+items.length+'</small></button><div class="pr-category-body">'+content+'</div></section>';
 }
 function renderPrs(){
  const groups=new Map();
  for(const r of prRecords){const key=prKey(r);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r)}
  const catalogOrder=new Map(movementCatalog.map((m,i)=>[m.id,i]));
- const items=[...groups.entries()].map(([key,records])=>{records.sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));const best=records.reduce((a,b)=>Number(b.value)>Number(a.value)?b:a);return {key,records,best,movement_name:best.movement_name,movement_id:best.movement_id,measurement_method:best.measurement_method,rep_count:best.rep_count}}).sort((a,b)=>(catalogOrder.get(a.movement_id)??Number.MAX_SAFE_INTEGER)-(catalogOrder.get(b.movement_id)??Number.MAX_SAFE_INTEGER)||(a.measurement_method==="load"?Number(a.rep_count):0)-(b.measurement_method==="load"?Number(b.rep_count):0));
+ const items=[...groups.entries()].map(([key,records])=>{records.sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.created_at.localeCompare(b.created_at));const best=records.reduce((a,b)=>Number(b.value)>Number(a.value)?b:a);return {key,records,best,movement_name:best.movement_name,movement_id:best.movement_id,measurement_method:best.measurement_method,rep_count:best.rep_count}}).sort((a,b)=>(catalogOrder.get(a.movement_id)??Number.MAX_SAFE_INTEGER)-(catalogOrder.get(b.movement_id)??Number.MAX_SAFE_INTEGER)||(isLoadBased(a.measurement_method)?Number(a.rep_count):0)-(isLoadBased(b.measurement_method)?Number(b.rep_count):0));
  const renderSection=(section)=>prCategoryOrder.map(method=>{const subset=items.filter(x=>x.measurement_method===method);return subset.length?renderPrCategory(method,subset,section):""}).join("");
  $("#prcards").innerHTML=items.length?renderSection("records"):'<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
  $("#prevolution").innerHTML=items.length?renderSection("evolution"):'<div class="card empty">Les graphiques apparaîtront après tes premiers PR.</div>';
@@ -138,13 +139,13 @@ function renderPrs(){
 function openPrHistory(key){
  const records=prRecords.filter(r=>prKey(r)===key).sort((a,b)=>b.record_date.localeCompare(a.record_date)||b.created_at.localeCompare(a.created_at));
  if(!records.length)return;
- const first=records[0],label=first.measurement_method==="load"?first.rep_count+" RM":first.measurement_method==="distance"?"Distance":"Répétitions";
+ const first=records[0],label=isLoadBased(first.measurement_method)?first.rep_count+" RM":first.measurement_method==="distance"?"Distance":"Répétitions";
  $("#prhistorytitle").textContent=first.movement_name+" · "+label;
  $("#prhistorylist").innerHTML=records.map(r=>'<div class="pr-history-row"><span>'+fmt(r.record_date)+'</span><strong>'+prValue(r)+'</strong></div>').join("");
  $("#prhistorydialog").showModal();
 }
 function syncPrForm(){
- const f=$("#prform"),movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value),method=movement?.measurement_method,load=method==="load",distance=method==="distance";
+ const f=$("#prform"),movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value),method=movement?.measurement_method,load=isLoadBased(method),distance=method==="distance";
  $("#prvaluelabel").textContent=load?"Charge (kg)":distance?"Distance (m)":"Nombre de répétitions";
  $("#prvalue").step=load?"0.5":distance?"0.1":"1";
  $("#prvalue").min=load?"0.5":distance?"0.1":"1";
@@ -165,7 +166,7 @@ $("#prform").elements.movement_id.onchange=syncPrForm;
 $("#prform").onsubmit=async e=>{
  e.preventDefault();const f=e.target,movement=movementCatalog.find(m=>m.id===f.elements.movement_id.value);
  if(!movement){$("#prformerror").textContent="Sélectionne un mouvement.";return}
- const body={movement_id:movement.id,record_date:f.elements.record_date.value,value:Number(f.elements.value.value),rep_count:movement.measurement_method==="load"?Number(f.elements.rep_count.value):null};
+ const body={movement_id:movement.id,record_date:f.elements.record_date.value,value:Number(f.elements.value.value),rep_count:isLoadBased(movement.measurement_method)?Number(f.elements.rep_count.value):null};
  try{await api("/prs",{method:"POST",body:JSON.stringify(body)});$("#prdialog").close();await loadPrs();toast("PR enregistré.")}catch(err){$("#prformerror").textContent=err.message}
 };
 
