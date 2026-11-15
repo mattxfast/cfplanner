@@ -678,3 +678,26 @@ button:disabled{opacity:.35;cursor:not-allowed}
   align-items:center;
   justify-content:center;
 }
+
+/* PR : consultation détaillée dans une fenêtre dédiée. */
+#view-prs .pr-section-title{background:#dc7417!important;border-color:#c96510!important;color:#fff!important}
+#view-prs .pr-section-title h2{color:#fff!important}
+#view-prs .pr-section-toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:transparent;border:0;padding:0;color:inherit;text-align:left;cursor:pointer}
+#view-prs .pr-section-toggle h2{margin:0;color:inherit!important}
+#view-prs .pr-section-title .pr-collapse-indicator{background:#f4a34e;border-color:#f8bd7e;color:#fff}
+#view-prs #prcards .pr-category-title{display:flex;align-items:center;gap:9px}
+#view-prs #prcards .pr-category-indicator{font-size:16px}
+#view-prs #prcards .pr-card{width:100%;text-align:left;cursor:pointer}
+#view-prs #prcards .pr-card:hover{border-color:#e7bd91;background:#fffaf4}
+#prhistorydialog{max-height:88vh;overflow:auto}
+#prhistorydialog .pr-history-page-title{background:#dc7417;color:#fff;padding:12px 14px;border-radius:10px;margin:-4px -4px 16px}
+#prhistorydialog .pr-history-page-title h2{color:#fff;font-size:16px}
+#prhistorychart{padding:0 4px 14px}
+#prhistorychart .pr-sparkline{height:150px}
+#prhistorylist{display:grid;gap:0}
+#prhistorylist .pr-history-section-title{background:#374151;color:#fff;border-radius:8px;padding:11px 13px;font:700 13px Manrope;margin:0 0 7px}
+#prhistorylist .pr-history-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:9px 10px;margin:3px 0;background:#f0f2f6;border:1px solid #e1e5ec;border-radius:8px}
+#prhistorylist .pr-history-date{font-size:12px;color:#4b5563}
+#prhistorylist .pr-history-row strong{font-size:14px;white-space:nowrap}
+#prhistorylist .entryactions{gap:5px}
+@media(max-width:480px){#prhistorydialog{padding:18px}#prhistorylist .pr-history-row{gap:7px;padding:8px 7px}#prhistorylist .pr-history-row .smallbtn{padding:7px}}
