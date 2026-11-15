@@ -511,3 +511,25 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 
 #view-admin .admin-reorder{width:27px;height:28px;min-width:27px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;border-radius:7px}#view-admin .admin-reorder:disabled{opacity:.2;cursor:default}#view-admin .admin-group-title{gap:12px}#view-admin .admin-group-title>span:first-child{flex:1;text-align:left}#view-admin .admin-group-title .admin-collapse-indicator{flex:0 0 22px;text-align:center;font-size:21px;line-height:1}@media(max-width:650px){#view-admin .admin-reorder{width:25px;height:27px;min-width:25px}}
+
+/* Repli compact à gauche des rubriques ; alignements verticaux de la page Séances. */
+.collapse-program{width:20px!important;height:20px!important;min-width:20px;padding:0!important;font-size:13px!important;line-height:1}
+#view-admin .admin-group-title{justify-content:flex-start!important;gap:8px!important}
+#view-admin .admin-group-title .admin-collapse-indicator{order:0;flex:0 0 18px!important;width:18px;height:18px;border:1px solid rgba(255,255,255,.7);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:12px!important;line-height:1}
+#view-admin .admin-group-title>span:nth-child(2){flex:1;text-align:left}
+#view-admin .admin-add{margin-left:auto}
+.section-collapse{width:19px!important;height:19px!important;min-width:19px;padding:0!important;flex:0 0 19px;font-size:12px!important;line-height:1}
+#view-sessions .weekheading{display:flex;align-items:center;gap:7px}
+#view-sessions .weekheading h2{margin:0;flex:1}
+#view-sessions .weekwod{align-items:center!important}
+#view-sessions .weekwod>div:first-child{display:flex;flex-direction:column;justify-content:center;min-height:34px;min-width:0;flex:1}
+#view-sessions .weekwod>b{align-self:center}
+#view-sessions .session-fold-body{display:block}
+#view-sessions .session-fold.collapsed .session-fold-body{display:none}
+#view-sessions #sessiontoolbar{align-items:center;gap:8px}
+#view-sessions #sessiontoolbar .section-collapse{margin-right:2px}
+#view-sessions #sessionlist.session-list-collapsed{display:none}
+#sessionlist .session-history-heading{display:flex;align-items:center;gap:12px}
+#sessionlist .session-history-heading .entryactions{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex:0 0 32px}
+#sessionlist .session-history-heading .entryactions .smallbtn{width:28px;height:28px;min-width:28px}
+@media(max-width:650px){#sessionlist .session-entry{grid-template-columns:1fr!important}#sessionlist .session-history-heading{align-items:center}#sessionlist .session-history-heading .entryactions{flex-direction:column;align-self:center}}
