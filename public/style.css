@@ -938,3 +938,12 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-prs .pr-section-title{justify-content:space-between!important}
 #view-prs .pr-section-title h2{flex:1 1 auto!important}
 #view-prs #prcards[hidden]{display:block!important}
+
+
+/* Paramétrage : les blocs de contenu reprennent le contour des cartes Séances, Programmes et PR. */
+#view-admin .admin-row,
+#view-admin .admin-add-form{
+  background:#f0f2f6!important;
+  border:1px solid #e1e5ec!important;
+  border-radius:11px!important;
+}
