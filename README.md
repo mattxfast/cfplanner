@@ -46,7 +46,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Modification du prénom et du nom.
 - Administration réservée au compte défini par `ADMIN_EMAIL`.
 - Gestion des utilisateurs (activation / désactivation).
-- Gestion du catalogue des mouvements, de leur catégorie et de leur ordre.
+- Gestion de la « Liste des mouvements » (catalogue commun), de leur catégorie et de leur ordre ; les flèches de tri s'affichent via le bouton ⇅ du titre.
 - Gestion des activités proposées lors de la création d'un WOD ou d'une séance.
 
 ## Utilisation
