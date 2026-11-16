@@ -272,6 +272,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .reorder-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto}
 #view-programs .reorder-btn{width:27px;height:29px;min-width:27px;padding:0;font-size:15px;line-height:1;border-radius:7px}
 #view-programs .reorder-btn:disabled{opacity:.22;cursor:default}
+/* Bouton ⇅ du titre de rubrique : active le mode « Réorganiser » qui affiche les flèches ↑ ↓. */
+#view-programs .reorder-toggle{width:34px;height:34px;padding:0;font-size:17px;line-height:1;flex:0 0 auto}
+#view-programs .reorder-toggle.active{background:var(--blue);color:var(--white)}
 #view-programs .program-section .movement-row{gap:10px}
 @media(max-width:650px){
  #view-programs .reorder-actions{gap:2px}

@@ -23,11 +23,11 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Création de programmes avec dates de début et de fin.
 - Ajout de WOD réutilisables dans chaque programme.
 - Description du contenu prévu, activité associée et durée par défaut.
-- Réorganisation des WOD.
+- Réorganisation des WOD via le bouton ⇅ du titre de rubrique (mode « Réorganiser » qui affiche les flèches ↑ ↓).
 - Un WOD ou un programme qui a déjà une séance réalisée ne peut plus être supprimé.
 - Liste de mouvements à travailler pour chaque programme.
 - Ajout de mouvements depuis le catalogue commun, géré par l’administrateur.
-- Réorganisation des mouvements.
+- Réorganisation des mouvements via le même bouton ⇅.
 
 ### Records personnels (PR)
 Les mouvements du catalogue sont répartis en quatre familles :
