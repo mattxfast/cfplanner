@@ -74,7 +74,7 @@ function loadXlsxLibrary(){
  return window.cfXlsxLoading;
 }
 function excelSheetName(name,used){
- let base=String(name||"Programme").replace(/[\\/?*:[\\]]/g," ").trim().slice(0,31)||"Programme",candidate=base,n=2;
+ let base=String(name||"Programme").replace(/[\\/?*[\\]:]/g," ").trim().slice(0,31)||"Programme",candidate=base,n=2;
  while(used.has(candidate.toLowerCase())){const suffix=" ("+n+++ ")";candidate=base.slice(0,31-suffix.length)+suffix}
  used.add(candidate.toLowerCase());return candidate;
 }
