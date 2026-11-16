@@ -54,6 +54,68 @@ async function moveProgramItem(itemId,direction,kind){const source=kind==="wod"?
 function openMovementPicker(pid){const current=movementsByProgram[pid]||[],used=new Set(current.map(m=>m.catalog_movement_id).filter(Boolean));$("#movementpickerform").elements.program_id.value=pid;$("#movementpickerlist").innerHTML=movementCatalog.length?movementCatalog.map(m=>`<label class="movement-check"><input type="checkbox" name="catalog_movement_ids" value="${m.id}" ${used.has(m.id)?"checked":""}><span>${esc(m.name)}</span></label>`).join(""):`<p class="muted">Le catalogue est vide. L’administrateur doit d’abord ajouter des mouvements.</p>`;$("#movementpickererror").textContent="";$("#movementpickerdialog").showModal()}
 $("#closemovementpicker").onclick=()=>$("#movementpickerdialog").close();$("#movementpickerform").onsubmit=async e=>{e.preventDefault();const pid=e.target.elements.program_id.value,selected=[...e.target.querySelectorAll('input[name="catalog_movement_ids"]:checked')].map(x=>x.value),existing=movementsByProgram[pid]||[],wanted=new Set(selected);try{for(const m of existing.filter(x=>x.catalog_movement_id&&!wanted.has(x.catalog_movement_id)))await api("/movements/"+m.id,{method:"DELETE"});for(const id of selected.filter(x=>!existing.some(m=>m.catalog_movement_id===x)))await api("/programs/"+pid+"/movements",{method:"POST",body:JSON.stringify({catalog_movement_id:id})});$("#movementpickerdialog").close();await load();switchView("programs");toast("Mouvements du programme mis à jour.")}catch(x){$("#movementpickererror").textContent=x.message}};
 $("#profileform").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$("#profileerror").textContent="";try{const d=await api("/profile",{method:"PUT",body:JSON.stringify({first_name:f.get("first_name"),last_name:f.get("last_name")})});user=d.user;renderUserbar();toast("Profil mis à jour.")}catch(x){$("#profileerror").textContent=x.message}};
+function isoWeekParts(dateString){
+ const date=new Date(dateString+"T00:00:00Z"),day=date.getUTCDay()||7;
+ date.setUTCDate(date.getUTCDate()+4-day);
+ const year=date.getUTCFullYear(),yearStart=new Date(Date.UTC(year,0,1));
+ return {year,week:Math.ceil((((date-yearStart)/86400000)+1)/7)};
+}
+function loadXlsxLibrary(){
+ if(window.XLSX)return Promise.resolve(window.XLSX);
+ if(window.cfXlsxLoading)return window.cfXlsxLoading;
+ window.cfXlsxLoading=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  script.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error("La bibliothèque Excel n'a pas pu être chargée."));
+  script.onerror=()=>reject(new Error("Impossible de charger le module Excel. Vérifie ta connexion puis réessaie."));
+  document.head.appendChild(script);
+ });
+ return window.cfXlsxLoading;
+}
+async function exportWeeklyExcel(){
+ const button=$("#exportexcel"),status=$("#exportexcelstatus");
+ button.disabled=true;button.textContent="Génération…";status.textContent="";
+ try{
+  const [data,XLSX]=await Promise.all([api("/export-data"),loadXlsxLibrary()]);
+  const movementBySession=new Map();
+  for(const check of data.checks){
+   if(!movementBySession.has(check.session_id))movementBySession.set(check.session_id,new Set());
+   movementBySession.get(check.session_id).add(check.movement_name);
+  }
+  const wodNames=data.wods||[],movementNames=data.movements||[];
+  const grouped=new Map();
+  for(const session of data.sessions||[]){
+   const {year,week}=isoWeekParts(session.session_date),key=year+"-"+week;
+   if(!grouped.has(key))grouped.set(key,{year,week,total:0,wods:new Map(),movements:new Map()});
+   const row=grouped.get(key);row.total++;
+   if(wodNames.includes(session.wod_name))row.wods.set(session.wod_name,(row.wods.get(session.wod_name)||0)+1);
+   for(const name of movementBySession.get(session.id)||[])row.movements.set(name,(row.movements.get(name)||0)+1);
+  }
+  const workbook=XLSX.utils.book_new(),years=[...new Set([...grouped.values()].map(x=>x.year))].sort((a,b)=>a-b);
+  const targetYears=years.length?years:[new Date().getFullYear()];
+  for(const year of targetYears){
+   const rows=[["Semaine","Nb de WODs","WOD réalisés",...Array(Math.max(0,wodNames.length-1)).fill(""),"Mouvements travaillés",...Array(Math.max(0,movementNames.length-1)).fill("")],
+    ["N°","Total",...wodNames,...movementNames]];
+   const weeks=[...grouped.values()].filter(x=>x.year===year).sort((a,b)=>a.week-b.week);
+   for(const week of weeks)rows.push([week.week,week.total,...wodNames.map(name=>week.wods.get(name)||0),...movementNames.map(name=>week.movements.get(name)||0)]);
+   const sheet=XLSX.utils.aoa_to_sheet(rows);
+   const wodStart=2,wodEnd=wodStart+wodNames.length-1,movementStart=wodEnd+1,movementEnd=movementStart+movementNames.length;
+   sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}}];
+   if(wodNames.length)sheet["!merges"].push({s:{r:0,c:wodStart},e:{r:0,c:wodEnd}});
+   if(movementNames.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
+   sheet["!cols"]=[{wch:12},{wch:13},...wodNames.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...movementNames.map(n=>({wch:Math.max(10,Math.min(22,n.length+2))}))];
+   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:movementEnd})}};
+   sheet["!freeze"]={xSplit:2,ySplit:2,topLeftCell:"C3",activePane:"bottomRight",state:"frozen"};
+   XLSX.utils.book_append_sheet(workbook,sheet,String(year));
+  }
+  const stamp=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(workbook,"CFPlanner_bilan_hebdomadaire_"+stamp+".xlsx");
+  status.textContent="Export Excel généré.";
+ }catch(error){status.textContent=error.message||"Erreur lors de la génération de l'export."; }
+ finally{button.disabled=false;button.textContent="Exporter les données";}
+}
+$("#exportexcel").onclick=exportWeeklyExcel;
+
 
 function openProgram(p=null){const f=$("#programform");f.reset();f.elements.program_id.value=p?.id||"";f.elements.name.value=p?.name||"";f.elements.start.value=p?.start_monday||"";f.elements.end.value=p?.end_monday||"";$("#programtitle").textContent=p?"Modifier le programme":"Nouveau programme";$("#programsubmit").textContent=p?"Enregistrer les modifications":"Créer le programme";$("#programerror").textContent="";$("#programdialog").showModal()}
 $("#newprogram").onclick=()=>openProgram();$("#closeprogram").onclick=()=>$("#programdialog").close();
