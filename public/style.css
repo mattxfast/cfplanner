@@ -999,7 +999,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-account>.toolbar{margin:0 0 var(--section-content-gap)!important}
 #view-account #profileform{margin:0!important}
 
-/* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes), historique des séances et listes du paramétrage ont exactement
+/* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes), historique des séances et des PR, en-têtes de programme et listes du paramétrage ont exactement
    la même hauteur, le même texte, les mêmes boutons et le même écart entre boutons. */
 #view-sessions [data-session-fold="movements"] .weekwod,
 #view-programs .program-section .movement-row,
@@ -1010,10 +1010,14 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 #view-sessions [data-session-fold="movements"] .weekwod b{font:inherit!important}
 #view-programs .program-section .entryactions,
+#view-programs .programhead .entryactions,
 #sessionlist .session-history-heading .entryactions,
+#prhistorylist .entryactions,
 #view-admin .admin-row-actions{display:flex!important;align-items:center!important;gap:var(--list-button-gap)!important;flex:0 0 auto!important}
 #view-programs .program-section .entryactions .smallbtn,
+#view-programs .programhead .entryactions .smallbtn,
 #sessionlist .entryactions .smallbtn,
+#prhistorylist .entryactions .smallbtn,
 #view-sessions .weekcount .smallbtn.delete,
 #view-admin .admin-row-actions .smallbtn{
   width:var(--list-button-size)!important;height:var(--list-button-size)!important;min-width:var(--list-button-size)!important;
@@ -1047,11 +1051,11 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* Suppression : style identique dans toutes les rubriques, avec état désactivé visible. */
 button.smallbtn.delete,
 #prhistorylist .entryactions > button.smallbtn.delete{
-  width:28px!important;
-  height:28px!important;
-  min-width:28px!important;
-  min-height:28px!important;
-  flex:0 0 28px!important;
+  width:var(--list-button-size)!important;
+  height:var(--list-button-size)!important;
+  min-width:var(--list-button-size)!important;
+  min-height:var(--list-button-size)!important;
+  flex:0 0 var(--list-button-size)!important;
   padding:0!important;
   display:inline-flex!important;
   align-items:center!important;
@@ -1060,7 +1064,7 @@ button.smallbtn.delete,
   border-radius:8px!important;
   background:#fff0f1!important;
   color:#bd3446!important;
-  font-size:22px!important;
+  font-size:16px!important;
   font-weight:500!important;
   line-height:1!important;
 }
