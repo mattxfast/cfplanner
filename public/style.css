@@ -1012,3 +1012,34 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .checkbox-label{display:flex!important;align-items:center;gap:9px;font-size:13px}.checkbox-label input[type="checkbox"]{width:auto!important;margin:0;flex:0 0 auto}
 
 #programform input:disabled{opacity:.65;background:#eef1f5;cursor:not-allowed}
+
+
+/* Suppression : style identique dans toutes les rubriques, avec état désactivé visible. */
+button.smallbtn.delete,
+#prhistorylist .entryactions > button.smallbtn.delete{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  min-height:28px!important;
+  flex:0 0 28px!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border-radius:8px!important;
+  background:#fff0f1!important;
+  color:#bd3446!important;
+  font-size:22px!important;
+  font-weight:500!important;
+  line-height:1!important;
+}
+button.smallbtn.delete:disabled,
+button.smallbtn.delete.is-disabled{
+  background:#e5e7eb!important;
+  border:1px solid #d1d5db!important;
+  color:#9ca3af!important;
+  opacity:1!important;
+  cursor:not-allowed!important;
+  filter:none!important;
+}
