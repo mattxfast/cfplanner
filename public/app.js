@@ -73,49 +73,65 @@ function loadXlsxLibrary(){
  });
  return window.cfXlsxLoading;
 }
+function excelSheetName(name,used){
+ let base=String(name||"Programme").replace(/[\\/?*[\\]:]/g," ").trim().slice(0,31)||"Programme",candidate=base,n=2;
+ while(used.has(candidate.toLowerCase())){const suffix=" ("+n+++ ")";candidate=base.slice(0,31-suffix.length)+suffix}
+ used.add(candidate.toLowerCase());return candidate;
+}
 async function exportWeeklyExcel(){
  const button=$("#exportexcel"),status=$("#exportexcelstatus");
  button.disabled=true;button.textContent="Génération…";status.textContent="";
  try{
   const [data,XLSX]=await Promise.all([api("/export-data"),loadXlsxLibrary()]);
-  const movementBySession=new Map();
-  for(const check of data.checks){
-   if(!movementBySession.has(check.session_id))movementBySession.set(check.session_id,new Set());
-   movementBySession.get(check.session_id).add(check.movement_name);
+  const programs=data.programs||[],wods=data.wods||[],movements=data.movements||[],sessions=data.sessions||[],checks=data.checks||[];
+  const checksBySession=new Map();
+  for(const check of checks){
+   if(!checksBySession.has(check.session_id))checksBySession.set(check.session_id,new Set());
+   checksBySession.get(check.session_id).add(check.movement_id);
   }
-  const wodNames=data.wods||[],movementNames=data.movements||[];
-  const grouped=new Map();
-  for(const session of data.sessions||[]){
-   const {year,week}=isoWeekParts(session.session_date),key=year+"-"+week;
-   if(!grouped.has(key))grouped.set(key,{year,week,total:0,wods:new Map(),movements:new Map()});
-   const row=grouped.get(key);row.total++;
-   if(wodNames.includes(session.wod_name))row.wods.set(session.wod_name,(row.wods.get(session.wod_name)||0)+1);
-   for(const name of movementBySession.get(session.id)||[])row.movements.set(name,(row.movements.get(name)||0)+1);
-  }
-  const workbook=XLSX.utils.book_new(),years=[...new Set([...grouped.values()].map(x=>x.year))].sort((a,b)=>a-b);
-  const targetYears=years.length?years:[new Date().getFullYear()];
-  for(const year of targetYears){
-   const topRow=["Semaine","Nb de WODs"];
-   if(wodNames.length)topRow.push("WOD réalisés",...Array(wodNames.length-1).fill(""));
-   if(movementNames.length)topRow.push("Mouvements travaillés",...Array(movementNames.length-1).fill(""));
-   const rows=[topRow,["N°","Total",...wodNames,...movementNames]];
-   const weeks=[...grouped.values()].filter(x=>x.year===year).sort((a,b)=>a.week-b.week);
-   for(const week of weeks)rows.push([week.week,week.total,...wodNames.map(name=>week.wods.get(name)||0),...movementNames.map(name=>week.movements.get(name)||0)]);
+  const workbook=XLSX.utils.book_new(),usedSheetNames=new Set();
+  for(const program of programs){
+   const programWods=wods.filter(w=>w.program_id===program.id).slice(0,7);
+   const wodColumns=Array.from({length:7},(_,i)=>programWods[i]?.name||"—");
+   const programMovements=movements.filter(m=>m.program_id===program.id&&sessions.some(s=>s.program_id===program.id&&(checksBySession.get(s.id)?.has(m.id))));
+   const programSessions=sessions.filter(s=>s.program_id===program.id);
+   const grouped=new Map();
+   for(const session of programSessions){
+    const {year,week}=isoWeekParts(session.session_date),key=year+"-"+String(week).padStart(2,"0");
+    if(!grouped.has(key))grouped.set(key,{year,week,total:0,wods:new Map(),movements:new Map()});
+    const row=grouped.get(key);row.total++;
+    const wodIndex=programWods.findIndex(w=>w.id===session.wod_id);
+    if(wodIndex>=0)row.wods.set(wodIndex,(row.wods.get(wodIndex)||0)+1);
+    for(const movement of programMovements){
+     if(checksBySession.get(session.id)?.has(movement.id))row.movements.set(movement.id,(row.movements.get(movement.id)||0)+1);
+    }
+   }
+   const topRow=["Semaine ISO","Nb de séances","WOD réalisés",...Array(6).fill("")];
+   if(programMovements.length)topRow.push("Mouvements travaillés",...Array(programMovements.length-1).fill(""));
+   const rows=[topRow,["Année-Semaine","Total",...wodColumns,...programMovements.map(m=>m.name)]];
+   const weeks=[...grouped.values()].sort((a,b)=>a.year-b.year||a.week-b.week);
+   for(const week of weeks){
+    const weekLabel=week.year+"-S"+String(week.week).padStart(2,"0");
+    rows.push([weekLabel,week.total,...Array.from({length:7},(_,i)=>week.wods.get(i)||0),...programMovements.map(m=>week.movements.get(m.id)||0)]);
+   }
    const sheet=XLSX.utils.aoa_to_sheet(rows);
-   const wodStart=2,wodEnd=wodStart+wodNames.length-1,movementStart=wodEnd+1,movementEnd=movementNames.length?movementStart+movementNames.length-1:wodEnd,lastColumn=1+wodNames.length+movementNames.length;
-   sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}}];
-   if(wodNames.length)sheet["!merges"].push({s:{r:0,c:wodStart},e:{r:0,c:wodEnd}});
-   if(movementNames.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
-   sheet["!cols"]=[{wch:12},{wch:13},...wodNames.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...movementNames.map(n=>({wch:Math.max(10,Math.min(22,n.length+2))}))];
+   const movementStart=9,movementEnd=movementStart+programMovements.length-1,lastColumn=8+programMovements.length;
+   sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},{s:{r:0,c:2},e:{r:0,c:8}}];
+   if(programMovements.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
+   sheet["!cols"]=[{wch:15},{wch:14},...wodColumns.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...programMovements.map(m=>({wch:Math.max(10,Math.min(22,m.name.length+2))}))];
    sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn}})};
    sheet["!freeze"]={xSplit:2,ySplit:2,topLeftCell:"C3",activePane:"bottomRight",state:"frozen"};
-   XLSX.utils.book_append_sheet(workbook,sheet,String(year));
+   XLSX.utils.book_append_sheet(workbook,sheet,excelSheetName(program.name,usedSheetNames));
+  }
+  if(!programs.length){
+   const sheet=XLSX.utils.aoa_to_sheet([["Aucun programme enregistré"]]);
+   XLSX.utils.book_append_sheet(workbook,sheet,"Programmes");
   }
   const stamp=new Date().toISOString().slice(0,10);
-  XLSX.writeFile(workbook,"CFPlanner_bilan_hebdomadaire_"+stamp+".xlsx");
-  status.textContent="Export Excel généré.";
- }catch(error){status.textContent=error.message||"Erreur lors de la génération de l'export."; }
- finally{button.disabled=false;button.textContent="Exporter les données";}
+  XLSX.writeFile(workbook,"CFPlanner_bilan_programmes_"+stamp+".xlsx");
+  status.textContent="Export Excel généré : "+programs.length+" programme(s).";
+ }catch(error){status.textContent=error.message||"Erreur lors de la génération de l'export."}
+ finally{button.disabled=false;button.textContent="Exporter les données"}
 }
 $("#exportexcel").onclick=exportWeeklyExcel;
 
