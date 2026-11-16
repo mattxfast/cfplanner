@@ -4,6 +4,10 @@ CFPlanner est une application web responsive de planification et de suivi de l'e
 
 ## Fonctionnalités
 
+### Navigation
+- En-tête compact (logo, nom de l'utilisateur, accès au compte et déconnexion).
+- Barre d'onglets Séances / Programmes & WOD / PR fixée en bas de l'écran, toujours visible pendant le défilement.
+
 ### Séances
 - Vue hebdomadaire avec navigation entre les semaines.
 - Suivi du nombre de séances réalisées et de l'avancement des WOD de la programmation.
