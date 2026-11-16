@@ -184,7 +184,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-programs .program-section-toolbar .addwod{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 #view-programs .program-actions{display:none!important}
-#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:var(--content-item-gap)!important;min-height:46px}
+#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:var(--content-item-gap)!important;min-height:34px}
 #view-programs .program-section .wodrow{justify-content:flex-start!important;text-align:left!important}
 #view-programs .program-section .wodrow>div:first-child{text-align:left!important;flex:1;min-width:0}
 #view-programs .program-section .wodrow .entryactions{margin-left:auto;flex:0 0 auto}
@@ -959,6 +959,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
   --page-content-gap:18px;
   --section-content-gap:10px;
   --content-item-gap:10px;
+  --list-row-height:44px;
+  --list-button-size:30px;
+  --list-button-gap:6px;
 }
 #dashboard>.navtabs{margin:0!important}
 
@@ -995,6 +998,26 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-admin .admin-add-form{margin:0 0 var(--content-item-gap)!important}
 #view-account>.toolbar{margin:0 0 var(--section-content-gap)!important}
 #view-account #profileform{margin:0!important}
+
+/* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes) et listes du paramétrage ont exactement
+   la même hauteur, le même texte, les mêmes boutons et le même écart entre boutons. */
+#view-sessions [data-session-fold="movements"] .weekwod,
+#view-programs .program-section .movement-row,
+#view-admin .admin-row{
+  box-sizing:border-box!important;min-height:var(--list-row-height)!important;padding:6px 10px!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;
+  border-radius:11px!important;font-family:inherit!important;font-size:14px!important;font-weight:500!important;color:var(--ink)!important;
+}
+#view-sessions [data-session-fold="movements"] .weekwod b{font:inherit!important}
+#view-programs .program-section .entryactions,
+#view-admin .admin-row-actions{display:flex!important;align-items:center!important;gap:var(--list-button-gap)!important;flex:0 0 auto!important}
+#view-programs .program-section .entryactions .smallbtn,
+#view-admin .admin-row-actions .smallbtn{
+  width:var(--list-button-size)!important;height:var(--list-button-size)!important;min-width:var(--list-button-size)!important;
+  min-height:var(--list-button-size)!important;flex:0 0 var(--list-button-size)!important;padding:0!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  border-radius:8px!important;font-size:16px!important;line-height:1!important;
+}
 
 /* Même rythme sur petit écran : seuls les espacements internes sont légèrement réduits. */
 @media(max-width:650px){
