@@ -203,9 +203,10 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section .wodrow{
   display:flex!important;
   flex-direction:row!important;
+  flex-wrap:wrap!important;
   align-items:center!important;
   justify-content:space-between!important;
-  gap:12px!important;
+  gap:8px 12px!important;
   min-height:0!important;
   margin:0!important;
   padding:9px 12px!important;
@@ -216,9 +217,13 @@ button:disabled{opacity:.35;cursor:not-allowed}
   text-align:left!important;
 }
 #view-programs .program-section .wodrow>div:first-child{
-  flex:1 1 auto!important;
+  flex:1 1 0!important;
   min-width:0!important;
   text-align:left!important;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px 7px;
 }
 #view-programs .program-section .wodrow b{
   display:block!important;
@@ -226,7 +231,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
   text-align:left!important;
 }
 #view-programs .program-section .wodrow p{
-  margin:5px 0 0!important;
+  flex:1 0 100%;
+  margin:0!important;
   font-size:12px!important;
   color:var(--muted)!important;
   text-align:left!important;
@@ -1002,7 +1008,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){.weekly-program-row{grid-template-columns:1fr auto}.weekly-program-week{grid-column:1/-1;padding:0}.weekly-program-week small{display:inline;margin-left:6px}.weekly-program-fields{grid-column:1/-1;grid-template-columns:1fr}.weekly-program-row>.smallbtn{grid-column:1/-1;margin:0;justify-self:end}}
 
 /* Programmation hebdomadaire par WOD suivi */
-.wod-entry{display:grid;gap:var(--content-item-gap)}.tracked-tag{display:inline-block;margin-left:7px;padding:2px 7px;border-radius:10px;background:#e8eef8;color:#425675;font-size:10px;font-weight:700;vertical-align:middle}.wod-weekly-program{border:1px solid #e1e5ec;border-radius:10px;background:#f7f8fa;overflow:hidden}.wod-weekly-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:8px 11px;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:600;cursor:pointer}.wod-weekly-toggle small{margin-left:auto;color:var(--muted);font-weight:400}.wod-weekly-toggle b{font-size:15px}.wod-weekly-body{display:grid;gap:7px;padding:0 9px 9px}.wod-weekly-program.collapsed .wod-weekly-body{display:none}.wod-week-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:8px;background:#fff;border:1px solid #e6e9ef;border-radius:8px}.wod-week-row label{margin:0;font-size:12px}.wod-week-row label small{margin-left:8px;color:var(--muted);font-weight:400}.wod-week-row textarea{display:block;width:100%;margin-top:5px;min-height:48px;resize:vertical;font-size:12px}.wod-week-row .smallbtn{white-space:nowrap}
+.wod-entry{display:grid;gap:var(--content-item-gap)}.tracked-tag{display:inline-block;margin-left:0;padding:2px 7px;border-radius:10px;background:#e8eef8;color:#425675;font-size:10px;font-weight:700;vertical-align:middle}.wod-weekly-program{flex:1 0 100%;border:0;border-top:1px solid #e1e5ec;border-radius:0;background:transparent;overflow:hidden}.wod-weekly-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:8px 0 0;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:600;cursor:pointer}.wod-weekly-toggle small{margin-left:auto;color:var(--muted);font-weight:400}.wod-weekly-toggle b{font-size:15px}.wod-weekly-body{display:grid;gap:7px;padding:8px 0 0}.wod-weekly-program.collapsed .wod-weekly-body{display:none}.wod-week-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:8px;background:#fff;border:1px solid #e6e9ef;border-radius:8px}.wod-week-row label{margin:0;font-size:12px}.wod-week-row label small{margin-left:8px;color:var(--muted);font-weight:400}.wod-week-row textarea{display:block;width:100%;margin-top:5px;min-height:48px;resize:vertical;font-size:12px}.wod-week-row .smallbtn{white-space:nowrap}
 
 .checkbox-label{display:flex!important;align-items:center;gap:9px;font-size:13px}.checkbox-label input[type="checkbox"]{width:auto!important;margin:0;flex:0 0 auto}
 
