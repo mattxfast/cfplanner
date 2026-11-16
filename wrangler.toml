@@ -12,3 +12,6 @@ binding = "DB"
 database_name = "cfplanner"
 database_id = "d91dd250-7ef6-4242-9b5f-b7ba313be883"
 migrations_dir = "migrations"
+
+[vars]
+ADMIN_EMAIL = "mattxfast@gmail.com"
