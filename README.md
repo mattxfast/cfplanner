@@ -15,6 +15,7 @@ CFPlanner est une application web responsive de planification et de suivi de l'e
 - Indicateur de semaine de compétition.
 - Historique des séances avec modification et suppression.
 - Enregistrement de la date, de l'heure de départ, de la durée, de l'activité, des notes et des mouvements travaillés.
+- Si le programme n'a aucun mouvement à travailler, la séance permet de cocher n'importe quel mouvement du catalogue ; ces mouvements apparaissent dans le récapitulatif de la semaine et dans l'export Excel.
 
 Une planification n'est pas une séance réalisée : elle sert de repère dans la semaine. La séance n'est comptabilisée qu'après son enregistrement.
 
@@ -77,6 +78,7 @@ La migration Wrangler `0001_init.sql` installe le socle initial (utilisateurs, s
 Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V2 crée les tables et colonnes nécessaires à l'application actuelle.
 - V3 ajoute l'index sur les mouvements cochés dans les séances.
+- V7 ajoute la table `session_catalog_movement_checks` (mouvements du catalogue cochés dans une séance d'un programme sans mouvement à travailler).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
