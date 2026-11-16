@@ -1,0 +1,60 @@
+# AGENTS.md — CFPlanner
+
+Instructions communes à tous les agents IA qui travaillent sur ce dépôt (Claude Code, Codex ou autre).
+Plusieurs agents interviennent **à tour de rôle** : ce fichier est la référence partagée. Lis-le en entier avant toute modification.
+
+## Le projet
+
+CFPlanner est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
+
+## Architecture
+
+- `src/worker.js` : backend Cloudflare Worker (toutes les routes `/api/*`, authentification, migrations applicatives, tâche cron).
+- `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `app.js`, `style.css`, `manifest.webmanifest`). Pas de framework, pas d'étape de build.
+- Base de données : Cloudflare D1, binding `DB`.
+- `wrangler.toml` : bindings, variable `ADMIN_EMAIL` (compte administrateur), cron quotidien de purge des sessions expirées.
+- `migrations/0001_init.sql` : socle initial appliqué par Wrangler.
+
+## Méthode de travail (obligatoire)
+
+Les agents poussent **directement sur `main`**. Il n'y a pas de relecture de pull request : ces règles sont la seule protection.
+
+1. **Toujours partir de la dernière version** : `git pull --rebase origin main` avant toute modification. Un autre agent a pu pousser depuis ta dernière intervention.
+2. **Ne jamais forcer un push** (`git push --force` et `--force-with-lease` interdits). En cas de conflit, récupère, fusionne proprement, puis pousse.
+3. **Ne pas reformater les fichiers existants.** Respecte le style compact actuel et ne modifie que les lignes nécessaires : un reformatage global rend l'historique illisible et provoque des conflits entre agents.
+4. **Vérifier avant de pousser** :
+   - `node --check public/app.js`
+   - `cp src/worker.js /tmp/worker.mjs && node --check /tmp/worker.mjs`
+   - relire le diff complet (`git diff`) avant de committer.
+5. **Un commit par fonctionnalité ou correctif**, avec un message clair en français décrivant le changement. Un retour arrière doit pouvoir se faire par un simple `git revert`.
+6. **Mettre à jour le `README.md`** dès qu'une fonctionnalité, une route ou une migration change.
+7. Un push sur `main` peut partir en production : ne pousse que du code vérifié et complet.
+
+## Base de données et migrations
+
+- Les évolutions de schéma passent par `runMigration("vN-description", ...)` dans `ensureV2Schema` (`src/worker.js`).
+- **Toute nouvelle évolution reçoit une nouvelle version** à la suite des existantes. Ne jamais modifier une migration déjà publiée.
+- Les migrations sont **additives et idempotentes** (`CREATE ... IF NOT EXISTS`, ajout de colonne seulement si elle manque). Jamais de suppression ni de réinitialisation de données.
+- Ajouter les index nécessaires aux nouvelles requêtes.
+
+## Règles de sécurité
+
+- **Requêtes SQL toujours paramétrées** (`?` + `.bind()`). Ne jamais concaténer une valeur venant de la requête.
+- **Toute lecture ou écriture est filtrée par `user_id`.** Avant d'écrire dans une table liée (mouvements cochés, plans, thèmes…), vérifier que l'élément parent appartient à l'utilisateur, et renvoyer 404 sinon.
+- **Valider côté serveur** toutes les entrées (dates, durées, identifiants, longueurs), même si le front les contrôle déjà.
+- Les écritures multiples qui doivent réussir ensemble passent par `env.DB.batch()`.
+- **Côté front, tout texte injecté dans du HTML passe par `esc()`.**
+- Les routes `/api/admin/*` restent réservées au compte défini par `ADMIN_EMAIL`.
+- Aucun secret (mot de passe, jeton, clé) dans le dépôt.
+- Ne pas ajouter de script ou de ressource externe sans nécessité ; préférer l'hébergement dans `public/`.
+
+## Frontend et CSS
+
+- Réutiliser les composants et classes existants avant d'en créer de nouveaux.
+- Ne pas empiler de nouvelles surcharges CSS : modifier la règle existante plutôt que d'en ajouter une plus spécifique, et éviter `!important`.
+- Utiliser les variables CSS de `:root` pour les couleurs et les espacements.
+- Interface responsive : vérifier le rendu mobile.
+
+## En fin d'intervention
+
+Résume en quelques lignes ce qui a été modifié, les migrations ajoutées éventuelles, et les points à vérifier par l'utilisateur.
