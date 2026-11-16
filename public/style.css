@@ -47,7 +47,7 @@ header{height:50px;margin-bottom:16px}
 @media(max-width:650px){.weekstats{padding:8px 6px}.weekstat{padding:2px 8px}.weekstat strong{font-size:18px}.weekstat span{font-size:10px}}
 
 /* Programme movements and per-session checks */
-.movement-editor{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.movement-editor h3,.movement-editor h4{font:700 14px Manrope;margin:0 0 6px}.movement-editor .muted,.wodlist>.muted{font-size:12px;margin:0 0 10px}.inline-add{display:flex;gap:8px;align-items:center;margin-top:10px}.inline-add input{margin:0;flex:1;min-width:0}.movement-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.movement-editor.compact{margin-top:16px;padding-top:12px}.movement-check{display:flex;align-items:center;gap:10px;padding:7px 0;margin:0;border-bottom:1px solid var(--line);font-weight:500}.movement-check input{width:18px;height:18px;margin:0;accent-color:var(--green)}.movement-check span{font-size:13px}
+.movement-editor{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.movement-editor h3,.movement-editor h4{font:700 14px Manrope;margin:0 0 6px}.movement-editor .muted,.wodlist>.muted,.weekwodlist>.muted{font-size:12px;margin:0}.inline-add{display:flex;gap:8px;align-items:center;margin-top:10px}.inline-add input{margin:0;flex:1;min-width:0}.movement-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.movement-editor.compact{margin-top:16px;padding-top:12px}.movement-check{display:flex;align-items:center;gap:10px;padding:7px 0;margin:0;border-bottom:1px solid var(--line);font-weight:500}.movement-check input{width:18px;height:18px;margin:0;accent-color:var(--green)}.movement-check span{font-size:13px}
 @media(max-width:500px){.inline-add{align-items:stretch}.inline-add .smallbtn{white-space:nowrap}}
 
 /* Dashboard visual hierarchy */
@@ -147,7 +147,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section-heading{background:#d5dce8!important;color:#26344d!important;border:1px solid #c3ccda!important;border-radius:11px!important;padding:10px 13px!important;margin:0 0 9px!important}
 #view-programs .program-section .wodlist,
 #view-programs .program-section .program-movement-list{background:transparent!important;border:0!important;padding:0!important;margin:0!important}
-#view-programs .program-section .wodrow{background:#f0f2f6!important;border:1px solid #e1e5ec!important;border-radius:11px!important;padding:10px 12px!important;margin:0 0 7px!important}
+#view-programs .program-section .wodrow{background:#f0f2f6!important;border:1px solid #e1e5ec!important;border-radius:11px!important;padding:10px 12px!important;margin:0!important}
 #view-programs .program-section .movement-row{background:#f0f2f6!important;border:0!important;border-bottom:1px solid #e1e5ec!important;border-radius:0!important;padding:9px 4px!important}
 #view-programs .program-section .inline-add{margin-top:9px}
 
@@ -184,7 +184,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-programs .program-section-toolbar .addwod{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 #view-programs .program-actions{display:none!important}
-#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:5px!important;min-height:34px}
+#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:var(--content-item-gap)!important;min-height:34px}
 #view-programs .program-section .wodrow{justify-content:flex-start!important;text-align:left!important}
 #view-programs .program-section .wodrow>div:first-child{text-align:left!important;flex:1;min-width:0}
 #view-programs .program-section .wodrow .entryactions{margin-left:auto;flex:0 0 auto}
@@ -198,7 +198,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* WOD de l’onglet Programmes : reprendre exactement la carte WOD de l’onglet Séances. */
 #view-programs .program-section .wodlist{
   display:grid!important;
-  gap:6px!important;
+  gap:var(--content-item-gap)!important;
 }
 #view-programs .program-section .wodrow{
   display:flex!important;
@@ -652,7 +652,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-prs #prcards .pr-category-body{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:7px;
+  gap:var(--content-item-gap);
 }
 #view-prs #prevolution .pr-category-body{
   display:grid;
@@ -945,21 +945,21 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 
 
-/* CFPlanner — rythme vertical commun entre les pages, rubriques et contenus. */
+/* CFPlanner — rythme vertical commun : un bloc (bandeau orange + titres de rubrique + contenus) garde le même écart entre toutes ses bulles ; seul l’écart entre deux blocs est plus grand (--page-content-gap). */
 :root{
   --page-content-gap:18px;
   --section-content-gap:10px;
-  --content-item-gap:8px;
+  --content-item-gap:10px;
 }
 #dashboard>.navtabs{margin:0!important}
 
 /* Séances */
 #view-sessions #weekboard .weekbar{margin:0 0 var(--section-content-gap)!important}
-#view-sessions #weekboard .weekstats{margin:0 0 var(--page-content-gap)!important}
-#view-sessions .session-fold{margin:0 0 var(--page-content-gap)!important}
+#view-sessions #weekboard .weekstats{margin:0 0 var(--section-content-gap)!important}
+#view-sessions .session-fold{margin:0 0 var(--section-content-gap)!important}
 #view-sessions .weekheading{margin:0 0 var(--section-content-gap)!important}
 #view-sessions .weekwodlist{gap:var(--content-item-gap)!important}
-#view-sessions #sessiontoolbar{margin:var(--page-content-gap) 0 var(--section-content-gap)!important}
+#view-sessions #sessiontoolbar{margin:var(--section-content-gap) 0!important}
 #view-sessions #sessionlist{margin:0!important}
 
 /* Programmes & WOD */
@@ -967,7 +967,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs #programlist>.program{margin:0!important}
 #view-programs .programbody{padding:var(--section-content-gap) 0 0!important}
 #view-programs .program-section,
-#view-programs .program-section.movement-editor{margin:0 0 var(--page-content-gap)!important}
+#view-programs .program-section.movement-editor{margin:0 0 var(--section-content-gap)!important}
 #view-programs .program-section-heading{margin:0 0 var(--section-content-gap)!important}
 #view-programs .program-section .wodlist,
 #view-programs .program-section .program-movement-list{margin:0!important}
@@ -976,7 +976,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* PR */
 #view-prs>.pr-section-title{margin:0 0 var(--section-content-gap)!important}
 #view-prs #prcards{margin:0!important}
-#view-prs .pr-category-group{margin:0 0 var(--page-content-gap)!important}
+#view-prs .pr-category-group{margin:0 0 var(--section-content-gap)!important}
 #view-prs .pr-category-body{margin:var(--section-content-gap) 0 0!important}
 
 /* Paramétrage et compte */
@@ -989,7 +989,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 
 /* Même rythme sur petit écran : seuls les espacements internes sont légèrement réduits. */
 @media(max-width:650px){
-  :root{--page-content-gap:16px;--section-content-gap:9px;--content-item-gap:7px}
+  :root{--page-content-gap:16px;--section-content-gap:9px;--content-item-gap:9px}
 }
 
 
@@ -1002,7 +1002,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:650px){.weekly-program-row{grid-template-columns:1fr auto}.weekly-program-week{grid-column:1/-1;padding:0}.weekly-program-week small{display:inline;margin-left:6px}.weekly-program-fields{grid-column:1/-1;grid-template-columns:1fr}.weekly-program-row>.smallbtn{grid-column:1/-1;margin:0;justify-self:end}}
 
 /* Programmation hebdomadaire par WOD suivi */
-.wod-entry{display:grid;gap:6px}.tracked-tag{display:inline-block;margin-left:7px;padding:2px 7px;border-radius:10px;background:#e8eef8;color:#425675;font-size:10px;font-weight:700;vertical-align:middle}.wod-weekly-program{border:1px solid #e1e5ec;border-radius:10px;background:#f7f8fa;overflow:hidden}.wod-weekly-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:8px 11px;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:600;cursor:pointer}.wod-weekly-toggle small{margin-left:auto;color:var(--muted);font-weight:400}.wod-weekly-toggle b{font-size:15px}.wod-weekly-body{display:grid;gap:7px;padding:0 9px 9px}.wod-weekly-program.collapsed .wod-weekly-body{display:none}.wod-week-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:8px;background:#fff;border:1px solid #e6e9ef;border-radius:8px}.wod-week-row label{margin:0;font-size:12px}.wod-week-row label small{margin-left:8px;color:var(--muted);font-weight:400}.wod-week-row textarea{display:block;width:100%;margin-top:5px;min-height:48px;resize:vertical;font-size:12px}.wod-week-row .smallbtn{white-space:nowrap}
+.wod-entry{display:grid;gap:var(--content-item-gap)}.tracked-tag{display:inline-block;margin-left:7px;padding:2px 7px;border-radius:10px;background:#e8eef8;color:#425675;font-size:10px;font-weight:700;vertical-align:middle}.wod-weekly-program{border:1px solid #e1e5ec;border-radius:10px;background:#f7f8fa;overflow:hidden}.wod-weekly-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:8px 11px;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:600;cursor:pointer}.wod-weekly-toggle small{margin-left:auto;color:var(--muted);font-weight:400}.wod-weekly-toggle b{font-size:15px}.wod-weekly-body{display:grid;gap:7px;padding:0 9px 9px}.wod-weekly-program.collapsed .wod-weekly-body{display:none}.wod-week-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:8px;background:#fff;border:1px solid #e6e9ef;border-radius:8px}.wod-week-row label{margin:0;font-size:12px}.wod-week-row label small{margin-left:8px;color:var(--muted);font-weight:400}.wod-week-row textarea{display:block;width:100%;margin-top:5px;min-height:48px;resize:vertical;font-size:12px}.wod-week-row .smallbtn{white-space:nowrap}
 
 .checkbox-label{display:flex!important;align-items:center;gap:9px;font-size:13px}.checkbox-label input[type="checkbox"]{width:auto!important;margin:0;flex:0 0 auto}
 
