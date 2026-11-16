@@ -94,8 +94,10 @@ async function exportWeeklyExcel(){
   const workbook=XLSX.utils.book_new(),years=[...new Set([...grouped.values()].map(x=>x.year))].sort((a,b)=>a-b);
   const targetYears=years.length?years:[new Date().getFullYear()];
   for(const year of targetYears){
-   const rows=[["Semaine","Nb de WODs","WOD réalisés",...Array(Math.max(0,wodNames.length-1)).fill(""),"Mouvements travaillés",...Array(Math.max(0,movementNames.length-1)).fill("")],
-    ["N°","Total",...wodNames,...movementNames]];
+   const topRow=["Semaine","Nb de WODs"];
+   if(wodNames.length)topRow.push("WOD réalisés",...Array(wodNames.length-1).fill(""));
+   if(movementNames.length)topRow.push("Mouvements travaillés",...Array(movementNames.length-1).fill(""));
+   const rows=[topRow,["N°","Total",...wodNames,...movementNames]];
    const weeks=[...grouped.values()].filter(x=>x.year===year).sort((a,b)=>a.week-b.week);
    for(const week of weeks)rows.push([week.week,week.total,...wodNames.map(name=>week.wods.get(name)||0),...movementNames.map(name=>week.movements.get(name)||0)]);
    const sheet=XLSX.utils.aoa_to_sheet(rows);
