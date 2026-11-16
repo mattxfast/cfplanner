@@ -99,12 +99,12 @@ async function exportWeeklyExcel(){
    const weeks=[...grouped.values()].filter(x=>x.year===year).sort((a,b)=>a.week-b.week);
    for(const week of weeks)rows.push([week.week,week.total,...wodNames.map(name=>week.wods.get(name)||0),...movementNames.map(name=>week.movements.get(name)||0)]);
    const sheet=XLSX.utils.aoa_to_sheet(rows);
-   const wodStart=2,wodEnd=wodStart+wodNames.length-1,movementStart=wodEnd+1,movementEnd=movementStart+movementNames.length;
+   const wodStart=2,wodEnd=wodStart+wodNames.length-1,movementStart=wodEnd+1,movementEnd=movementNames.length?movementStart+movementNames.length-1:wodEnd,lastColumn=1+wodNames.length+movementNames.length;
    sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}}];
    if(wodNames.length)sheet["!merges"].push({s:{r:0,c:wodStart},e:{r:0,c:wodEnd}});
    if(movementNames.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
    sheet["!cols"]=[{wch:12},{wch:13},...wodNames.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...movementNames.map(n=>({wch:Math.max(10,Math.min(22,n.length+2))}))];
-   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:movementEnd})}};
+   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn})}};
    sheet["!freeze"]={xSplit:2,ySplit:2,topLeftCell:"C3",activePane:"bottomRight",state:"frozen"};
    XLSX.utils.book_append_sheet(workbook,sheet,String(year));
   }
