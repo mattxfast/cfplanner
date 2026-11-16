@@ -999,7 +999,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-account>.toolbar{margin:0 0 var(--section-content-gap)!important}
 #view-account #profileform{margin:0!important}
 
-/* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes) et listes du paramétrage ont exactement
+/* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes), historique des séances et listes du paramétrage ont exactement
    la même hauteur, le même texte, les mêmes boutons et le même écart entre boutons. */
 #view-sessions [data-session-fold="movements"] .weekwod,
 #view-programs .program-section .movement-row,
@@ -1010,8 +1010,11 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 #view-sessions [data-session-fold="movements"] .weekwod b{font:inherit!important}
 #view-programs .program-section .entryactions,
+#sessionlist .session-history-heading .entryactions,
 #view-admin .admin-row-actions{display:flex!important;align-items:center!important;gap:var(--list-button-gap)!important;flex:0 0 auto!important}
 #view-programs .program-section .entryactions .smallbtn,
+#sessionlist .entryactions .smallbtn,
+#view-sessions .weekcount .smallbtn.delete,
 #view-admin .admin-row-actions .smallbtn{
   width:var(--list-button-size)!important;height:var(--list-button-size)!important;min-width:var(--list-button-size)!important;
   min-height:var(--list-button-size)!important;flex:0 0 var(--list-button-size)!important;padding:0!important;
