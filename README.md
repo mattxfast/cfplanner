@@ -33,7 +33,7 @@ Les mouvements du catalogue sont répartis en quatre familles :
 | Gym | Nombre de répétitions | 25 répétitions |
 | Engine | Distance en mètres | 2 000 m |
 
-Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les PR peuvent être modifiés ou supprimés depuis leur historique.
+Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les enregistrements peuvent être supprimés depuis leur historique.
 
 ### Compte et administration
 - Création de compte et connexion par e-mail et mot de passe.
