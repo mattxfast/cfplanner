@@ -1,3 +1,4 @@
+(()=>{const u=new URL(location.href);if(u.searchParams.has("password")){u.searchParams.delete("password");u.searchParams.delete("email");history.replaceState(null,"",u.pathname+u.search+u.hash)}})();
 const $=s=>document.querySelector(s);let tab="login",user=null,selectedWeekStart=null,programs=[],wodsByProgram={},movementsByProgram={},movementChecks=[],sessions=[],prRecords=[],activities=[],movementCatalog=[],isAdmin=false,weekCompetition=false,weeklyPlans=[];
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 const fmt=s=>new Intl.DateTimeFormat("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(s+"T12:00:00"));
@@ -106,7 +107,7 @@ async function exportWeeklyExcel(){
    if(wodNames.length)sheet["!merges"].push({s:{r:0,c:wodStart},e:{r:0,c:wodEnd}});
    if(movementNames.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
    sheet["!cols"]=[{wch:12},{wch:13},...wodNames.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...movementNames.map(n=>({wch:Math.max(10,Math.min(22,n.length+2))}))];
-   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn})}};
+   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn}})};
    sheet["!freeze"]={xSplit:2,ySplit:2,topLeftCell:"C3",activePane:"bottomRight",state:"frozen"};
    XLSX.utils.book_append_sheet(workbook,sheet,String(year));
   }
