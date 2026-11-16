@@ -184,7 +184,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .program-section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-programs .program-section-toolbar .addwod{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 #view-programs .program-actions{display:none!important}
-#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:var(--content-item-gap)!important;min-height:34px}
+#view-programs .program-section .movement-row{font-size:13px!important;padding:6px 10px!important;margin-bottom:var(--content-item-gap)!important;min-height:46px}
 #view-programs .program-section .wodrow{justify-content:flex-start!important;text-align:left!important}
 #view-programs .program-section .wodrow>div:first-child{text-align:left!important;flex:1;min-width:0}
 #view-programs .program-section .wodrow .entryactions{margin-left:auto;flex:0 0 auto}
