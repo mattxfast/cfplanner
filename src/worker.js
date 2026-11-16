@@ -11,6 +11,7 @@ const setCookie=(v,age)=>`cfplanner_session=${encodeURIComponent(v)}; Path=/; Ht
 async function me(r,e){const t=cookie(r,"cfplanner_session");if(!t)return null;return await e.DB.prepare("SELECT u.id,u.email,u.first_name,u.last_name FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>? AND u.is_active=1").bind(await sha(t),Math.floor(Date.now()/1000)).first()}
 async function session(id,email,e){const t=b64(crypto.getRandomValues(new Uint8Array(32))),exp=Math.floor(Date.now()/1000)+SESSION_DAYS*86400;await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)").bind(await sha(t),id,exp).run();const profile=await e.DB.prepare("SELECT first_name,last_name FROM users WHERE id=?").bind(id).first();return json({ok:true,user:{id,email,first_name:profile?.first_name||"",last_name:profile?.last_name||""},is_admin:String(e.ADMIN_EMAIL||"").trim().toLowerCase()===email},200,{"set-cookie":setCookie(t,SESSION_DAYS*86400)})}
 const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s));
+const addDays=(s,n)=>{const d=new Date(s+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 function validatePr(movement,value,repCountInput){
  if(!Number.isFinite(value)||value<=0)return {error:"Valeur de record invalide."};
  if(movement.measurement_method==="load"||movement.measurement_method==="force"){
