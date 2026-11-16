@@ -947,3 +947,52 @@ button:disabled{opacity:.35;cursor:not-allowed}
   border:1px solid #e1e5ec!important;
   border-radius:11px!important;
 }
+
+
+/* CFPlanner — rythme vertical commun entre les pages, rubriques et contenus. */
+:root{
+  --page-content-gap:18px;
+  --section-content-gap:10px;
+  --content-item-gap:8px;
+}
+#dashboard>.navtabs{margin:22px 0 var(--page-content-gap)!important}
+
+/* Séances */
+#view-sessions #weekboard .weekbar{margin:0 0 var(--section-content-gap)!important}
+#view-sessions #weekboard .weekstats{margin:0 0 var(--page-content-gap)!important}
+#view-sessions .session-fold{margin:0 0 var(--page-content-gap)!important}
+#view-sessions .weekheading{margin:0 0 var(--section-content-gap)!important}
+#view-sessions .weekwodlist{gap:var(--content-item-gap)!important}
+#view-sessions #sessiontoolbar{margin:var(--page-content-gap) 0 var(--section-content-gap)!important}
+#view-sessions #sessionlist{margin:0!important}
+
+/* Programmes & WOD */
+#view-programs #programlist{display:grid;gap:var(--page-content-gap)}
+#view-programs #programlist>.program{margin:0!important}
+#view-programs .programbody{padding:var(--section-content-gap) 0 0!important}
+#view-programs .program-section,
+#view-programs .program-section.movement-editor{margin:0 0 var(--page-content-gap)!important}
+#view-programs .program-section-heading{margin:0 0 var(--section-content-gap)!important}
+#view-programs .program-section .wodlist,
+#view-programs .program-section .program-movement-list{margin:0!important}
+#view-programs .bottom-action{margin:var(--page-content-gap) 0 0!important}
+
+/* PR */
+#view-prs>.pr-section-title{margin:0 0 var(--section-content-gap)!important}
+#view-prs #prcards{margin:0!important}
+#view-prs .pr-category-group{margin:0 0 var(--page-content-gap)!important}
+#view-prs .pr-category-body{margin:var(--section-content-gap) 0 0!important}
+
+/* Paramétrage et compte */
+#view-admin .admin-group{margin:0 0 var(--page-content-gap)!important}
+#view-admin .admin-group-body{padding:var(--section-content-gap) 0 0!important}
+#view-admin .admin-data-list{gap:var(--content-item-gap)!important}
+#view-admin .admin-add-form{margin:0 0 var(--content-item-gap)!important}
+#view-account>.toolbar{margin:0 0 var(--section-content-gap)!important}
+#view-account #profileform{margin:0!important}
+
+/* Même rythme sur petit écran : seuls les espacements internes sont légèrement réduits. */
+@media(max-width:650px){
+  :root{--page-content-gap:16px;--section-content-gap:9px;--content-item-gap:7px}
+  #dashboard>.navtabs{margin-bottom:var(--page-content-gap)!important}
+}
