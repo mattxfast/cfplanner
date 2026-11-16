@@ -67,7 +67,7 @@ function loadXlsxLibrary(){
   const script=document.createElement("script");
   script.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   script.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error("La bibliothèque Excel n'a pas pu être chargée."));
-  script.onerror=()=>reject(new Error("Impossible de charger le module Excel. Vérifie ta connexion puis réessaie."));
+  script.onerror=()=>{window.cfXlsxLoading=null;reject(new Error("Impossible de charger le module Excel. Vérifie ta connexion puis réessaie."))};
   document.head.appendChild(script);
  });
  return window.cfXlsxLoading;
