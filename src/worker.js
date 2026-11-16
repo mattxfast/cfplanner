@@ -52,7 +52,8 @@ async function ensureV2Schema(env) {
     "CREATE INDEX IF NOT EXISTS personal_records_user_movement_date ON personal_records(user_id,movement_id,rep_count,record_date)",
     "CREATE TABLE IF NOT EXISTS program_movements (id TEXT PRIMARY KEY, program_id TEXT NOT NULL REFERENCES programs(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(program_id,name))",
     "CREATE INDEX IF NOT EXISTS program_movements_program ON program_movements(program_id,sort_order)",
-    "CREATE TABLE IF NOT EXISTS session_movement_checks (session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE, movement_id TEXT NOT NULL REFERENCES program_movements(id) ON DELETE CASCADE, PRIMARY KEY(session_id,movement_id))"
+    "CREATE TABLE IF NOT EXISTS session_movement_checks (session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE, movement_id TEXT NOT NULL REFERENCES program_movements(id) ON DELETE CASCADE, PRIMARY KEY(session_id,movement_id))",
+    "CREATE INDEX IF NOT EXISTS session_movement_checks_movement ON session_movement_checks(movement_id)"
   ];
   for (const statement of schemaStatements) {
     await env.DB.prepare(statement).run();
@@ -86,11 +87,19 @@ async function ensureV2Schema(env) {
   return schemaReady;
 }
 async function saveMovementChecks(env,userId,sessionId,programId,ids=[]){
- await env.DB.prepare("DELETE FROM session_movement_checks WHERE session_id=?").bind(sessionId).run();
- for(const movementId of [...new Set(ids.map(String))]){
-  const movement=await env.DB.prepare("SELECT id FROM program_movements WHERE id=? AND program_id=? AND user_id=?").bind(movementId,programId,userId).first();
-  if(movement) await env.DB.prepare("INSERT OR IGNORE INTO session_movement_checks(session_id,movement_id) VALUES(?,?)").bind(sessionId,movementId).run();
+ const uniqueIds=[...new Set(ids.map(String).filter(Boolean))];
+ const validIds=[];
+ for(let offset=0;offset<uniqueIds.length;offset+=100){
+  const chunk=uniqueIds.slice(offset,offset+100);
+  const placeholders=chunk.map(()=>"?").join(",");
+  const rows=await env.DB.prepare("SELECT id FROM program_movements WHERE program_id=? AND user_id=? AND id IN ("+placeholders+")").bind(programId,userId,...chunk).all();
+  validIds.push(...rows.results.map(row=>row.id));
  }
+ const statements=[
+  env.DB.prepare("DELETE FROM session_movement_checks WHERE session_id=?").bind(sessionId),
+  ...validIds.map(id=>env.DB.prepare("INSERT OR IGNORE INTO session_movement_checks(session_id,movement_id) VALUES(?,?)").bind(sessionId,id))
+ ];
+ await env.DB.batch(statements);
 }
 async function api(r,e,p){
  if(r.method==="POST"&&p==="/api/register"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),pw=String(b.password||"");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Adresse e-mail invalide."},400);if(pw.length<12)return json({error:"Mot de passe : 12 caractères minimum."},400);if(await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return json({error:"Ce compte existe déjà."},409);const id=uid();await e.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,await hashPass(pw)).run();return session(id,email,e)}
@@ -117,7 +126,7 @@ async function api(r,e,p){
  if(m&&r.method==="POST"){const b=await r.json(),pid=m[1],ok=await e.DB.prepare("SELECT id FROM programs WHERE id=? AND user_id=?").bind(pid,u.id).first();if(!ok)return json({error:"Programme introuvable."},404);let name=String(b.name||"").trim().slice(0,80),catalogId=null;if(b.catalog_movement_id){const item=await e.DB.prepare("SELECT id,name FROM movement_catalog WHERE id=?").bind(String(b.catalog_movement_id)).first();if(!item)return json({error:"Mouvement du catalogue introuvable."},404);catalogId=item.id;name=item.name}if(!name)return json({error:"Libellé du mouvement requis."},400);const id=uid();try{await e.DB.prepare("INSERT INTO program_movements(id,program_id,user_id,name,sort_order,catalog_movement_id) VALUES(?,?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM program_movements WHERE program_id=?),0),?)").bind(id,pid,u.id,name,pid,catalogId).run()}catch{return json({error:"Ce mouvement existe déjà dans le programme."},409)}return json({ok:true,id})}
  m=p.match(/^\/api\/movements\/([\w-]+)$/);if(m&&r.method==="PUT"){const b=await r.json(),name=String(b.name||"").trim().slice(0,80);if(!name)return json({error:"Libellé du mouvement requis."},400);try{const result=await e.DB.prepare("UPDATE program_movements SET name=? WHERE id=? AND user_id=?").bind(name,m[1],u.id).run();if(!result.meta?.changes)return json({error:"Mouvement introuvable."},404)}catch{return json({error:"Ce mouvement existe déjà dans le programme."},409)}return json({ok:true})}if(m&&r.method==="DELETE"){await e.DB.prepare("DELETE FROM program_movements WHERE id=? AND user_id=?").bind(m[1],u.id).run();return json({ok:true})}
  if(r.method==="GET"&&p==="/api/movement-checks"){const x=await e.DB.prepare("SELECT c.session_id,c.movement_id FROM session_movement_checks c JOIN training_sessions s ON s.id=c.session_id WHERE s.user_id=?").bind(u.id).all();return json({checks:x.results})}
-  m=p.match(/^\/api\/programs\/([\w-]+)$/);m=p.match(/^\/api\/programs\/([\w-]+)\/order$/);if(m&&r.method==="PUT"){const pid=m[1],b=await r.json(),kind=b.kind,ids=Array.isArray(b.ids)?b.ids.map(String):[];if(!["wod","movement"].includes(kind)||!ids.length||new Set(ids).size!==ids.length)return json({error:"Ordre invalide."},400);const table=kind==="wod"?"program_wods":"program_movements";const owned=await e.DB.prepare("SELECT id FROM programs WHERE id=? AND user_id=?").bind(pid,u.id).first();if(!owned)return json({error:"Programme introuvable."},404);const current=await e.DB.prepare("SELECT id FROM "+table+" WHERE program_id=? AND user_id=? ORDER BY sort_order,created_at").bind(pid,u.id).all();if(current.results.length!==ids.length||current.results.some(x=>!ids.includes(x.id)))return json({error:"La liste a changé. Actualise la page."},409);for(let i=0;i<ids.length;i++)await e.DB.prepare("UPDATE "+table+" SET sort_order=? WHERE id=? AND program_id=? AND user_id=?").bind(i,ids[i],pid,u.id).run();return json({ok:true})}
+  m=p.match(/^\/api\/programs\/([\w-]+)$/);m=p.match(/^\/api\/programs\/([\w-]+)\/order$/);if(m&&r.method==="PUT"){const pid=m[1],b=await r.json(),kind=b.kind,ids=Array.isArray(b.ids)?b.ids.map(String):[];if(!["wod","movement"].includes(kind)||!ids.length||new Set(ids).size!==ids.length)return json({error:"Ordre invalide."},400);const table=kind==="wod"?"program_wods":"program_movements";const owned=await e.DB.prepare("SELECT id FROM programs WHERE id=? AND user_id=?").bind(pid,u.id).first();if(!owned)return json({error:"Programme introuvable."},404);const current=await e.DB.prepare("SELECT id FROM "+table+" WHERE program_id=? AND user_id=? ORDER BY sort_order,created_at").bind(pid,u.id).all();if(current.results.length!==ids.length||current.results.some(x=>!ids.includes(x.id)))return json({error:"La liste a changé. Actualise la page."},409);await e.DB.batch(ids.map((id,i)=>e.DB.prepare("UPDATE "+table+" SET sort_order=? WHERE id=? AND program_id=? AND user_id=?").bind(i,id,pid,u.id)));return json({ok:true})}
  m=p.match(/^\/api\/programs\/([\w-]+)$/);if(m&&r.method==="PUT"){const b=await r.json(),name=String(b.name||"").trim().slice(0,100),start=b.start,end=b.end;if(!name||!validDate(start)||!validDate(end)||start>end)return json({error:"Vérifie le nom et les dates."},400);const overlap=await e.DB.prepare("SELECT id FROM programs WHERE user_id=? AND id<>? AND NOT(end_monday<? OR start_monday>?)").bind(u.id,m[1],start,end).first();if(overlap)return json({error:"Les dates chevauchent un autre programme."},409);const result=await e.DB.prepare("UPDATE programs SET name=?,start_monday=?,end_monday=? WHERE id=? AND user_id=?").bind(name,start,end,m[1],u.id).run();if(!result.meta?.changes)return json({error:"Programme introuvable."},404);return json({ok:true})}
  if(m&&r.method==="DELETE"){await e.DB.prepare("DELETE FROM programs WHERE id=? AND user_id=?").bind(m[1],u.id).run();return json({ok:true})}
  m=p.match(/^\/api\/programs\/([\w-]+)\/wods$/);if(m&&r.method==="GET"){const x=await e.DB.prepare("SELECT * FROM program_wods WHERE program_id=? AND user_id=? ORDER BY sort_order,created_at").bind(m[1],u.id).all();return json({wods:x.results})}
