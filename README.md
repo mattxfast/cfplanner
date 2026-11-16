@@ -20,7 +20,7 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Description du contenu prévu, activité associée et durée par défaut.
 - Réorganisation des WOD.
 - Liste de mouvements à travailler pour chaque programme.
-- Ajout de mouvements depuis le catalogue commun ou création de mouvements personnels.
+- Ajout de mouvements depuis le catalogue commun, géré par l’administrateur.
 - Réorganisation des mouvements.
 
 ### Records personnels (PR)
