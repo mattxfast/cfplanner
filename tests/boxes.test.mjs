@@ -47,3 +47,70 @@ test("administrateurs : un admin en nomme un autre, l'admin principal reste prot
   assert.equal((await alice.get("/admin/users")).status, 403);
   assert.equal((await alice.get("/me")).data.is_admin, false);
 });
+
+let boxId;
+test("box : création par un admin, demande de gestionnaire validée par un admin", async () => {
+  assert.equal((await alice.post("/admin/boxes", {name: "Box intruse"})).status, 403);
+  const created = await admin.post("/admin/boxes", {name: "CrossFit Test", city: "Marseille"});
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+  boxId = created.data.id;
+  assert.equal((await admin.post("/admin/boxes", {name: "crossfit test"})).status, 409);
+  assert.ok((await bob.get("/boxes")).data.boxes.some(b => b.id === boxId));
+  // sans prénom ni nom, pas de demande
+  const nameless = client(worker.base);
+  await nameless.post("/register", {email: "anonyme@test.local", password: PASSWORD});
+  assert.equal((await nameless.post(`/boxes/${boxId}/requests`, {role: "member"})).status, 400);
+  // Alice demande à gérer la box : rejouable sans doublon
+  assert.equal((await alice.post(`/boxes/${boxId}/requests`, {role: "manager"})).status, 200);
+  assert.equal((await alice.post(`/boxes/${boxId}/requests`, {role: "manager"})).status, 200);
+  assert.equal((await alice.get(`/manage/boxes/${boxId}`)).status, 404, "pas encore validée");
+  const pending = (await admin.get("/admin/boxes")).data.managers.filter(x => x.box_id === boxId);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].status, "pending");
+  const aliceId = await idOf("alice@test.local");
+  assert.equal((await bob.put(`/admin/boxes/${boxId}/managers/${aliceId}`, {approve: true})).status, 403);
+  assert.equal((await admin.put(`/admin/boxes/${boxId}/managers/${aliceId}`, {approve: true})).status, 200);
+  const box = await alice.get(`/manage/boxes/${boxId}`);
+  assert.equal(box.status, 200);
+  // la box est créée avec les catégories RX, Inter, Scaled ; le gestionnaire est aussi membre
+  assert.deepEqual(
+    box.data.categories.map(c => c.name),
+    ["RX", "Inter", "Scaled"]
+  );
+  assert.ok(box.data.members.some(m => m.user_id === aliceId && m.status === "approved" && m.is_manager));
+});
+
+test("box : adhésion validée par un gestionnaire de la box, catégories paramétrables", async () => {
+  const bobId = await idOf("bob@test.local"),
+    carolId = await idOf("carol@test.local");
+  assert.equal((await bob.post(`/boxes/${boxId}/requests`, {role: "member"})).status, 200);
+  assert.equal((await carol.post(`/boxes/${boxId}/requests`, {role: "member"})).status, 200);
+  assert.deepEqual((await bob.get("/boxes")).data.memberships, [{box_id: boxId, role: "member", status: "pending"}]);
+  // un simple membre (ou l'admin) ne gère pas la box
+  assert.equal((await bob.get(`/manage/boxes/${boxId}`)).status, 404);
+  assert.equal((await carol.put(`/manage/boxes/${boxId}/members/${bobId}`, {approve: true})).status, 404);
+  assert.equal((await admin.get(`/manage/boxes/${boxId}`)).status, 404);
+  assert.equal((await alice.put(`/manage/boxes/${boxId}/members/${bobId}`, {approve: true})).status, 200);
+  assert.equal((await alice.put(`/manage/boxes/${boxId}/members/${carolId}`, {approve: true})).status, 200);
+  assert.equal((await bob.get("/boxes")).data.memberships[0].status, "approved");
+  // le gestionnaire ne peut pas être retiré des membres
+  const aliceId = await idOf("alice@test.local");
+  assert.equal((await alice.del(`/manage/boxes/${boxId}/members/${aliceId}`)).status, 400);
+  // catégories : ajout rejouable, renommage, ordre, suppression
+  const cid = "6f1c2c1e-1b2a-4c3d-8e4f-5a6b7c8d9e0f";
+  assert.equal((await alice.post(`/manage/boxes/${boxId}/categories`, {name: "Masters", client_id: cid})).data.id, cid);
+  assert.equal((await alice.post(`/manage/boxes/${boxId}/categories`, {name: "Masters", client_id: cid})).status, 200);
+  assert.equal((await alice.post(`/manage/boxes/${boxId}/categories`, {name: "RX"})).status, 409);
+  assert.equal((await bob.put(`/manage/categories/${cid}`, {name: "Pirate"})).status, 404);
+  assert.equal((await alice.put(`/manage/categories/${cid}`, {name: "Masters 40+"})).status, 200);
+  let cats = (await alice.get(`/manage/boxes/${boxId}`)).data.categories;
+  assert.deepEqual(
+    cats.map(c => c.name),
+    ["RX", "Inter", "Scaled", "Masters 40+"]
+  );
+  const ids = cats.map(c => c.id).reverse();
+  assert.equal((await alice.put(`/manage/boxes/${boxId}/categories/order`, {ids})).status, 200);
+  cats = (await alice.get(`/manage/boxes/${boxId}`)).data.categories;
+  assert.equal(cats[0].name, "Masters 40+");
+  assert.equal((await alice.del(`/manage/categories/${cid}`)).status, 200);
+});

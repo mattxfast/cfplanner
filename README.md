@@ -31,6 +31,12 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Ajout de mouvements depuis le catalogue commun, géré par l’administrateur.
 - Réorganisation des mouvements via le même bouton ⇅.
 
+### Box
+- Les administrateurs créent la liste des box CrossFit qui utilisent l'application (nom unique, ville) ; chaque nouvelle box reçoit les catégories RX, Inter et Scaled.
+- Dans **Mon compte → Mes box**, un utilisateur demande à rejoindre une box (adhésion, validée par un gestionnaire de la box) ou à la gérer (validée par un administrateur, dans « Gestionnaires de box »). Prénom et nom sont obligatoires pour faire une demande (ils sont affichés aux gestionnaires et dans les classements). Un utilisateur peut être membre de plusieurs box et gérer plusieurs box ; une demande peut être annulée et une box quittée à tout moment.
+- Un gestionnaire validé devient aussi membre de la box et voit l'onglet **Ma box** (icône maison) dans la barre du bas : demandes d'adhésion à valider ou refuser, membres (un gestionnaire ne peut pas être retiré), catégories de score de la box (ajout, renommage, ordre via ⇅, suppression ; au moins une catégorie). S'il gère plusieurs box, il choisit la box en haut de l'onglet.
+- Un administrateur peut retirer le rôle de gestionnaire ; supprimer une box supprime ses adhésions et ses catégories.
+
 ### Records personnels (PR)
 Les mouvements du catalogue sont répartis en quatre familles :
 
@@ -68,6 +74,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
   - un bandeau sous l'en-tête indique « Hors ligne » et le nombre de modifications en attente (toucher le bandeau relance la synchronisation) ;
   - les créations de séance et de PR envoient un `client_id` (UUID généré sur le téléphone) : `POST /api/sessions` et `POST /api/prs` l'utilisent comme identifiant et ne créent jamais de doublon en cas de rejeu ;
   - une modification refusée par le serveur lors du rejeu (par exemple une donnée devenue invalide) est retirée de la file avec un message ;
+  - les demandes d'adhésion ou de gestion d'une box et les actions du gestionnaire (validation, retrait, catégories) fonctionnent aussi hors ligne (la création d'une catégorie porte un `client_id`) ;
   - connexion, création de compte, déconnexion et administration nécessitent le réseau ; la déconnexion avertit s'il reste des modifications non synchronisées et efface les données locales.
 - Icônes dans `public/icons/` (SVG source + PNG 180, 192, 512 et 512 « maskable »).
 - Écran de démarrage : fond jaune, barre de musculation et « FitFactory ». Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
@@ -109,6 +116,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V11 renomme « Hors programme » un ancien programme par défaut qui n'a ni WOD visible ni mouvement (il devient le programme technique caché).
 - V12 rétablit le marqueur `is_default` du programme technique « Hors programme » s'il avait été retiré par la modification d'un autre programme (bug corrigé).
 - V13 ajoute la colonne `users.is_admin` (administrateurs nommés en plus du compte `ADMIN_EMAIL`).
+- V14 ajoute les tables `boxes` (nom unique sans tenir compte de la casse, ville), `box_members` (box, utilisateur, rôle `member` ou `manager`, statut `pending` ou `approved`) et `box_categories` (catégories de score d'une box, ordonnées).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
@@ -144,7 +152,7 @@ Lancer les tests d'intégration (Node.js 20+ ; démarrent le Worker en local sur
 node --test tests/*.test.mjs
 ```
 
-Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels.
+Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires et adhésions (`tests/boxes.test.mjs`).
 
 Déployer le Worker et les assets :
 

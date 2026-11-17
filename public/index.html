@@ -171,6 +171,11 @@
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="13.5" r="7.5" />
               <path d="M12 13.5V9.5M10 2.5h4M18.4 6.6l1.6-1.6" />
+            </svg></button
+          ><button class="navtab" data-view="box" aria-label="Ma box" title="Ma box" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 20.5h18M5 20.5V9.5l7-5 7 5v11" />
+              <path d="M9.5 20.5v-5h5v5" />
             </svg>
           </button>
         </nav>
@@ -230,7 +235,27 @@
             ><button type="button" class="smallbtn" id="timerreset">Réinitialiser</button>
           </div>
         </section>
+        <section id="view-box" hidden>
+          <div class="page-banner"><h2 id="boxviewtitle">Ma box</h2></div>
+          <label class="box-picker" id="managedboxpicker" hidden
+            >Box gérée<select id="managedboxselect"></select
+          ></label>
+          <div id="boxmanager"></div>
+        </section>
         <section id="view-admin" hidden>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Box</span
+              ><button type="button" class="admin-add" id="addbox" aria-label="Ajouter une box">＋</button>
+            </div>
+            <div class="admin-group-body"><div id="adminboxlist" class="admin-data-list"></div></div>
+          </section>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Gestionnaires de box</span>
+            </div>
+            <div class="admin-group-body"><div id="managerrequestlist" class="admin-data-list"></div></div>
+          </section>
           <section class="admin-group" data-admin-group>
             <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
               <span class="admin-collapse-indicator">−</span><span>Liste des mouvements</span
@@ -288,6 +313,19 @@
             <div id="movementcatalogerror" class="error"></div>
           </form>
         </dialog>
+        <dialog id="boxdialog" class="modal">
+          <form id="boxform">
+            <div class="sectionhead">
+              <h2 id="boxdialogtitle">Ajouter une box</h2>
+              <button type="button" class="iconbtn" data-close-dialog="boxdialog">×</button>
+            </div>
+            <input type="hidden" name="id" /><label
+              >Nom de la box<input name="name" maxlength="80" placeholder="Ex. CrossFit Massilia" required /></label
+            ><label>Ville<input name="city" maxlength="80" placeholder="Ex. Marseille" /></label
+            ><button class="primary">Enregistrer</button>
+            <div id="boxformerror" class="error"></div>
+          </form>
+        </dialog>
         <dialog id="activitydialog" class="modal">
           <form id="activityform">
             <div class="sectionhead">
@@ -311,6 +349,20 @@
             ><button class="primary">Enregistrer mes informations</button>
             <div id="profileerror" class="error"></div>
           </form>
+          <div class="account-heading"><h3>Mes box</h3></div>
+          <section class="profile-export-card" id="boxcard">
+            <p class="muted">
+              Rejoins ta box pour enregistrer ses WOD et voir les classements. Chaque demande est validée par un
+              gestionnaire de la box (ou par un administrateur pour devenir gestionnaire).
+            </p>
+            <div id="myboxlist" class="box-membership-list"></div>
+            <label>Box<select id="boxjoinselect"></select></label>
+            <div class="two">
+              <button type="button" class="primary" id="boxjoin">Demander l’adhésion</button
+              ><button type="button" class="primary" id="boxmanagerrequest">Devenir gestionnaire</button>
+            </div>
+            <div id="boxjoinerror" class="error" role="status"></div>
+          </section>
           <div class="account-heading"><h3>Apparence</h3></div>
           <section class="profile-export-card">
             <p class="muted">Thème de l’application sur cet appareil.</p>
@@ -510,6 +562,7 @@
     <script src="/js/session-form.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/admin.js"></script>
+    <script src="/js/boxes.js"></script>
     <script src="/js/prs.js"></script>
     <script src="/js/timer.js"></script>
     <script src="/js/account.js"></script>

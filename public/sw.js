@@ -1,7 +1,7 @@
 // FitFactory — service worker : rend l'application installable et utilisable hors connexion.
 // Stratégie « réseau d'abord » : la dernière version publiée est toujours servie quand le réseau répond ;
 // le cache ne sert que de secours hors connexion. Les appels /api/ ne sont jamais mis en cache.
-const CACHE = "fitfactory-v7";
+const CACHE = "fitfactory-v8";
 const SHELL = [
   "/",
   "/index.html",
@@ -12,6 +12,7 @@ const SHELL = [
   "/js/session-form.js",
   "/js/reminders.js",
   "/js/admin.js",
+  "/js/boxes.js",
   "/js/prs.js",
   "/js/timer.js",
   "/js/account.js",

@@ -3,10 +3,106 @@
 
 async function loadAdmin() {
   if (!isAdmin) return;
-  const [a, u, m] = await Promise.all([api("/admin/activities"), api("/admin/users"), api("/admin/movements")]);
+  const [a, u, m, b] = await Promise.all([
+    api("/admin/activities"),
+    api("/admin/users"),
+    api("/admin/movements"),
+    api("/admin/boxes"),
+  ]);
   activities = a.activities;
   renderAdmin(u.users, m.movements);
+  renderAdminBoxes(b.boxes, b.managers);
 }
+// Box : création, modification, suppression ; gestionnaires (demandes à valider, retrait).
+function renderAdminBoxes(list, managers) {
+  const person = x =>
+    esc([x.first_name, x.last_name].filter(Boolean).join(" ") || x.email) +
+    ` <small class="muted">${esc(x.email)}</small>`;
+  $("#adminboxlist").innerHTML =
+    list
+      .map(
+        b =>
+          `<div class="admin-row"><span>${esc(b.name)}${b.city ? ` <small class="muted">· ${esc(b.city)}</small>` : ""} <small class="muted">· ${b.members} membre${b.members > 1 ? "s" : ""}</small></span><span class="admin-row-actions"><button class="smallbtn" data-edit-box="${b.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-box="${b.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></span></div>`
+      )
+      .join("") || `<p class="muted">Aucune box. Touche ＋ pour en créer une.</p>`;
+  const sorted = [...managers].sort((x, y) => (x.status === y.status ? 0 : x.status === "pending" ? -1 : 1));
+  $("#managerrequestlist").innerHTML =
+    sorted
+      .map(
+        x =>
+          `<div class="admin-row"><span>${person(x)} <small class="muted">· ${esc(list.find(b => b.id === x.box_id)?.name || "")} · ${x.status === "pending" ? "demande en attente" : "gestionnaire"}</small></span><span class="admin-row-actions">${x.status === "pending" ? `<button class="smallbtn" data-manager-decision="1" data-box="${x.box_id}" data-user="${x.user_id}" aria-label="Valider" title="Valider"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>` : ""}<button class="smallbtn delete" data-manager-decision="0" data-box="${x.box_id}" data-user="${x.user_id}" aria-label="${x.status === "pending" ? "Refuser" : "Retirer"}" title="${x.status === "pending" ? "Refuser" : "Retirer le rôle de gestionnaire"}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></span></div>`
+      )
+      .join("") || `<p class="muted">Aucun gestionnaire ni demande en attente.</p>`;
+  $("#adminboxlist")
+    .querySelectorAll("[data-edit-box]")
+    .forEach(b => (b.onclick = () => openBoxDialog(list.find(x => x.id === b.dataset.editBox))));
+  $("#adminboxlist")
+    .querySelectorAll("[data-del-box]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const box = list.find(x => x.id === b.dataset.delBox);
+          if (!confirm("Supprimer la box « " + box.name + " » ? Ses adhésions et ses catégories seront supprimées."))
+            return;
+          try {
+            await api("/admin/boxes/" + box.id, {method: "DELETE"});
+            await loadAdmin();
+            await loadBoxes();
+            toast("Box supprimée.");
+          } catch (e) {
+            toast(e.message);
+          }
+        })
+    );
+  $("#managerrequestlist")
+    .querySelectorAll("[data-manager-decision]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const approve = b.dataset.managerDecision === "1";
+          if (!approve && !confirm("Refuser la demande ou retirer ce gestionnaire ?")) return;
+          try {
+            await api("/admin/boxes/" + b.dataset.box + "/managers/" + b.dataset.user, {
+              method: "PUT",
+              body: JSON.stringify({approve}),
+            });
+            await loadAdmin();
+            await loadBoxes();
+            toast(approve ? "Gestionnaire validé." : "Demande refusée ou rôle retiré.");
+          } catch (e) {
+            toast(e.message);
+          }
+        })
+    );
+}
+function openBoxDialog(box = null) {
+  const f = $("#boxform");
+  f.reset();
+  f.elements.id.value = box?.id || "";
+  f.elements.name.value = box?.name || "";
+  f.elements.city.value = box?.city || "";
+  $("#boxdialogtitle").textContent = box ? "Modifier la box" : "Ajouter une box";
+  $("#boxformerror").textContent = "";
+  $("#boxdialog").showModal();
+}
+$("#addbox").onclick = () => openBoxDialog();
+$("#boxform").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements,
+    id = f.id.value;
+  try {
+    await api(id ? "/admin/boxes/" + id : "/admin/boxes", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify({name: f.name.value, city: f.city.value}),
+    });
+    $("#boxdialog").close();
+    await loadAdmin();
+    await loadBoxes();
+    toast(id ? "Box modifiée." : "Box créée.");
+  } catch (x) {
+    $("#boxformerror").textContent = x.message;
+  }
+};
 document.querySelectorAll("[data-admin-add]").forEach(
   b =>
     (b.onclick = () => {

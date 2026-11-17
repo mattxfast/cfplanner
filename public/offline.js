@@ -97,6 +97,24 @@ const FFOffline = (() => {
       ...(body.catalog_movement_ids || []).map(catalog_movement_id => ({session_id: session.id, catalog_movement_id})),
     ];
   }
+  // Espace gestionnaire d'une box : adhésions et catégories.
+  function patchManagedBox(data, boxId, op, body) {
+    let m;
+    if ((m = op.path.match(/^\/manage\/boxes\/([\w-]+)\/members\/([\w-]+)$/)) && m[1] === boxId) {
+      if (op.method === "PUT" && body.approve)
+        data.members = (data.members || []).map(x => (x.user_id === m[2] ? {...x, status: "approved"} : x));
+      else data.members = (data.members || []).filter(x => x.user_id !== m[2] || x.is_manager);
+    } else if (op.method === "POST" && op.path === "/manage/boxes/" + boxId + "/categories") {
+      const id = body.client_id || op.at;
+      data.categories = [...(data.categories || []).filter(c => c.id !== id), {id, name: body.name, pending: 1}];
+    } else if (op.method === "PUT" && op.path === "/manage/boxes/" + boxId + "/categories/order") {
+      const order = body.ids || [];
+      data.categories = [...(data.categories || [])].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    } else if ((m = op.path.match(/^\/manage\/categories\/([\w-]+)$/))) {
+      if (op.method === "DELETE") data.categories = (data.categories || []).filter(c => c.id !== m[1]);
+      else data.categories = (data.categories || []).map(c => (c.id === m[1] ? {...c, name: body.name} : c));
+    }
+  }
   function patch(path, data, op) {
     if (!data || typeof data !== "object") return data;
     const body = op.body || {},
@@ -129,6 +147,11 @@ const FFOffline = (() => {
         data.flags = (data.flags || []).filter(x => x.week_start !== body.week_start);
         data.flags.push({week_start: body.week_start, competition: body.competition ? 1 : 0});
       }
+    } else if (path === "/boxes" && (m = op.path.match(/^\/boxes\/([\w-]+)\/requests$/))) {
+      data.memberships = (data.memberships || []).filter(x => !(x.box_id === m[1] && x.role === body.role));
+      if (op.method === "POST") data.memberships.push({box_id: m[1], role: body.role, status: "pending"});
+    } else if ((m = path.match(/^\/manage\/boxes\/([\w-]+)$/))) {
+      patchManagedBox(data, m[1], op, body);
     } else if (path === "/prs") {
       if (op.method === "POST" && op.path === "/prs") {
         data.records = (data.records || []).filter(r => r.id !== body.client_id);

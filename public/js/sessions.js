@@ -5,12 +5,13 @@ async function load() {
   try {
     const from = selectedWeekStart || mondayOf(today()),
       to = addDays(from, 6);
-    const [a, mc, p, w, pr] = await Promise.all([
+    const [a, mc, p, w, pr, bx] = await Promise.all([
       api("/activities"),
       api("/movement-catalog"),
       api("/program-data"),
       api("/week-data?from=" + from + "&to=" + to),
       api("/prs"),
+      api("/boxes"),
     ]);
     activities = a.activities;
     movementCatalog = mc.movements;
@@ -24,6 +25,7 @@ async function load() {
     weeklyPlans = w.plans;
     weekCompetition = !!w.flags.find(x => x.week_start === from)?.competition;
     prRecords = pr.records;
+    setBoxes(bx);
     renderUserbar();
     $("#profileform").elements.first_name.value = user.first_name || "";
     $("#profileform").elements.last_name.value = user.last_name || "";
@@ -55,7 +57,8 @@ async function loadPrs() {
 }
 function switchView(v) {
   document.querySelectorAll(".navtab").forEach(b => b.classList.toggle("active", b.dataset.view === v));
-  ["sessions", "programs", "prs", "timer", "account", "admin"].forEach(x => ($("#view-" + x).hidden = x !== v));
+  ["sessions", "programs", "prs", "timer", "account", "admin", "box"].forEach(x => ($("#view-" + x).hidden = x !== v));
+  if (v === "box") loadManagedBox();
 }
 document.querySelectorAll(".navtab").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
 function renderSessions() {

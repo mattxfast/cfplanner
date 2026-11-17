@@ -685,6 +685,9 @@ body.modal-open {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.navtab[hidden] {
+  display: none;
+}
 .navtab.active {
   color: var(--nav-active);
   border-color: var(--nav-bar, var(--nav-active));
@@ -1897,7 +1900,8 @@ button:disabled {
 }
 /* Bouton ⇅ du titre de rubrique : active le mode « Réorganiser » qui affiche les flèches ↑ ↓. */
 #view-programs .reorder-toggle,
-#view-admin .reorder-toggle {
+#view-admin .reorder-toggle,
+#view-box .reorder-toggle {
   width: 34px;
   height: 34px;
   padding: 0;
@@ -1906,7 +1910,8 @@ button:disabled {
   flex: 0 0 auto;
 }
 #view-programs .reorder-toggle.active,
-#view-admin .reorder-toggle.active {
+#view-admin .reorder-toggle.active,
+#view-box .reorder-toggle.active {
   background: var(--blue);
   color: var(--on-accent);
 }
@@ -2302,7 +2307,8 @@ button:disabled {
 }
 
 /* Administration : bandeaux orange, puis cartes individuelles sur fond gris. */
-#view-admin .admin-group {
+#view-admin .admin-group,
+#view-box .admin-group {
   padding: 0;
   margin: 0 0 22px;
   background: transparent;
@@ -2310,7 +2316,8 @@ button:disabled {
   box-shadow: none;
   overflow: visible;
 }
-#view-admin .admin-group-title {
+#view-admin .admin-group-title,
+#view-box .admin-group-title {
   width: 100%;
   min-height: 52px;
   box-sizing: border-box;
@@ -2326,11 +2333,13 @@ button:disabled {
     700 16px Manrope,
     sans-serif;
 }
-#view-admin .admin-group-title > span {
+#view-admin .admin-group-title > span,
+#view-box .admin-group-title > span {
   font-size: 16px;
   line-height: 1.3;
 }
-#view-admin .admin-add {
+#view-admin .admin-add,
+#view-box .admin-add {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -2345,17 +2354,21 @@ button:disabled {
   align-items: center;
   justify-content: center;
 }
-#view-admin .admin-add:hover {
+#view-admin .admin-add:hover,
+#view-box .admin-add:hover {
   background: rgba(255, 255, 255, 0.32);
 }
-#view-admin .admin-group-body {
+#view-admin .admin-group-body,
+#view-box .admin-group-body {
   padding: 18px 0 0;
 }
-#view-admin .admin-data-list {
+#view-admin .admin-data-list,
+#view-box .admin-data-list {
   display: grid;
   gap: 10px;
 }
-#view-admin .admin-row {
+#view-admin .admin-row,
+#view-box .admin-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2368,39 +2381,47 @@ button:disabled {
   border-radius: 11px;
   font-size: 14px;
 }
-#view-admin .admin-row > span:first-child {
+#view-admin .admin-row > span:first-child,
+#view-box .admin-row > span:first-child {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-#view-admin .admin-row-actions {
+#view-admin .admin-row-actions,
+#view-box .admin-row-actions {
   display: flex;
   align-items: center;
   gap: 7px;
   flex: 0 0 auto;
 }
 @media (max-width: 650px) {
-  #view-admin .admin-group-body {
+  #view-admin .admin-group-body,
+  #view-box .admin-group-body {
     padding-top: 15px;
   }
 }
 
 /* Administration : bouton d'ajout bleu et formulaires dans des fenêtres modales. */
-#view-admin .admin-add {
+#view-admin .admin-add,
+#view-box .admin-add {
   background: var(--blue);
   color: var(--on-accent);
 }
-#view-admin .admin-add:hover {
+#view-admin .admin-add:hover,
+#view-box .admin-add:hover {
   background: var(--blue-hover);
 }
-#view-admin .admin-group-title {
+#view-admin .admin-group-title,
+#view-box .admin-group-title {
   cursor: pointer;
 }
-#view-admin .admin-group-title:focus-visible {
+#view-admin .admin-group-title:focus-visible,
+#view-box .admin-group-title:focus-visible {
   outline: 3px solid var(--focus-ring-strong);
   outline-offset: 3px;
 }
-#view-admin .admin-group-title .admin-add {
+#view-admin .admin-group-title .admin-add,
+#view-box .admin-group-title .admin-add {
   cursor: pointer;
 }
 #movementcatalogdialog form,
@@ -2423,26 +2444,31 @@ button:disabled {
 }
 
 /* Administration : reprendre exactement le bandeau orange clair des WOD et programmes. */
-#view-admin .admin-group-title {
+#view-admin .admin-group-title,
+#view-box .admin-group-title {
   background: var(--banner-bg);
   color: var(--banner-ink);
   border: var(--banner-border-width) solid var(--banner-border);
   border-radius: 11px;
 }
-#view-admin .admin-group-title > span {
+#view-admin .admin-group-title > span,
+#view-box .admin-group-title > span {
   color: var(--banner-ink);
 }
 
 /* Hauteur compacte des lignes de rubriques et de l'historique des séances. */
-#view-admin .admin-row {
+#view-admin .admin-row,
+#view-box .admin-row {
   min-height: 34px;
   padding: 6px 10px;
   gap: 10px;
 }
-#view-admin .admin-row-actions {
+#view-admin .admin-row-actions,
+#view-box .admin-row-actions {
   gap: 6px;
 }
-#view-admin .admin-row-actions .smallbtn {
+#view-admin .admin-row-actions .smallbtn,
+#view-box .admin-row-actions .smallbtn {
   width: 28px;
   height: 28px;
   min-width: 28px;
@@ -2458,7 +2484,8 @@ button:disabled {
   margin: 4px 0 0;
 }
 
-#view-admin .admin-reorder {
+#view-admin .admin-reorder,
+#view-box .admin-reorder {
   width: 27px;
   height: 28px;
   min-width: 27px;
@@ -2470,25 +2497,30 @@ button:disabled {
   line-height: 1;
   border-radius: 7px;
 }
-#view-admin .admin-reorder:disabled {
+#view-admin .admin-reorder:disabled,
+#view-box .admin-reorder:disabled {
   opacity: 0.2;
   cursor: default;
 }
-#view-admin .admin-group-title {
+#view-admin .admin-group-title,
+#view-box .admin-group-title {
   gap: 12px;
 }
-#view-admin .admin-group-title > span:first-child {
+#view-admin .admin-group-title > span:first-child,
+#view-box .admin-group-title > span:first-child {
   flex: 1;
   text-align: left;
 }
-#view-admin .admin-group-title .admin-collapse-indicator {
+#view-admin .admin-group-title .admin-collapse-indicator,
+#view-box .admin-group-title .admin-collapse-indicator {
   flex: 0 0 22px;
   text-align: center;
   font-size: 21px;
   line-height: 1;
 }
 @media (max-width: 650px) {
-  #view-admin .admin-reorder {
+  #view-admin .admin-reorder,
+  #view-box .admin-reorder {
     width: 25px;
     height: 27px;
     min-width: 25px;
@@ -2496,11 +2528,13 @@ button:disabled {
 }
 
 /* Repli compact à gauche des rubriques ; alignements verticaux de la page Séances. */
-#view-admin .admin-group-title {
+#view-admin .admin-group-title,
+#view-box .admin-group-title {
   justify-content: flex-start;
   gap: 8px;
 }
-#view-admin .admin-group-title .admin-collapse-indicator {
+#view-admin .admin-group-title .admin-collapse-indicator,
+#view-box .admin-group-title .admin-collapse-indicator {
   order: 0;
   flex: 0 0 18px;
   width: 18px;
@@ -2513,11 +2547,13 @@ button:disabled {
   font-size: 12px;
   line-height: 1;
 }
-#view-admin .admin-group-title > span:nth-child(2) {
+#view-admin .admin-group-title > span:nth-child(2),
+#view-box .admin-group-title > span:nth-child(2) {
   flex: 1;
   text-align: left;
 }
-#view-admin .admin-add {
+#view-admin .admin-add,
+#view-box .admin-add {
   margin-left: auto;
 }
 /* Boutons déplier/replier : identiques sur toutes les pages (séances, programmes), orange plein pour rester visibles. */
@@ -2614,7 +2650,8 @@ button:disabled {
 }
 
 /* Corrections d'alignement et accordéons des sous-rubriques. */
-#view-admin .admin-group-title .admin-collapse-indicator {
+#view-admin .admin-group-title .admin-collapse-indicator,
+#view-box .admin-group-title .admin-collapse-indicator {
   background: var(--neutral-bg);
   border: 1px solid var(--neutral-border);
   color: var(--ink-soft);
@@ -3131,6 +3168,7 @@ button:disabled {
 
 /* Harmonisation stricte des bandeaux et commandes entre Paramétrages, PR et WOD. */
 #view-admin .admin-group-title,
+#view-box .admin-group-title,
 #view-prs .pr-section-title {
   min-height: 52px;
   box-sizing: border-box;
@@ -3140,7 +3178,8 @@ button:disabled {
   align-items: center;
   gap: 10px !important;
 }
-#view-admin .admin-group-title .admin-collapse-indicator {
+#view-admin .admin-group-title .admin-collapse-indicator,
+#view-box .admin-group-title .admin-collapse-indicator {
   width: 20px;
   height: 20px;
   min-width: 20px;
@@ -3158,6 +3197,7 @@ button:disabled {
   font: 700 12px/1 Manrope;
 }
 #view-admin .admin-group-title > span:nth-child(2),
+#view-box .admin-group-title > span:nth-child(2),
 #view-prs .pr-section-title h2 {
   flex: 1 1 auto;
   min-width: 0;
@@ -3165,6 +3205,7 @@ button:disabled {
   text-align: left;
 }
 #view-admin .admin-group-title .admin-add,
+#view-box .admin-group-title .admin-add,
 #view-prs .pr-section-title .addpr {
   width: 34px;
   height: 34px;
@@ -3262,7 +3303,8 @@ button:disabled {
 }
 
 /* Paramétrage : les blocs de contenu reprennent le contour des cartes Séances, Programmes et PR. */
-#view-admin .admin-row {
+#view-admin .admin-row,
+#view-box .admin-row {
   background: var(--content-bg);
   border: 1px solid var(--content-border);
   border-radius: 11px;
@@ -3345,13 +3387,16 @@ button:disabled {
 }
 
 /* Paramétrage et compte */
-#view-admin .admin-group {
+#view-admin .admin-group,
+#view-box .admin-group {
   margin: 0 0 var(--page-content-gap);
 }
-#view-admin .admin-group-body {
+#view-admin .admin-group-body,
+#view-box .admin-group-body {
   padding: var(--section-content-gap) 0 0;
 }
-#view-admin .admin-data-list {
+#view-admin .admin-data-list,
+#view-box .admin-data-list {
   gap: var(--content-item-gap);
 }
 #view-account > .toolbar {
@@ -3365,7 +3410,8 @@ button:disabled {
    la même hauteur, le même texte, les mêmes boutons et le même écart entre boutons. */
 #view-sessions [data-session-fold="movements"] .weekwod,
 #view-programs .program-section .movement-row,
-#view-admin .admin-row {
+#view-admin .admin-row,
+#view-box .admin-row {
   box-sizing: border-box;
   min-height: var(--list-row-height) !important;
   padding: 6px 10px;
@@ -3386,7 +3432,8 @@ button:disabled {
 #view-programs .programhead .entryactions,
 #sessionlist .session-history-heading .entryactions,
 #prhistorylist .entryactions,
-#view-admin .admin-row-actions {
+#view-admin .admin-row-actions,
+#view-box .admin-row-actions {
   display: flex;
   align-items: center;
   gap: var(--list-button-gap) !important;
@@ -3397,7 +3444,8 @@ button:disabled {
 #sessionlist .entryactions .smallbtn,
 #prhistorylist .entryactions .smallbtn,
 #view-sessions .weekcount .smallbtn,
-#view-admin .admin-row-actions .smallbtn {
+#view-admin .admin-row-actions .smallbtn,
+#view-box .admin-row-actions .smallbtn {
   width: var(--list-button-size) !important;
   height: var(--list-button-size) !important;
   min-width: var(--list-button-size) !important;
@@ -3461,10 +3509,12 @@ button:disabled {
   margin: 0;
 }
 /* Rappels (profil) : interrupteur et choix en pastilles (pas de liste déroulante) */
-#remindercard {
+#remindercard,
+#boxcard {
   align-items: stretch;
 }
-#remindercard > * {
+#remindercard > *,
+#boxcard > * {
   flex-basis: 100%;
 }
 .reminder-hint {
@@ -3929,4 +3979,21 @@ button:active:not(:disabled) {
 }
 #programdefaultfield[hidden] {
   display: none;
+}
+
+/* Box : sélecteur de la box gérée (onglet « Ma box ») et liste des adhésions (Mon compte). */
+.box-picker {
+  margin: 0 0 var(--section-content-gap);
+}
+.box-picker[hidden] {
+  display: none;
+}
+.box-membership-list .admin-row {
+  padding: 6px 0;
+}
+.box-membership-list .admin-row:first-child {
+  border-top: 0;
+}
+#boxcard label {
+  margin: 0;
 }

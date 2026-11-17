@@ -277,6 +277,17 @@ async function ensureV2Schema(env) {
       if (!columns.results.some(column => column.name === "is_admin"))
         await env.DB.prepare("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0").run();
     });
+    await runMigration("v14-boxes", async () => {
+      for (const statement of [
+        "CREATE TABLE IF NOT EXISTS boxes (id TEXT PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS boxes_name ON boxes(name COLLATE NOCASE)",
+        "CREATE TABLE IF NOT EXISTS box_members (box_id TEXT NOT NULL REFERENCES boxes(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, role TEXT NOT NULL CHECK(role IN ('member','manager')), status TEXT NOT NULL CHECK(status IN ('pending','approved')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, decided_at TEXT, PRIMARY KEY(box_id,user_id,role))",
+        "CREATE INDEX IF NOT EXISTS box_members_user ON box_members(user_id,role,status)",
+        "CREATE INDEX IF NOT EXISTS box_members_box ON box_members(box_id,role,status)",
+        "CREATE TABLE IF NOT EXISTS box_categories (id TEXT PRIMARY KEY, box_id TEXT NOT NULL REFERENCES boxes(id) ON DELETE CASCADE, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(box_id,name))",
+      ])
+        await env.DB.prepare(statement).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -379,6 +390,18 @@ const clientId = v =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ""))
     ? String(v).toLowerCase()
     : null;
+// Box : un utilisateur est membre et/ou gestionnaire d'une box (demande « pending » puis validation « approved »).
+// Les adhésions sont validées par un gestionnaire de la box, les gestionnaires par un administrateur.
+const DEFAULT_BOX_CATEGORIES = ["RX", "Inter", "Scaled"];
+const boxRole = (e, userId, boxId, role) =>
+  e.DB.prepare("SELECT 1 FROM box_members WHERE box_id=? AND user_id=? AND role=? AND status='approved'")
+    .bind(boxId, userId, role)
+    .first();
+const boxText = (v, max) =>
+  String(v ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, max);
 // Limitation des tentatives de connexion : 5 échecs par e-mail ou 20 par adresse IP sur 15 minutes.
 const LOGIN_WINDOW = 15 * 60,
   LOGIN_LIMITS = {email: 5, ip: 20};
@@ -899,7 +922,205 @@ async function api(r, e, p) {
           .run();
       return json({ok: true});
     }
+    if (r.method === "GET" && p === "/api/admin/boxes") {
+      const [boxes, people] = await Promise.all([
+        e.DB.prepare(
+          "SELECT b.id,b.name,b.city,(SELECT COUNT(*) FROM box_members m WHERE m.box_id=b.id AND m.role='member' AND m.status='approved') AS members FROM boxes b ORDER BY b.name COLLATE NOCASE"
+        ).all(),
+        e.DB.prepare(
+          "SELECT m.box_id,m.user_id,m.status,m.created_at,u.email,u.first_name,u.last_name FROM box_members m JOIN users u ON u.id=m.user_id WHERE m.role='manager' ORDER BY m.created_at"
+        ).all(),
+      ]);
+      return json({boxes: boxes.results, managers: people.results});
+    }
+    if (r.method === "POST" && p === "/api/admin/boxes") {
+      const b = await r.json(),
+        name = boxText(b.name, 80),
+        city = boxText(b.city, 80),
+        id = uid();
+      if (!name) return json({error: "Nom de la box requis."}, 400);
+      try {
+        await e.DB.batch([
+          e.DB.prepare("INSERT INTO boxes(id,name,city) VALUES(?,?,?)").bind(id, name, city),
+          ...DEFAULT_BOX_CATEGORIES.map((c, i) =>
+            e.DB.prepare("INSERT INTO box_categories(id,box_id,name,sort_order) VALUES(?,?,?,?)").bind(uid(), id, c, i)
+          ),
+        ]);
+      } catch {
+        return json({error: "Une box porte déjà ce nom."}, 409);
+      }
+      return json({ok: true, id});
+    }
+    if (r.method === "PUT" && (m = p.match(/^\/api\/admin\/boxes\/([\w-]+)$/))) {
+      const b = await r.json(),
+        name = boxText(b.name, 80),
+        city = boxText(b.city, 80);
+      if (!name) return json({error: "Nom de la box requis."}, 400);
+      try {
+        const result = await e.DB.prepare("UPDATE boxes SET name=?,city=? WHERE id=?").bind(name, city, m[1]).run();
+        if (!result.meta?.changes) return json({error: "Box introuvable."}, 404);
+      } catch {
+        return json({error: "Une box porte déjà ce nom."}, 409);
+      }
+      return json({ok: true});
+    }
+    if (r.method === "DELETE" && (m = p.match(/^\/api\/admin\/boxes\/([\w-]+)$/))) {
+      await e.DB.prepare("DELETE FROM boxes WHERE id=?").bind(m[1]).run();
+      return json({ok: true});
+    }
+    // Demande de gestionnaire : validation (approve=true, le gestionnaire devient aussi membre) ou refus/retrait.
+    if (r.method === "PUT" && (m = p.match(/^\/api\/admin\/boxes\/([\w-]+)\/managers\/([\w-]+)$/))) {
+      const b = await r.json(),
+        row = await e.DB.prepare("SELECT status FROM box_members WHERE box_id=? AND user_id=? AND role='manager'")
+          .bind(m[1], m[2])
+          .first();
+      if (!row) return json({error: "Demande introuvable."}, 404);
+      if (b.approve)
+        await e.DB.batch([
+          e.DB.prepare(
+            "UPDATE box_members SET status='approved',decided_at=CURRENT_TIMESTAMP WHERE box_id=? AND user_id=? AND role='manager'"
+          ).bind(m[1], m[2]),
+          e.DB.prepare(
+            "INSERT INTO box_members(box_id,user_id,role,status,decided_at) VALUES(?,?,'member','approved',CURRENT_TIMESTAMP) ON CONFLICT(box_id,user_id,role) DO UPDATE SET status='approved',decided_at=CURRENT_TIMESTAMP"
+          ).bind(m[1], m[2]),
+        ]);
+      else
+        await e.DB.prepare("DELETE FROM box_members WHERE box_id=? AND user_id=? AND role='manager'")
+          .bind(m[1], m[2])
+          .run();
+      return json({ok: true});
+    }
     return json({error: "Route admin inconnue."}, 404);
+  }
+  if (r.method === "GET" && p === "/api/boxes") {
+    const [boxes, mine] = await Promise.all([
+      e.DB.prepare("SELECT id,name,city FROM boxes ORDER BY name COLLATE NOCASE").all(),
+      e.DB.prepare("SELECT box_id,role,status FROM box_members WHERE user_id=?").bind(u.id).all(),
+    ]);
+    return json({boxes: boxes.results, memberships: mine.results});
+  }
+  // Demande d'adhésion (role=member) ou de gestion (role=manager) : rejouable sans effet (mode hors ligne).
+  if ((m = p.match(/^\/api\/boxes\/([\w-]+)\/requests$/)) && (r.method === "POST" || r.method === "DELETE")) {
+    const b = await r.json(),
+      role = b.role === "manager" ? "manager" : b.role === "member" ? "member" : null;
+    if (!role) return json({error: "Type de demande invalide."}, 400);
+    if (!(await e.DB.prepare("SELECT 1 FROM boxes WHERE id=?").bind(m[1]).first()))
+      return json({error: "Box introuvable."}, 404);
+    if (r.method === "DELETE") {
+      await e.DB.prepare("DELETE FROM box_members WHERE box_id=? AND user_id=? AND role=?")
+        .bind(m[1], u.id, role)
+        .run();
+      return json({ok: true});
+    }
+    if (!String(u.first_name || "").trim() || !String(u.last_name || "").trim())
+      return json({error: "Renseigne ton prénom et ton nom dans Mon compte avant de rejoindre une box."}, 400);
+    await e.DB.prepare("INSERT OR IGNORE INTO box_members(box_id,user_id,role,status) VALUES(?,?,?,'pending')")
+      .bind(m[1], u.id, role)
+      .run();
+    return json({ok: true});
+  }
+  if (p.startsWith("/api/manage/")) {
+    // Espace gestionnaire : chaque route vérifie que l'utilisateur gère la box concernée.
+    const managed = async boxId => !!boxId && !!(await boxRole(e, u.id, boxId, "manager"));
+    const deny = () => json({error: "Box introuvable."}, 404);
+    if (r.method === "GET" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)$/))) {
+      if (!(await managed(m[1]))) return deny();
+      const [box, members, categories] = await Promise.all([
+        e.DB.prepare("SELECT id,name,city FROM boxes WHERE id=?").bind(m[1]).first(),
+        e.DB.prepare(
+          "SELECT m.user_id,m.status,m.created_at,u.first_name,u.last_name,u.email,EXISTS(SELECT 1 FROM box_members g WHERE g.box_id=m.box_id AND g.user_id=m.user_id AND g.role='manager' AND g.status='approved') AS is_manager FROM box_members m JOIN users u ON u.id=m.user_id WHERE m.box_id=? AND m.role='member' ORDER BY u.last_name COLLATE NOCASE,u.first_name COLLATE NOCASE"
+        )
+          .bind(m[1])
+          .all(),
+        e.DB.prepare("SELECT id,name,sort_order FROM box_categories WHERE box_id=? ORDER BY sort_order,name")
+          .bind(m[1])
+          .all(),
+      ]);
+      return json({box, members: members.results, categories: categories.results});
+    }
+    if ((m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/members\/([\w-]+)$/))) {
+      if (!(await managed(m[1]))) return deny();
+      if (r.method === "PUT") {
+        const b = await r.json();
+        if (b.approve) {
+          const result = await e.DB.prepare(
+            "UPDATE box_members SET status='approved',decided_at=CURRENT_TIMESTAMP WHERE box_id=? AND user_id=? AND role='member'"
+          )
+            .bind(m[1], m[2])
+            .run();
+          if (!result.meta?.changes) return json({error: "Demande introuvable."}, 404);
+          return json({ok: true});
+        }
+      }
+      if (r.method === "PUT" || r.method === "DELETE") {
+        if (await boxRole(e, m[2], m[1], "manager"))
+          return json({error: "Un gestionnaire de la box ne peut pas être retiré des membres."}, 400);
+        await e.DB.prepare("DELETE FROM box_members WHERE box_id=? AND user_id=? AND role='member'")
+          .bind(m[1], m[2])
+          .run();
+        return json({ok: true});
+      }
+    }
+    if (r.method === "POST" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/categories$/))) {
+      if (!(await managed(m[1]))) return deny();
+      const b = await r.json(),
+        name = boxText(b.name, 40),
+        id = clientId(b.client_id) || uid();
+      if (!name) return json({error: "Nom de la catégorie requis."}, 400);
+      if (await e.DB.prepare("SELECT 1 FROM box_categories WHERE id=? AND box_id=?").bind(id, m[1]).first())
+        return json({ok: true, id});
+      try {
+        await e.DB.prepare(
+          "INSERT INTO box_categories(id,box_id,name,sort_order) VALUES(?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM box_categories WHERE box_id=?),0))"
+        )
+          .bind(id, m[1], name, m[1])
+          .run();
+      } catch {
+        return json({error: "Cette catégorie existe déjà."}, 409);
+      }
+      return json({ok: true, id});
+    }
+    if (r.method === "PUT" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/categories\/order$/))) {
+      if (!(await managed(m[1]))) return deny();
+      const b = await r.json(),
+        ids = Array.isArray(b.ids) ? b.ids.map(String) : [],
+        current = (await e.DB.prepare("SELECT id FROM box_categories WHERE box_id=?").bind(m[1]).all()).results;
+      if (
+        !ids.length ||
+        new Set(ids).size !== ids.length ||
+        current.length !== ids.length ||
+        current.some(x => !ids.includes(x.id))
+      )
+        return json({error: "La liste a changé. Actualise la page."}, 409);
+      await e.DB.batch(
+        ids.map((id, i) =>
+          e.DB.prepare("UPDATE box_categories SET sort_order=? WHERE id=? AND box_id=?").bind(i, id, m[1])
+        )
+      );
+      return json({ok: true});
+    }
+    if ((m = p.match(/^\/api\/manage\/categories\/([\w-]+)$/)) && (r.method === "PUT" || r.method === "DELETE")) {
+      const category = await e.DB.prepare("SELECT id,box_id FROM box_categories WHERE id=?").bind(m[1]).first();
+      if (!category || !(await managed(category.box_id))) return json({error: "Catégorie introuvable."}, 404);
+      if (r.method === "PUT") {
+        const name = boxText((await r.json()).name, 40);
+        if (!name) return json({error: "Nom de la catégorie requis."}, 400);
+        try {
+          await e.DB.prepare("UPDATE box_categories SET name=? WHERE id=?").bind(name, m[1]).run();
+        } catch {
+          return json({error: "Cette catégorie existe déjà."}, 409);
+        }
+        return json({ok: true});
+      }
+      if (
+        (await e.DB.prepare("SELECT COUNT(*) AS n FROM box_categories WHERE box_id=?").bind(category.box_id).first())
+          .n <= 1
+      )
+        return json({error: "La box doit garder au moins une catégorie."}, 400);
+      await e.DB.prepare("DELETE FROM box_categories WHERE id=?").bind(m[1]).run();
+      return json({ok: true});
+    }
+    return json({error: "Route inconnue."}, 404);
   }
   if (r.method === "GET" && p === "/api/prs") {
     const x = await e.DB.prepare(
