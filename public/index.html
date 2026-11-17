@@ -1,29 +1,466 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f5f5f0"><title>FitFactory</title><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-750x1334.png"><link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1242x2208.png"><link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1125x2436.png"><link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-828x1792.png"><link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1242x2688.png"><link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1170x2532.png"><link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1284x2778.png"><link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1179x2556.png"><link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1290x2796.png"><link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1206x2622.png"><link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1260x2736.png"><link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1320x2868.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="FitFactory"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/manrope-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/style.css"><script>(function(){try{var t=localStorage.getItem("fitfactory-theme")||localStorage.getItem("cfplanner-theme")||"auto",d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light"}catch(e){}})()</script></head>
-<body><main id="app"><header><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 140 512 232" preserveAspectRatio="none" aria-hidden="true"><g fill="currentColor" stroke="none"><rect x="0" y="241" width="15" height="30"/><rect x="26" y="199" width="38" height="114" rx="6"/><rect x="76" y="176" width="40" height="160" rx="6"/><rect x="124" y="241" width="264" height="30"/><rect x="396" y="176" width="40" height="160" rx="6"/><rect x="448" y="199" width="38" height="114" rx="6"/><rect x="497" y="241" width="15" height="30"/></g></svg></span><div><b>FitFactory</b></div></div><div id="userbar"></div></header><button id="syncstatus" class="sync-status" type="button" hidden></button>
-<section id="auth" class="auth card"><h1>Ton entraînement, structuré.</h1><p>Programmes, WOD de référence et séances réellement effectuées.</p><div class="tabs"><button class="tab active" data-tab="login">Connexion</button><button class="tab" data-tab="register">Créer un compte</button></div><form id="authform" method="post"><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Mot de passe<input name="password" type="password" minlength="12" autocomplete="current-password" required></label><button class="primary" id="authsubmit">Se connecter</button><p class="hint" id="authhint">Mot de passe de 12 caractères minimum.</p><div id="autherror" class="error"></div></form></section>
-<section id="dashboard" hidden><nav class="navtabs"><button class="navtab active" data-view="sessions" aria-label="Séances" title="Séances"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.6 10.2 6.7 6.9A2.4 2.4 0 0 1 9 3.8h6a2.4 2.4 0 0 1 2.3 3.1l-.9 3.3"/><path d="M7 20.5a7.07 7.07 0 1 1 10 0z"/></svg></button><button class="navtab" data-view="programs" aria-label="Programmes & WOD" title="Programmes & WOD"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg></button><button class="navtab" data-view="prs" aria-label="PR" title="PR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 4.5 14h7l-1 7.5 9-11.5h-7z"/></svg></button></nav>
-<section id="view-sessions"><div id="weekboard"></div><div class="toolbar section-toolbar" id="sessiontoolbar"><button class="smallbtn section-collapse" id="toggle-session-history" aria-label="Replier l’historique" aria-expanded="true">−</button><h2>Historique des séances</h2></div><div id="sessionlist" class="entries"></div></section>
-<section id="view-programs" hidden><div id="programlist"></div><div class="bottom-action"><button id="newprogram" class="primary">＋ Nouveau programme</button></div></section>
-<section id="view-prs" hidden><div class="toolbar section-toolbar pr-section-title"><h2>Mes PR</h2><button id="newpr" class="primary addsession-compact addwod addpr" type="button" aria-label="Nouveau PR" title="Nouveau PR">＋</button></div><div id="prcards" class="pr-grid"></div></section>
-<section id="view-admin" hidden>
-<section class="admin-group" data-admin-group>
-<div class="admin-group-title" role="button" tabindex="0" aria-expanded="true"><span class="admin-collapse-indicator">−</span><span>Liste des mouvements</span><button type="button" class="smallbtn reorder-toggle" id="toggle-catalog-reorder" aria-pressed="false" aria-label="Réorganiser les mouvements" title="Réorganiser les mouvements">⇅</button><button type="button" class="admin-add" data-admin-add="movementcatalogform" aria-label="Ajouter un mouvement">＋</button></div>
-<div class="admin-group-body"><div id="movementcataloglist" class="admin-data-list"></div></div>
-</section>
-<section class="admin-group" data-admin-group>
-<div class="admin-group-title" role="button" tabindex="0" aria-expanded="true"><span class="admin-collapse-indicator">−</span><span>Activités</span><button type="button" class="admin-add" data-admin-add="activityform" aria-label="Ajouter une activité">＋</button></div>
-<div class="admin-group-body"><div id="activitylist" class="admin-data-list"></div></div>
-</section>
-<section class="admin-group" data-admin-group>
-<div class="admin-group-title" role="button" tabindex="0" aria-expanded="true"><span class="admin-collapse-indicator">−</span><span>Utilisateurs</span></div>
-<div class="admin-group-body"><div id="userlist" class="admin-data-list"></div></div>
-</section>
-</section><dialog id="movementcatalogdialog" class="modal"><form id="movementcatalogform"><div class="sectionhead"><h2 id="movementcatalogdialogtitle">Ajouter un mouvement</h2><button type="button" class="iconbtn" data-close-dialog="movementcatalogdialog">×</button></div><label>Nom du mouvement<input name="name" maxlength="80" placeholder="Ex. Snatch" required></label><label>Catégorie<select name="measurement_method" required><option value="load">Lift</option><option value="force">Force</option><option value="reps">Gym</option><option value="distance">Engine</option></select></label><button class="primary">Enregistrer</button><div id="movementcatalogerror" class="error"></div></form></dialog>
-<dialog id="activitydialog" class="modal"><form id="activityform"><div class="sectionhead"><h2 id="activitydialogtitle">Ajouter une activité</h2><button type="button" class="iconbtn" data-close-dialog="activitydialog">×</button></div><input type="hidden" name="id"><label>Nom<input name="name" maxlength="80" required></label><label>Durée par défaut (min)<input name="duration_minutes" type="number" min="1" max="600" required></label><label class="admin-default"><input type="checkbox" name="is_default"> Activité par défaut</label><button class="primary">Enregistrer</button></form></dialog><section id="view-account" hidden><div class="toolbar"><h2>Mon compte</h2></div><form id="profileform" class="card profile-card"><label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required></label><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required></label><label>Adresse e-mail<input id="profileemail" type="email" disabled></label><button class="primary">Enregistrer mes informations</button><div id="profileerror" class="error"></div></form><section class="card profile-export-card"><div><h3>Apparence</h3><p class="muted">Thème de l’application sur cet appareil.</p></div><div id="themechoice" class="theme-choice" role="radiogroup" aria-label="Thème"><label><input type="radio" name="theme" value="auto">Automatique (selon le téléphone)</label><label><input type="radio" name="theme" value="light">Clair</label><label><input type="radio" name="theme" value="dark">Sombre</label></div></section><section class="card profile-export-card" id="remindercard"><div><h3>Rappels</h3><p class="muted">Une notification sur ce téléphone si tu n’as pas enregistré de séance depuis quelques jours.</p></div><p id="reminderhint" class="reminder-hint" hidden></p><label class="reminder-switch"><input type="checkbox" id="reminderenabled">Activer les rappels sur ce téléphone</label><div id="reminderoptions" class="reminder-options" hidden><p class="reminder-legend">Me rappeler après</p><div class="choice-chips" id="reminderdays" role="radiogroup" aria-label="Nombre de jours sans séance"></div><p class="reminder-legend">Vers</p><div class="choice-chips" id="reminderhours" role="radiogroup" aria-label="Heure du rappel"></div><button type="button" class="smallbtn" id="remindertest">Envoyer une notification de test</button></div><div id="reminderstatus" class="error" role="status"></div></section><section class="card profile-export-card"><div><h3>Export Excel</h3><p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p></div><button type="button" class="primary" id="exportexcel">Exporter les données</button><div id="exportexcelstatus" class="error" role="status"></div></section></section>
-</section>
-<dialog id="programdialog" class="modal"><form id="programform" method="dialog"><input type="hidden" name="program_id"><div class="sectionhead"><h2 id="programtitle">Nouveau programme</h2><button type="button" class="iconbtn" id="closeprogram">×</button></div><label>Nom du programme<input name="name" placeholder="Ex. Force & haltéro" required maxlength="100"></label><label class="checkbox-label"><input type="checkbox" name="is_default"> Programme par défaut (du 01/01/1970 au 31/12/2100)</label><div class="two"><label>Début<input name="start" type="date" required></label><label>Fin<input name="end" type="date" required></label></div><button class="primary" id="programsubmit">Créer le programme</button><div class="error" id="programerror"></div></form></dialog>
-<dialog id="woddialog" class="modal"><form id="wodform" method="dialog"><div class="sectionhead"><h2 id="wodtitle">Ajouter un WOD au programme</h2><button type="button" class="iconbtn" id="closewod">×</button></div><input type="hidden" name="program_id"><input type="hidden" name="wod_id"><label>Nom du WOD<input name="name" placeholder="WOD 1 — Force" required maxlength="100"></label><label>Contenu prévu / consignes<textarea name="planned_comment" rows="4" placeholder="Décris librement le contenu prévu…"></textarea></label><label class="checkbox-label"><input type="checkbox" name="is_tracked"> Entraînement suivi (programmation semaine par semaine)</label><div class="two"><label>Activité<select name="activity_id" required></select></label><label>Durée par défaut (min)<input name="duration_minutes" type="number" min="1" max="600" required></label></div><button class="primary">Enregistrer le WOD</button><div class="error" id="woderror"></div></form></dialog>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f5f0" />
+    <title>FitFactory</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+      href="/splash/splash-750x1334.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1242x2208.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1125x2436.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+      href="/splash/splash-828x1792.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1242x2688.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1170x2532.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1284x2778.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1179x2556.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1290x2796.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1206x2622.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1260x2736.png"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/splash-1320x2868.png"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FitFactory" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="preload" href="/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/manrope-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/style.css" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("fitfactory-theme") || localStorage.getItem("cfplanner-theme") || "auto",
+            d = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = d ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <main id="app">
+      <header>
+        <div class="brand">
+          <span class="mark" aria-hidden="true"
+            ><svg viewBox="0 140 512 232" preserveAspectRatio="none" aria-hidden="true">
+              <g fill="currentColor" stroke="none">
+                <rect x="0" y="241" width="15" height="30" />
+                <rect x="26" y="199" width="38" height="114" rx="6" />
+                <rect x="76" y="176" width="40" height="160" rx="6" />
+                <rect x="124" y="241" width="264" height="30" />
+                <rect x="396" y="176" width="40" height="160" rx="6" />
+                <rect x="448" y="199" width="38" height="114" rx="6" />
+                <rect x="497" y="241" width="15" height="30" />
+              </g></svg
+          ></span>
+          <div><b>FitFactory</b></div>
+        </div>
+        <div id="userbar"></div>
+      </header>
+      <button id="syncstatus" class="sync-status" type="button" hidden></button>
+      <section id="auth" class="auth card">
+        <h1>Ton entraînement, structuré.</h1>
+        <p>Programmes, WOD de référence et séances réellement effectuées.</p>
+        <div class="tabs">
+          <button class="tab active" data-tab="login">Connexion</button
+          ><button class="tab" data-tab="register">Créer un compte</button>
+        </div>
+        <form id="authform" method="post">
+          <label>E-mail<input name="email" type="email" autocomplete="email" required /></label
+          ><label
+            >Mot de passe<input
+              name="password"
+              type="password"
+              minlength="12"
+              autocomplete="current-password"
+              required /></label
+          ><button class="primary" id="authsubmit">Se connecter</button>
+          <p class="hint" id="authhint">Mot de passe de 12 caractères minimum.</p>
+          <div id="autherror" class="error"></div>
+        </form>
+      </section>
+      <section id="dashboard" hidden>
+        <nav class="navtabs">
+          <button class="navtab active" data-view="sessions" aria-label="Séances" title="Séances">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.6 10.2 6.7 6.9A2.4 2.4 0 0 1 9 3.8h6a2.4 2.4 0 0 1 2.3 3.1l-.9 3.3" />
+              <path d="M7 20.5a7.07 7.07 0 1 1 10 0z" />
+            </svg></button
+          ><button class="navtab" data-view="programs" aria-label="Programmes & WOD" title="Programmes & WOD">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+              <path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2" />
+            </svg></button
+          ><button class="navtab" data-view="prs" aria-label="PR" title="PR">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 4.5 14h7l-1 7.5 9-11.5h-7z" /></svg>
+          </button>
+        </nav>
+        <section id="view-sessions">
+          <div id="weekboard"></div>
+          <div class="toolbar section-toolbar" id="sessiontoolbar">
+            <button
+              class="smallbtn section-collapse"
+              id="toggle-session-history"
+              aria-label="Replier l’historique"
+              aria-expanded="true"
+            >
+              −
+            </button>
+            <h2>Historique des séances</h2>
+          </div>
+          <div id="sessionlist" class="entries"></div>
+        </section>
+        <section id="view-programs" hidden>
+          <div id="programlist"></div>
+          <div class="bottom-action"><button id="newprogram" class="primary">＋ Nouveau programme</button></div>
+        </section>
+        <section id="view-prs" hidden>
+          <div class="toolbar section-toolbar pr-section-title">
+            <h2>Mes PR</h2>
+            <button
+              id="newpr"
+              class="primary addsession-compact addwod addpr"
+              type="button"
+              aria-label="Nouveau PR"
+              title="Nouveau PR"
+            >
+              ＋
+            </button>
+          </div>
+          <div id="prcards" class="pr-grid"></div>
+        </section>
+        <section id="view-admin" hidden>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Liste des mouvements</span
+              ><button
+                type="button"
+                class="smallbtn reorder-toggle"
+                id="toggle-catalog-reorder"
+                aria-pressed="false"
+                aria-label="Réorganiser les mouvements"
+                title="Réorganiser les mouvements"
+              >
+                ⇅</button
+              ><button
+                type="button"
+                class="admin-add"
+                data-admin-add="movementcatalogform"
+                aria-label="Ajouter un mouvement"
+              >
+                ＋
+              </button>
+            </div>
+            <div class="admin-group-body"><div id="movementcataloglist" class="admin-data-list"></div></div>
+          </section>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Activités</span
+              ><button type="button" class="admin-add" data-admin-add="activityform" aria-label="Ajouter une activité">
+                ＋
+              </button>
+            </div>
+            <div class="admin-group-body"><div id="activitylist" class="admin-data-list"></div></div>
+          </section>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Utilisateurs</span>
+            </div>
+            <div class="admin-group-body"><div id="userlist" class="admin-data-list"></div></div>
+          </section>
+        </section>
+        <dialog id="movementcatalogdialog" class="modal">
+          <form id="movementcatalogform">
+            <div class="sectionhead">
+              <h2 id="movementcatalogdialogtitle">Ajouter un mouvement</h2>
+              <button type="button" class="iconbtn" data-close-dialog="movementcatalogdialog">×</button>
+            </div>
+            <label>Nom du mouvement<input name="name" maxlength="80" placeholder="Ex. Snatch" required /></label
+            ><label
+              >Catégorie<select name="measurement_method" required>
+                <option value="load">Lift</option>
+                <option value="force">Force</option>
+                <option value="reps">Gym</option>
+                <option value="distance">Engine</option>
+              </select></label
+            ><button class="primary">Enregistrer</button>
+            <div id="movementcatalogerror" class="error"></div>
+          </form>
+        </dialog>
+        <dialog id="activitydialog" class="modal">
+          <form id="activityform">
+            <div class="sectionhead">
+              <h2 id="activitydialogtitle">Ajouter une activité</h2>
+              <button type="button" class="iconbtn" data-close-dialog="activitydialog">×</button>
+            </div>
+            <input type="hidden" name="id" /><label>Nom<input name="name" maxlength="80" required /></label
+            ><label
+              >Durée par défaut (min)<input name="duration_minutes" type="number" min="1" max="600" required /></label
+            ><label class="admin-default"><input type="checkbox" name="is_default" /> Activité par défaut</label
+            ><button class="primary">Enregistrer</button>
+          </form>
+        </dialog>
+        <section id="view-account" hidden>
+          <div class="toolbar"><h2>Mon compte</h2></div>
+          <form id="profileform" class="card profile-card">
+            <label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required /></label
+            ><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required /></label
+            ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label
+            ><button class="primary">Enregistrer mes informations</button>
+            <div id="profileerror" class="error"></div>
+          </form>
+          <section class="card profile-export-card">
+            <div>
+              <h3>Apparence</h3>
+              <p class="muted">Thème de l’application sur cet appareil.</p>
+            </div>
+            <div id="themechoice" class="theme-choice" role="radiogroup" aria-label="Thème">
+              <label><input type="radio" name="theme" value="auto" />Automatique (selon le téléphone)</label
+              ><label><input type="radio" name="theme" value="light" />Clair</label
+              ><label><input type="radio" name="theme" value="dark" />Sombre</label>
+            </div>
+          </section>
+          <section class="card profile-export-card" id="remindercard">
+            <div>
+              <h3>Rappels</h3>
+              <p class="muted">
+                Une notification sur ce téléphone si tu n’as pas enregistré de séance depuis quelques jours.
+              </p>
+            </div>
+            <p id="reminderhint" class="reminder-hint" hidden></p>
+            <label class="reminder-switch"
+              ><input type="checkbox" id="reminderenabled" />Activer les rappels sur ce téléphone</label
+            >
+            <div id="reminderoptions" class="reminder-options" hidden>
+              <p class="reminder-legend">Me rappeler après</p>
+              <div
+                class="choice-chips"
+                id="reminderdays"
+                role="radiogroup"
+                aria-label="Nombre de jours sans séance"
+              ></div>
+              <p class="reminder-legend">Vers</p>
+              <div class="choice-chips" id="reminderhours" role="radiogroup" aria-label="Heure du rappel"></div>
+              <button type="button" class="smallbtn" id="remindertest">Envoyer une notification de test</button>
+            </div>
+            <div id="reminderstatus" class="error" role="status"></div>
+          </section>
+          <section class="card profile-export-card">
+            <div>
+              <h3>Export Excel</h3>
+              <p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p>
+            </div>
+            <button type="button" class="primary" id="exportexcel">Exporter les données</button>
+            <div id="exportexcelstatus" class="error" role="status"></div>
+          </section>
+        </section>
+      </section>
+      <dialog id="programdialog" class="modal">
+        <form id="programform" method="dialog">
+          <input type="hidden" name="program_id" />
+          <div class="sectionhead">
+            <h2 id="programtitle">Nouveau programme</h2>
+            <button type="button" class="iconbtn" id="closeprogram">×</button>
+          </div>
+          <label>Nom du programme<input name="name" placeholder="Ex. Force & haltéro" required maxlength="100" /></label
+          ><label class="checkbox-label"
+            ><input type="checkbox" name="is_default" /> Programme par défaut (du 01/01/1970 au 31/12/2100)</label
+          >
+          <div class="two">
+            <label>Début<input name="start" type="date" required /></label
+            ><label>Fin<input name="end" type="date" required /></label>
+          </div>
+          <button class="primary" id="programsubmit">Créer le programme</button>
+          <div class="error" id="programerror"></div>
+        </form>
+      </dialog>
+      <dialog id="woddialog" class="modal">
+        <form id="wodform" method="dialog">
+          <div class="sectionhead">
+            <h2 id="wodtitle">Ajouter un WOD au programme</h2>
+            <button type="button" class="iconbtn" id="closewod">×</button>
+          </div>
+          <input type="hidden" name="program_id" /><input type="hidden" name="wod_id" /><label
+            >Nom du WOD<input name="name" placeholder="WOD 1 — Force" required maxlength="100" /></label
+          ><label
+            >Contenu prévu / consignes<textarea
+              name="planned_comment"
+              rows="4"
+              placeholder="Décris librement le contenu prévu…"
+            ></textarea></label
+          ><label class="checkbox-label"
+            ><input type="checkbox" name="is_tracked" /> Entraînement suivi (programmation semaine par semaine)</label
+          >
+          <div class="two">
+            <label>Activité<select name="activity_id" required></select></label
+            ><label
+              >Durée par défaut (min)<input name="duration_minutes" type="number" min="1" max="600" required
+            /></label>
+          </div>
+          <button class="primary">Enregistrer le WOD</button>
+          <div class="error" id="woderror"></div>
+        </form>
+      </dialog>
 
-<dialog id="movementpickerdialog" class="modal"><form id="movementpickerform" method="dialog"><div class="sectionhead"><h2>Choisir les mouvements du programme</h2><button type="button" class="iconbtn" id="closemovementpicker">×</button></div><input type="hidden" name="program_id"><div id="movementpickerlist" class="movement-picker-list"></div><button class="primary">Enregistrer la sélection</button><div class="error" id="movementpickererror"></div></form></dialog><dialog id="sessiondialog" class="modal"><form id="sessionform" method="post"><div class="sectionhead"><h2 id="sessiontitle">Enregistrer une séance</h2><button type="button" class="iconbtn" id="closesession">×</button></div><input type="hidden" name="session_id"><select name="program_id" required hidden></select><label>WOD effectué<select name="wod_id" required></select></label><div class="session-time-row"><label>Date<input name="session_date" type="date" required></label><label>Activité<select name="activity_id" required></select></label><label hidden>Heure<input name="start_time" type="time" required></label><label hidden>Durée (min)<input name="duration_minutes" type="number" min="1" max="600" required></label></div><label>Réalisé / notes<textarea name="actual_comment" rows="4" placeholder="Charges, répétitions, sensations, adaptations, résultat…"></textarea></label><section id="sessionmovementsection" class="movement-editor"><h3>Focus mouvement</h3><div id="sessionmovementchecks"></div></section><button type="button" class="primary" id="savesession">Enregistrer la séance</button><div class="error" id="sessionerror"></div></form></dialog>
-<dialog id="wodchoice" class="modal wod-choice-modal"><div class="sectionhead"><h2 id="wodchoicetitle">Que souhaites-tu faire ?</h2><button type="button" class="iconbtn" id="closewodchoice">×</button></div><div class="wod-choice-actions"><button type="button" class="primary" id="choice-record">Enregistrer</button><button type="button" class="primary" id="choice-plan">Planifier</button></div></dialog><dialog id="prdialog" class="modal"><form id="prform"><input type="hidden" name="pr_id"><div class="sectionhead"><h2>Nouveau PR</h2><button type="button" class="iconbtn" id="closepr">×</button></div><label>Mouvement<select name="movement_id" required></select></label><label>Date<input name="record_date" type="date" required></label><label><span id="prvaluelabel">Charge (kg)</span><input id="prvalue" name="value" type="number" min="0.5" step="0.5" required></label><label id="prrmfield">Nombre de RM<select name="rep_count" required><option value="1">1 RM</option><option value="2">2 RM</option><option value="3">3 RM</option><option value="4">4 RM</option><option value="5">5 RM</option><option value="6">6 RM</option><option value="7">7 RM</option><option value="8">8 RM</option><option value="9">9 RM</option><option value="10">10 RM</option><option value="11">11 RM</option><option value="12">12 RM</option><option value="13">13 RM</option><option value="14">14 RM</option><option value="15">15 RM</option><option value="16">16 RM</option><option value="17">17 RM</option><option value="18">18 RM</option><option value="19">19 RM</option><option value="20">20 RM</option></select></label><button type="submit" class="primary">Enregistrer le PR</button><div id="prformerror" class="error"></div></form></dialog><dialog id="prhistorydialog" class="modal"><div class="sectionhead pr-history-page-title"><h2 id="prhistorytitle">Historique du PR</h2><button type="button" class="iconbtn" id="closeprhistory">×</button></div><div id="prhistorychart"></div><div id="prhistorylist" class="pr-history-list"></div></dialog><div id="toast" role="status"></div></main><script src="/offline.js"></script><script src="/app.js"></script></body></html>
+      <dialog id="movementpickerdialog" class="modal">
+        <form id="movementpickerform" method="dialog">
+          <div class="sectionhead">
+            <h2>Choisir les mouvements du programme</h2>
+            <button type="button" class="iconbtn" id="closemovementpicker">×</button>
+          </div>
+          <input type="hidden" name="program_id" />
+          <div id="movementpickerlist" class="movement-picker-list"></div>
+          <button class="primary">Enregistrer la sélection</button>
+          <div class="error" id="movementpickererror"></div>
+        </form>
+      </dialog>
+      <dialog id="sessiondialog" class="modal">
+        <form id="sessionform" method="post">
+          <div class="sectionhead">
+            <h2 id="sessiontitle">Enregistrer une séance</h2>
+            <button type="button" class="iconbtn" id="closesession">×</button>
+          </div>
+          <input type="hidden" name="session_id" /><select name="program_id" required hidden></select
+          ><label>WOD effectué<select name="wod_id" required></select></label>
+          <div class="session-time-row">
+            <label>Date<input name="session_date" type="date" required /></label
+            ><label>Activité<select name="activity_id" required></select></label
+            ><label hidden>Heure<input name="start_time" type="time" required /></label
+            ><label hidden>Durée (min)<input name="duration_minutes" type="number" min="1" max="600" required /></label>
+          </div>
+          <label
+            >Réalisé / notes<textarea
+              name="actual_comment"
+              rows="4"
+              placeholder="Charges, répétitions, sensations, adaptations, résultat…"
+            ></textarea>
+          </label>
+          <section id="sessionmovementsection" class="movement-editor">
+            <h3>Focus mouvement</h3>
+            <div id="sessionmovementchecks"></div>
+          </section>
+          <button type="button" class="primary" id="savesession">Enregistrer la séance</button>
+          <div class="error" id="sessionerror"></div>
+        </form>
+      </dialog>
+      <dialog id="wodchoice" class="modal wod-choice-modal">
+        <div class="sectionhead">
+          <h2 id="wodchoicetitle">Que souhaites-tu faire ?</h2>
+          <button type="button" class="iconbtn" id="closewodchoice">×</button>
+        </div>
+        <div class="wod-choice-actions">
+          <button type="button" class="primary" id="choice-record">Enregistrer</button
+          ><button type="button" class="primary" id="choice-plan">Planifier</button>
+        </div>
+      </dialog>
+      <dialog id="prdialog" class="modal">
+        <form id="prform">
+          <input type="hidden" name="pr_id" />
+          <div class="sectionhead">
+            <h2>Nouveau PR</h2>
+            <button type="button" class="iconbtn" id="closepr">×</button>
+          </div>
+          <label>Mouvement<select name="movement_id" required></select></label
+          ><label>Date<input name="record_date" type="date" required /></label
+          ><label
+            ><span id="prvaluelabel">Charge (kg)</span
+            ><input id="prvalue" name="value" type="number" min="0.5" step="0.5" required /></label
+          ><label id="prrmfield"
+            >Nombre de RM<select name="rep_count" required>
+              <option value="1">1 RM</option>
+              <option value="2">2 RM</option>
+              <option value="3">3 RM</option>
+              <option value="4">4 RM</option>
+              <option value="5">5 RM</option>
+              <option value="6">6 RM</option>
+              <option value="7">7 RM</option>
+              <option value="8">8 RM</option>
+              <option value="9">9 RM</option>
+              <option value="10">10 RM</option>
+              <option value="11">11 RM</option>
+              <option value="12">12 RM</option>
+              <option value="13">13 RM</option>
+              <option value="14">14 RM</option>
+              <option value="15">15 RM</option>
+              <option value="16">16 RM</option>
+              <option value="17">17 RM</option>
+              <option value="18">18 RM</option>
+              <option value="19">19 RM</option>
+              <option value="20">20 RM</option>
+            </select></label
+          ><button type="submit" class="primary">Enregistrer le PR</button>
+          <div id="prformerror" class="error"></div>
+        </form>
+      </dialog>
+      <dialog id="prhistorydialog" class="modal">
+        <div class="sectionhead pr-history-page-title">
+          <h2 id="prhistorytitle">Historique du PR</h2>
+          <button type="button" class="iconbtn" id="closeprhistory">×</button>
+        </div>
+        <div id="prhistorychart"></div>
+        <div id="prhistorylist" class="pr-history-list"></div>
+      </dialog>
+      <div id="toast" role="status"></div>
+    </main>
+    <script src="/offline.js"></script>
+    <script src="/js/core.js"></script>
+    <script src="/js/sessions.js"></script>
+    <script src="/js/programs.js"></script>
+    <script src="/js/export.js"></script>
+    <script src="/js/session-form.js"></script>
+    <script src="/js/reminders.js"></script>
+    <script src="/js/admin.js"></script>
+    <script src="/js/prs.js"></script>
+    <script src="/js/account.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/boot.js"></script>
+  </body>
+</html>

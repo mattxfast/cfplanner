@@ -1,0 +1,399 @@
+// FitFactory — programmes, WOD, mouvements et fenêtres de programme/WOD.
+// Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
+
+function programWeeks(program) {
+  const weeks = [];
+  for (let start = mondayOf(program.start_monday); start <= program.end_monday; start = addDays(start, 7))
+    weeks.push(start);
+  return weeks;
+}
+// Le WOD technique « __AUTRES__ » (séances « Autres ») n’est jamais affiché dans les listes de WOD.
+function visibleWods(pid) {
+  return (wodsByProgram[pid] || []).filter(w => w.name !== "__AUTRES__");
+}
+function weeklyWodContent(wodId, weekStart) {
+  return weeklyWodPrograms.find(x => x.wod_id === wodId && x.week_start === weekStart)?.content || "";
+}
+function renderWodWeeklyProgramming(program, wod) {
+  const weeks = programWeeks(program),
+    expanded = window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set()),
+    key = wod.id;
+  return (
+    '<div class="wod-weekly-program ' +
+    (!expanded.has(key) ? "collapsed" : "") +
+    '"><button type="button" class="wod-weekly-toggle" data-toggle-wod-programming="' +
+    wod.id +
+    '" aria-expanded="' +
+    expanded.has(key) +
+    '"><span>Programmation hebdomadaire</span><small>' +
+    weeks.length +
+    " semaines</small><b>" +
+    (expanded.has(key) ? "−" : "＋") +
+    '</b></button><div class="wod-weekly-body">' +
+    weeks
+      .map(
+        (week, index) =>
+          '<div class="wod-week-row"><label><b>S' +
+          (index + 1) +
+          "</b><small>" +
+          fmt(week) +
+          '</small><textarea rows="2" maxlength="2000" data-wod-week-content="' +
+          wod.id +
+          '" data-week="' +
+          week +
+          '" placeholder="Contenu prévu pour ce WOD…">' +
+          esc(weeklyWodContent(wod.id, week)) +
+          '</textarea></label><button type="button" class="smallbtn save-wod-week" data-wod="' +
+          wod.id +
+          '" data-week="' +
+          week +
+          '">Enregistrer</button></div>'
+      )
+      .join("") +
+    "</div></div>"
+  );
+}
+function renderPrograms() {
+  const collapsed = window.cfCollapsedPrograms || (window.cfCollapsedPrograms = new Set());
+  const folded = window.cfProgramSections || (window.cfProgramSections = new Set());
+  const reordering = window.cfReorderSections || (window.cfReorderSections = new Set());
+  const reorderToggle = (key, count, label) =>
+    count > 1
+      ? `<button type="button" class="smallbtn reorder-toggle ${reordering.has(key) ? "active" : ""}" data-toggle-reorder="${key}" aria-pressed="${reordering.has(key)}" aria-label="${label}" title="${label}">⇅</button>`
+      : "";
+  $("#programlist").innerHTML = programs.length
+    ? programs
+        .map(
+          p =>
+            `<article class="program card ${collapsed.has(p.id) ? "collapsed" : ""}"><div class="programhead"><div class="program-title"><button class="smallbtn collapse-program" data-toggle-program="${p.id}" aria-expanded="${!collapsed.has(p.id)}">${collapsed.has(p.id) ? "＋" : "−"}</button><div><h3>${esc(p.name)}</h3><small>${p.is_default ? "Programme par défaut · 01/01/1970 → 31/12/2100" : fmt(p.start_monday) + " → " + fmt(p.end_monday)}</small></div></div><div class="entryactions"><button class="smallbtn" data-edit-program="${p.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete ${p.has_sessions ? "is-disabled" : ""}" data-del-program="${p.id}" aria-label="Supprimer le programme" title="${p.has_sessions ? "Ce programme a déjà une séance réalisée et ne peut pas être supprimé" : "Supprimer le programme"}" ${p.has_sessions ? 'disabled aria-disabled="true"' : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div><div class="programbody"><div class="program-section program-subsection ${folded.has(p.id + ":wods") ? "collapsed" : ""}"><div class="program-section-heading program-section-toolbar"><button class="smallbtn section-collapse program-section-toggle" data-toggle-program-section="${p.id}:wods" aria-label="Replier les WOD" aria-expanded="${!folded.has(p.id + ":wods")}">${folded.has(p.id + ":wods") ? "＋" : "−"}</button><span>WOD</span>${reorderToggle(p.id + ":wods", visibleWods(p.id).length, "Réorganiser les WOD")}<button class="primary addsession-compact addwod" data-add-wod="${p.id}" aria-label="Ajouter un WOD" title="Ajouter un WOD">＋</button></div><div class="program-subsection-body"><div class="wodlist">${
+              visibleWods(p.id)
+                .map(
+                  (w, i) =>
+                    `<div class="wod-entry"><div class="wodrow"><div class="wod-title"><b>${esc(w.name)}</b>${w.is_tracked ? `<span class="tracked-tag">Suivi</span>` : ""}</div><div class="entryactions reorder-actions">${reordering.has(p.id + ":wods") ? `<button class="smallbtn reorder-btn" data-move-wod="${w.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i === 0 ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg></button><button class="smallbtn reorder-btn" data-move-wod="${w.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i === visibleWods(p.id).length - 1 ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg></button>` : ""}<button class="smallbtn" data-edit-wod="${w.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete ${w.has_sessions ? "is-disabled" : ""}" data-del-wod="${w.id}" aria-label="Supprimer le WOD" title="${w.has_sessions ? "Ce WOD a déjà été réalisé et ne peut pas être supprimé" : "Supprimer le WOD"}" ${w.has_sessions ? 'disabled aria-disabled="true"' : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div>${w.planned_comment ? `<p>${esc(w.planned_comment)}</p>` : ""}${w.is_tracked ? renderWodWeeklyProgramming(p, w) : ""}</div></div>`
+                )
+                .join("") || "<p class='muted'>Aucun WOD dans ce programme.</p>"
+            }</div></div></div><div class="movement-editor compact program-section program-subsection ${folded.has(p.id + ":movements") ? "collapsed" : ""}"><div class="program-section-heading program-section-toolbar"><button class="smallbtn section-collapse program-section-toggle" data-toggle-program-section="${p.id}:movements" aria-label="Replier les mouvements" aria-expanded="${!folded.has(p.id + ":movements")}">${folded.has(p.id + ":movements") ? "＋" : "−"}</button><span>Focus mouvement</span>${reorderToggle(p.id + ":movements", (movementsByProgram[p.id] || []).length, "Réorganiser les mouvements")}<button class="primary addsession-compact addwod" data-pick-movements="${p.id}" aria-label="Ajouter un mouvement depuis le catalogue" title="Ajouter un mouvement depuis le catalogue">＋</button></div><div class="program-subsection-body"><div class="program-movement-list">${(movementsByProgram[p.id] || []).map((m, i) => `<div class="movement-row"><span>${esc(m.name)}</span><div class="entryactions reorder-actions">${reordering.has(p.id + ":movements") ? `<button class="smallbtn reorder-btn" data-move-movement="${m.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i === 0 ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg></button><button class="smallbtn reorder-btn" data-move-movement="${m.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i === (movementsByProgram[p.id] || []).length - 1 ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg></button>` : ""}${m.catalog_movement_id ? "" : `<button class="smallbtn" data-edit-movement="${m.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>`}<button class="smallbtn delete" data-del-movement="${m.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div>`).join("") || `<p class="muted">Aucun mouvement défini.</p>`}</div></div></div></div></div></article>`
+        )
+        .join("")
+    : "<div class='card empty'>Aucun programme. Crée ton premier programme.</div>";
+  $("#programlist")
+    .querySelectorAll("[data-toggle-wod-programming]")
+    .forEach(
+      b =>
+        (b.onclick = () => {
+          const key = b.dataset.toggleWodProgramming,
+            set = window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set());
+          if (set.has(key)) set.delete(key);
+          else set.add(key);
+          renderPrograms();
+        })
+    );
+  $("#programlist")
+    .querySelectorAll(".save-wod-week")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const wod = b.dataset.wod,
+            week = b.dataset.week,
+            field = $("#programlist").querySelector('[data-wod-week-content="' + wod + '"][data-week="' + week + '"]'),
+            content = field?.value || "";
+          b.disabled = true;
+          try {
+            await api("/wods/" + wod + "/weekly-programming", {
+              method: "PUT",
+              body: JSON.stringify({week_start: week, content}),
+            });
+            const old = weeklyWodPrograms.find(x => x.wod_id === wod && x.week_start === week);
+            if (old) old.content = content;
+            else weeklyWodPrograms.push({wod_id: wod, week_start: week, content});
+            toast("Programmation hebdomadaire enregistrée.");
+          } catch (e) {
+            toast(e.message);
+          } finally {
+            b.disabled = false;
+          }
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-toggle-program-section]")
+    .forEach(
+      b =>
+        (b.onclick = () => {
+          const key = b.dataset.toggleProgramSection;
+          if (folded.has(key)) folded.delete(key);
+          else folded.add(key);
+          renderPrograms();
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-toggle-reorder]")
+    .forEach(
+      b =>
+        (b.onclick = () => {
+          const key = b.dataset.toggleReorder;
+          if (reordering.has(key)) reordering.delete(key);
+          else reordering.add(key);
+          renderPrograms();
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-toggle-program]")
+    .forEach(
+      b =>
+        (b.onclick = () => {
+          const id = b.dataset.toggleProgram;
+          if (collapsed.has(id)) collapsed.delete(id);
+          else collapsed.add(id);
+          renderPrograms();
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-move-wod]")
+    .forEach(b => (b.onclick = () => moveProgramItem(b.dataset.moveWod, b.dataset.direction, "wod")));
+  $("#programlist")
+    .querySelectorAll("[data-move-movement]")
+    .forEach(b => (b.onclick = () => moveProgramItem(b.dataset.moveMovement, b.dataset.direction, "movement")));
+  $("#programlist")
+    .querySelectorAll("[data-edit-program]")
+    .forEach(b => (b.onclick = () => openProgram(programs.find(p => p.id === b.dataset.editProgram))));
+  $("#programlist")
+    .querySelectorAll("[data-del-program]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          if (confirm("Supprimer ce programme et ses WOD ?")) {
+            try {
+              await api("/programs/" + b.dataset.delProgram, {method: "DELETE"});
+              load();
+            } catch (e) {
+              toast(e.message);
+            }
+          }
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-pick-movements]")
+    .forEach(b => (b.onclick = () => openMovementPicker(b.dataset.pickMovements)));
+  $("#programlist")
+    .querySelectorAll("[data-edit-movement]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const id = b.dataset.editMovement;
+          let current = "";
+          for (const pid of Object.keys(movementsByProgram)) {
+            const m = movementsByProgram[pid].find(x => x.id === id);
+            if (m) {
+              current = m.name;
+              break;
+            }
+          }
+          const name = prompt("Modifier le mouvement :", current);
+          if (name === null || !name.trim() || name.trim() === current) return;
+          try {
+            await api("/movements/" + id, {method: "PUT", body: JSON.stringify({name: name.trim()})});
+            await load();
+            toast("Mouvement modifié.");
+          } catch (e) {
+            toast(e.message);
+          }
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-del-movement]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          if (confirm("Supprimer ce mouvement et ses validations ?")) {
+            await api("/movements/" + b.dataset.delMovement, {method: "DELETE"});
+            await load();
+          }
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-add-wod]")
+    .forEach(b => (b.onclick = () => openWod(b.dataset.addWod)));
+  $("#programlist")
+    .querySelectorAll("[data-edit-wod]")
+    .forEach(
+      b =>
+        (b.onclick = () => {
+          const id = b.dataset.editWod;
+          for (const pid of Object.keys(wodsByProgram)) {
+            const w = wodsByProgram[pid].find(x => x.id === id);
+            if (w) {
+              openWod(pid, w);
+              break;
+            }
+          }
+        })
+    );
+  $("#programlist")
+    .querySelectorAll("[data-del-wod]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          if (confirm("Supprimer ce WOD et les séances associées ?")) {
+            await api("/wods/" + b.dataset.delWod, {method: "DELETE"});
+            load();
+          }
+        })
+    );
+}
+async function moveProgramItem(itemId, direction, kind) {
+  const source = kind === "wod" ? wodsByProgram : movementsByProgram;
+  let pid = null;
+  for (const id of Object.keys(source)) {
+    if (source[id].some(x => x.id === itemId)) {
+      pid = id;
+      break;
+    }
+  }
+  if (!pid) return;
+  const previous = source[pid],
+    list = kind === "wod" ? visibleWods(pid) : [...previous],
+    index = list.findIndex(x => x.id === itemId),
+    target = index + Number(direction);
+  if (target < 0 || target >= list.length) return;
+  [list[index], list[target]] = [list[target], list[index]];
+  source[pid] = [...list, ...previous.filter(x => !list.includes(x))];
+  renderPrograms();
+  renderWeek();
+  try {
+    await api("/programs/" + pid + "/order", {
+      method: "PUT",
+      body: JSON.stringify({kind, ids: source[pid].map(x => x.id)}),
+    });
+  } catch (e) {
+    source[pid] = previous;
+    renderPrograms();
+    renderWeek();
+    toast(e.message);
+  }
+}
+function openMovementPicker(pid) {
+  const current = movementsByProgram[pid] || [],
+    used = new Set(current.map(m => m.catalog_movement_id).filter(Boolean));
+  $("#movementpickerform").elements.program_id.value = pid;
+  $("#movementpickerlist").innerHTML = movementCatalog.length
+    ? movementCatalog
+        .map(
+          m =>
+            `<label class="movement-check"><input type="checkbox" name="catalog_movement_ids" value="${m.id}" ${used.has(m.id) ? "checked" : ""}><span>${esc(m.name)}</span></label>`
+        )
+        .join("")
+    : `<p class="muted">Le catalogue est vide. L’administrateur doit d’abord ajouter des mouvements.</p>`;
+  $("#movementpickererror").textContent = "";
+  $("#movementpickerdialog").showModal();
+}
+$("#closemovementpicker").onclick = () => $("#movementpickerdialog").close();
+$("#movementpickerform").onsubmit = async e => {
+  e.preventDefault();
+  const pid = e.target.elements.program_id.value,
+    selected = [...e.target.querySelectorAll('input[name="catalog_movement_ids"]:checked')].map(x => x.value),
+    existing = movementsByProgram[pid] || [],
+    wanted = new Set(selected);
+  try {
+    for (const m of existing.filter(x => x.catalog_movement_id && !wanted.has(x.catalog_movement_id)))
+      await api("/movements/" + m.id, {method: "DELETE"});
+    for (const id of selected.filter(x => !existing.some(m => m.catalog_movement_id === x)))
+      await api("/programs/" + pid + "/movements", {method: "POST", body: JSON.stringify({catalog_movement_id: id})});
+    $("#movementpickerdialog").close();
+    await load();
+    switchView("programs");
+    toast("Mouvements du programme mis à jour.");
+  } catch (x) {
+    $("#movementpickererror").textContent = x.message;
+  }
+};
+
+function syncProgramDateFields() {
+  const f = $("#programform"),
+    isDefault = f.elements.is_default.checked;
+  f.elements.start.disabled = isDefault;
+  f.elements.end.disabled = isDefault;
+  f.elements.start.required = !isDefault;
+  f.elements.end.required = !isDefault;
+  if (isDefault) {
+    f.elements.start.value = "1970-01-01";
+    f.elements.end.value = "2100-12-31";
+  } else {
+    if (f.elements.start.value === "1970-01-01") f.elements.start.value = "";
+    if (f.elements.end.value === "2100-12-31") f.elements.end.value = "";
+  }
+}
+$("#programform").elements.is_default.onchange = syncProgramDateFields;
+function openProgram(p = null) {
+  const f = $("#programform");
+  f.reset();
+  f.elements.program_id.value = p?.id || "";
+  f.elements.name.value = p?.name || "";
+  f.elements.is_default.checked = !!p?.is_default;
+  f.elements.start.value = p && !p.is_default ? p.start_monday : "";
+  f.elements.end.value = p && !p.is_default ? p.end_monday : "";
+  syncProgramDateFields();
+  $("#programtitle").textContent = p ? "Modifier le programme" : "Nouveau programme";
+  $("#programsubmit").textContent = p ? "Enregistrer les modifications" : "Créer le programme";
+  $("#programerror").textContent = "";
+  $("#programdialog").showModal();
+}
+$("#newprogram").onclick = () => openProgram();
+$("#closeprogram").onclick = () => $("#programdialog").close();
+$("#programform").onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target),
+    id = f.get("program_id"),
+    body = {
+      name: f.get("name"),
+      start: f.get("start"),
+      end: f.get("end"),
+      is_default: $("#programform").elements.is_default.checked,
+    };
+  try {
+    await api(id ? "/programs/" + id : "/programs", {method: id ? "PUT" : "POST", body: JSON.stringify(body)});
+    $("#programdialog").close();
+    e.target.reset();
+    await load();
+    switchView("programs");
+    toast(id ? "Programme modifié." : "Programme créé.");
+  } catch (x) {
+    $("#programerror").textContent = x.message;
+  }
+};
+function openWod(pid, w = null) {
+  const f = $("#wodform");
+  f.reset();
+  f.elements.program_id.value = pid;
+  f.elements.wod_id.value = w?.id || "";
+  f.elements.name.value = w?.name || "";
+  f.elements.planned_comment.value = w?.planned_comment || "";
+  f.elements.is_tracked.checked = !!w?.is_tracked;
+  fillActivitySelect(f.elements.activity_id, w?.activity_id || defaultActivity()?.id);
+  f.elements.duration_minutes.value = w?.duration_minutes || defaultActivity()?.duration_minutes || 60;
+  $("#wodtitle").textContent = w ? "Modifier le WOD" : "Ajouter un WOD au programme";
+  $("#woddialog").showModal();
+}
+$("#closewod").onclick = () => $("#woddialog").close();
+$("#wodform").onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target),
+    id = f.get("wod_id"),
+    body = {
+      name: f.get("name"),
+      planned_comment: f.get("planned_comment"),
+      activity_id: f.get("activity_id"),
+      duration_minutes: Number(f.get("duration_minutes")),
+      is_tracked: $("#wodform").elements.is_tracked.checked,
+    };
+  try {
+    await api(id ? "/wods/" + id : "/programs/" + f.get("program_id") + "/wods", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    $("#woddialog").close();
+    await load();
+    toast(id ? "WOD modifié." : "WOD ajouté au programme.");
+  } catch (x) {
+    $("#woderror").textContent = x.message;
+  }
+};

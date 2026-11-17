@@ -12,7 +12,8 @@ FitFactory (anciennement CFPlanner ; dépôt GitHub, Worker Cloudflare, base D1,
 - `public/offline.js` : mode hors ligne (cache des lectures, file d'attente des modifications, resynchronisation). Toute nouvelle route d'écriture utilisée hors ligne doit être idempotente au rejeu (`client_id` pour les créations) et, si elle doit s'afficher immédiatement, avoir son application locale dans `patch()`.
 - `src/worker.js` : backend Cloudflare Worker (toutes les routes `/api/*`, authentification, migrations applicatives, tâches planifiées).
 - `src/push.js` : envoi des notifications Web Push (chiffrement RFC 8291, signature VAPID), sans dépendance.
-- `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `app.js`, `style.css`, `manifest.webmanifest`). Pas de framework, pas d'étape de build. Polices dans `public/fonts/` (DM Sans, Manrope, OFL) et bibliothèque Excel dans `public/vendor/` (SheetJS 0.18.5, Apache-2.0) : aucune ressource externe chargée par l'application.
+- `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `style.css`, `manifest.webmanifest`, `sw.js`). Pas de framework, pas d'étape de build.
+- `public/js/` : le code de l'interface, en scripts classiques chargés dans l'ordre par `index.html` (portée globale partagée) : `core.js` (état, dates, API, connexion), `sessions.js` (semaine, historique), `programs.js` (programmes, WOD, mouvements), `export.js` (Excel), `session-form.js` (saisie de séance), `reminders.js` (rappels), `admin.js`, `prs.js`, `account.js` (profil, thème), `ui.js` (défilement, service worker), puis `boot.js` (démarrage) **en dernier**. Un nouveau fichier doit être ajouté à `index.html` et à la liste `SHELL` de `sw.js` (en changeant la version du cache). Polices dans `public/fonts/` (DM Sans, Manrope, OFL) et bibliothèque Excel dans `public/vendor/` (SheetJS 0.18.5, Apache-2.0) : aucune ressource externe chargée par l'application.
 - Base de données : Cloudflare D1, binding `DB`.
 - `wrangler.toml` : bindings, variable `ADMIN_EMAIL` (compte administrateur), tâches planifiées : 03:17 UTC purge des sessions et tentatives de connexion expirées ; toutes les heures, rappels de séance (heure de Paris).
 - `migrations/0001_init.sql` : socle initial appliqué par Wrangler.
@@ -23,9 +24,10 @@ Les agents poussent **directement sur `main`**. Il n'y a pas de relecture de pul
 
 1. **Toujours partir de la dernière version** : `git pull --rebase origin main` avant toute modification. Un autre agent a pu pousser depuis ta dernière intervention.
 2. **Ne jamais forcer un push** (`git push --force` et `--force-with-lease` interdits). En cas de conflit, récupère, fusionne proprement, puis pousse.
-3. **Ne pas reformater les fichiers existants.** Respecte le style compact actuel et ne modifie que les lignes nécessaires : un reformatage global rend l'historique illisible et provoque des conflits entre agents.
+3. **Le code est formaté avec Prettier** (configuration `.prettierrc`) : lance `npx -y prettier@3.3.3 --write <fichiers modifiés>` avant de committer, et ne reformate pas autrement. Ne modifie que les lignes nécessaires.
 4. **Vérifier avant de pousser** :
-   - `node --check public/app.js`
+   - `for f in public/js/*.js public/offline.js public/sw.js; do node --check $f; done`
+   - `npx -y prettier@3.3.3 --check src public tests`
    - `cp src/worker.js /tmp/worker.mjs && node --check /tmp/worker.mjs`
    - `node --test tests/*.test.mjs` (tests d'intégration ; ajouter un test pour toute nouvelle route sensible)
    - relire le diff complet (`git diff`) avant de committer.
