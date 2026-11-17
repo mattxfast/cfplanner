@@ -42,6 +42,7 @@ Les mouvements du catalogue sont répartis en quatre familles :
 Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les enregistrements peuvent être supprimés depuis leur historique.
 
 ### Compte et administration
+- Choix du thème dans « Mon compte » : Automatique (selon le réglage du téléphone), Clair ou Sombre. La préférence est mémorisée sur l'appareil.
 - Création de compte et connexion par e-mail et mot de passe.
 - Modification du prénom et du nom.
 - Administration réservée au compte défini par `ADMIN_EMAIL`.
@@ -64,7 +65,7 @@ Les dates de séance ne peuvent pas être dans le futur. Un programme doit couvr
 ## Architecture technique
 
 - **Frontend** : HTML, CSS et JavaScript dans `public/`.
-- **Couleurs** : toutes définies dans la palette en tête de `public/style.css` (variables `:root` nommées par rôle : bandeau, rubrique, contenu, action, suppression…). Changer de thème revient à modifier ces variables.
+- **Couleurs** : toutes définies dans la palette en tête de `public/style.css` (variables `:root` nommées par rôle : bandeau, rubrique, contenu, action, suppression…). Le thème sombre redéfinit les mêmes variables sous `:root[data-theme="dark"]`.
 - **Backend** : Cloudflare Worker dans `src/worker.js`.
 - **Base de données** : Cloudflare D1, binding `DB`.
 - **Assets statiques** : binding Cloudflare `ASSETS`.

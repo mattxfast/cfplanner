@@ -271,6 +271,12 @@ $("#prform").onsubmit=async e=>{
 $("#toggle-catalog-reorder").onclick=()=>{window.cfCatalogReorder=!window.cfCatalogReorder;if(renderAdmin.last)renderAdmin(...renderAdmin.last)};
 $("#closeprhistory").onclick=()=>$("#prhistorydialog").close();
 
+// Thème clair / sombre : préférence mémorisée sur l’appareil, « auto » suit le réglage du téléphone.
+function themePreference(){try{return localStorage.getItem("cfplanner-theme")||"auto"}catch{return "auto"}}
+function applyTheme(){const pref=themePreference(),dark=pref==="dark"||(pref==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=dark?"dark":"light";document.querySelector('meta[name="theme-color"]')?.setAttribute("content",dark?"#0f1420":"#151b2b")}
+$("#themeselect").value=themePreference();$("#themeselect").onchange=e=>{try{localStorage.setItem("cfplanner-theme",e.target.value)}catch{}applyTheme()};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme);applyTheme();
+
 // Bloque le défilement de la page derrière une fenêtre ouverte (y compris sur iOS Safari).
 let lockedScrollY=0;function syncScrollLock(){const open=!!document.querySelector("dialog[open]"),body=document.body;if(open&&!body.classList.contains("modal-open")){lockedScrollY=window.scrollY;body.style.top=-lockedScrollY+"px";body.classList.add("modal-open")}else if(!open&&body.classList.contains("modal-open")){body.classList.remove("modal-open");body.style.top="";window.scrollTo(0,lockedScrollY)}}
 new MutationObserver(syncScrollLock).observe(document.body,{subtree:true,attributes:true,attributeFilter:["open"]});
