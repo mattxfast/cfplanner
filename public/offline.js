@@ -6,7 +6,7 @@
 // Chargé avant app.js, qui fournit l'envoi réseau et les noms affichés (FFOffline.init).
 const FFOffline=(()=>{
  const CACHE="ff-cache:",QUEUE="ff-queue",OWNER="ff-cache-owner";
- const NEVER_QUEUED=/^\/(login|register|logout|admin\/|admin$)/;
+ const NEVER_QUEUED=/^\/(login|register|logout|admin\/|admin$|push\/)/;
  const store={
   get(key){try{return JSON.parse(localStorage.getItem(key))}catch{return null}},
   set(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}},

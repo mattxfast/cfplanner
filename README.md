@@ -57,6 +57,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - iPhone : ouvrir le site dans Safari, bouton Partager, puis « Sur l'écran d'accueil ».
 - Android : ouvrir le site dans Chrome, menu ⋮, puis « Installer l'application ».
 - Service worker (`public/sw.js`) en « réseau d'abord » : la dernière version publiée est toujours chargée ; hors connexion, l'application (pages, scripts, polices) s'ouvre depuis le cache. Le service worker ne met jamais en cache les appels `/api/`.
+- Rappels par notification (profil → « Rappels ») : une notification si aucune séance n'a été enregistrée depuis 2, 3, 4, 5 ou 7 jours, vers 7 h, 12 h, 18 h ou 20 h (heure de Paris), au plus une fois par jour. Activation par téléphone (sur iPhone : app ajoutée à l'écran d'accueil, iOS 16.4 minimum), bouton de notification de test. Envoi Web Push depuis le Worker (`src/push.js`, sans dépendance : chiffrement RFC 8291, signature VAPID RFC 8292) ; les clés VAPID sont générées une seule fois et gardées dans la table `app_settings` (aucun secret à configurer). Seuls les services de notification d'Apple, Google, Mozilla et Microsoft sont acceptés comme destinataires ; un abonnement expiré (404/410) est supprimé.
 - Mode hors ligne (`public/offline.js`) :
   - chaque lecture `/api/…` réussie est gardée sur le téléphone (localStorage) ; sans réseau, la dernière copie est affichée, y compris au démarrage ;
   - sans réseau, les modifications (séances, PR, planification, compétition, programmes…) sont mises en file d'attente dans l'ordre et appliquées tout de suite à l'affichage, puis rejouées automatiquement au retour du réseau (événement « online », retour sur l'application, ou toutes les 20 s) ;
@@ -99,6 +100,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V3 ajoute l'index sur les mouvements cochés dans les séances.
 - V7 ajoute la table `session_catalog_movement_checks` (mouvements du catalogue cochés dans une séance d'un programme sans mouvement à travailler).
 - V8 ajoute la table `login_attempts` (tentatives de connexion échouées, indexées par clé e-mail/IP et date).
+- V9 ajoute les tables `app_settings` (clés VAPID), `push_subscriptions` (un abonnement par téléphone) et `reminder_settings` (jours sans séance, heure, dernier envoi).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 

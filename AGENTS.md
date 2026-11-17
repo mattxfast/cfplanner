@@ -10,10 +10,11 @@ FitFactory (anciennement CFPlanner ; dépôt GitHub, Worker Cloudflare, base D1,
 ## Architecture
 
 - `public/offline.js` : mode hors ligne (cache des lectures, file d'attente des modifications, resynchronisation). Toute nouvelle route d'écriture utilisée hors ligne doit être idempotente au rejeu (`client_id` pour les créations) et, si elle doit s'afficher immédiatement, avoir son application locale dans `patch()`.
-- `src/worker.js` : backend Cloudflare Worker (toutes les routes `/api/*`, authentification, migrations applicatives, tâche cron).
+- `src/worker.js` : backend Cloudflare Worker (toutes les routes `/api/*`, authentification, migrations applicatives, tâches planifiées).
+- `src/push.js` : envoi des notifications Web Push (chiffrement RFC 8291, signature VAPID), sans dépendance.
 - `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `app.js`, `style.css`, `manifest.webmanifest`). Pas de framework, pas d'étape de build. Polices dans `public/fonts/` (DM Sans, Manrope, OFL) et bibliothèque Excel dans `public/vendor/` (SheetJS 0.18.5, Apache-2.0) : aucune ressource externe chargée par l'application.
 - Base de données : Cloudflare D1, binding `DB`.
-- `wrangler.toml` : bindings, variable `ADMIN_EMAIL` (compte administrateur), cron quotidien de purge des sessions expirées.
+- `wrangler.toml` : bindings, variable `ADMIN_EMAIL` (compte administrateur), tâches planifiées : 03:17 UTC purge des sessions et tentatives de connexion expirées ; toutes les heures, rappels de séance (heure de Paris).
 - `migrations/0001_init.sql` : socle initial appliqué par Wrangler.
 
 ## Méthode de travail (obligatoire)
