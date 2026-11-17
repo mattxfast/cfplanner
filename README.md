@@ -122,6 +122,14 @@ Appliquer les migrations Wrangler sur la base distante :
 npx wrangler d1 migrations apply fitfactory --remote
 ```
 
+Lancer les tests d'intégration (Node.js 20+ ; démarrent le Worker en local sur une base D1 vide et temporaire, environ 1 minute) :
+
+```bash
+node --test tests/*.test.mjs
+```
+
+Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels.
+
 Déployer le Worker et les assets :
 
 ```bash

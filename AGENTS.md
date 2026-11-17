@@ -27,6 +27,7 @@ Les agents poussent **directement sur `main`**. Il n'y a pas de relecture de pul
 4. **Vérifier avant de pousser** :
    - `node --check public/app.js`
    - `cp src/worker.js /tmp/worker.mjs && node --check /tmp/worker.mjs`
+   - `node --test tests/*.test.mjs` (tests d'intégration ; ajouter un test pour toute nouvelle route sensible)
    - relire le diff complet (`git diff`) avant de committer.
 5. **Un commit par fonctionnalité ou correctif**, avec un message clair en français décrivant le changement. Un retour arrière doit pouvoir se faire par un simple `git revert`.
 6. **Mettre à jour le `README.md`** dès qu'une fonctionnalité, une route ou une migration change.
