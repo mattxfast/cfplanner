@@ -16,5 +16,9 @@ migrations_dir = "migrations"
 [vars]
 ADMIN_EMAIL = "mattxfast@gmail.com"
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [triggers]
 crons = ["17 3 * * *"]
