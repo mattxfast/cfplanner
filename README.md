@@ -45,6 +45,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Choix du thème dans « Mon compte », par trois cases exclusives : Automatique (selon le réglage du téléphone), Clair ou Sombre. La préférence est mémorisée sur l'appareil.
 - Export Excel dans « Mon compte » : un seul tableau « Bilan », une ligne par semaine ISO dans l'ordre chronologique, tous programmes confondus (une semaine qui chevauche deux programmes a une ligne par programme). Toujours 7 colonnes « WOD 1 » à « WOD 7 », par position (le 1er WOD de son programme compte en WOD 1, etc.) ; à chaque changement de programme, une ligne rappelle le nom du programme et de ses 7 WOD. Les colonnes de mouvements travaillés sont fixes pour tout le fichier : regroupées par nom (un même mouvement présent dans plusieurs programmes garde une seule colonne), limitées aux mouvements cochés au moins une fois.
 - Création de compte et connexion par e-mail et mot de passe.
+- Protection contre les essais de mots de passe : après 5 échecs en 15 minutes pour un même e-mail (ou 20 depuis une même adresse IP), la connexion est refusée avec le délai d'attente restant. Une connexion réussie remet le compteur de l'e-mail à zéro ; la tâche quotidienne purge les tentatives de plus de 24 h.
 - Modification du prénom et du nom.
 - Administration réservée au compte défini par `ADMIN_EMAIL`.
 - Gestion des utilisateurs (activation / désactivation).
@@ -90,6 +91,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V2 crée les tables et colonnes nécessaires à l'application actuelle.
 - V3 ajoute l'index sur les mouvements cochés dans les séances.
 - V7 ajoute la table `session_catalog_movement_checks` (mouvements du catalogue cochés dans une séance d'un programme sans mouvement à travailler).
+- V8 ajoute la table `login_attempts` (tentatives de connexion échouées, indexées par clé e-mail/IP et date).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 

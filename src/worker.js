@@ -129,9 +129,17 @@ async function ensureV2Schema(env) {
       await env.DB.prepare("CREATE TABLE IF NOT EXISTS session_catalog_movement_checks (session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE, catalog_movement_id TEXT NOT NULL REFERENCES movement_catalog(id) ON DELETE CASCADE, PRIMARY KEY(session_id,catalog_movement_id))").run();
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS session_catalog_movement_checks_movement ON session_catalog_movement_checks(catalog_movement_id)").run();
     });
+    await runMigration("v8-login-attempts", async () => {
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS login_attempts (attempt_key TEXT NOT NULL, attempted_at INTEGER NOT NULL)").run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS login_attempts_key_time ON login_attempts(attempt_key, attempted_at)").run();
+    });
   })().catch(err => { schemaReady = null; throw err; });
   return schemaReady;
 }
+// Limitation des tentatives de connexion : 5 échecs par e-mail ou 20 par adresse IP sur 15 minutes.
+const LOGIN_WINDOW=15*60,LOGIN_LIMITS={email:5,ip:20};
+const loginKeys=(r,email)=>({email:"email:"+email,ip:"ip:"+(r.headers.get("CF-Connecting-IP")||"inconnue")});
+async function loginWaitMinutes(e,keys){const since=Math.floor(Date.now()/1000)-LOGIN_WINDOW;let wait=0;for(const [kind,key] of Object.entries(keys)){const x=await e.DB.prepare("SELECT COUNT(*) AS n,MIN(attempted_at) AS first FROM login_attempts WHERE attempt_key=? AND attempted_at>?").bind(key,since).first();if(x.n>=LOGIN_LIMITS[kind])wait=Math.max(wait,Math.ceil((x.first+LOGIN_WINDOW-Math.floor(Date.now()/1000))/60))}return wait}
 async function movementCheckStatements(env,userId,sessionId,programId,ids=[],catalogIds=[]){
  const uniqueIds=[...new Set(ids.map(String).filter(Boolean))];
  const validIds=[];
@@ -158,7 +166,7 @@ async function movementCheckStatements(env,userId,sessionId,programId,ids=[],cat
 async function api(r,e,p){
  const adminEmail=String(e.ADMIN_EMAIL||"").trim().toLowerCase();
  if(r.method==="POST"&&p==="/api/register"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),pw=String(b.password||"");if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Adresse e-mail invalide."},400);if(pw.length<12)return json({error:"Mot de passe : 12 caractères minimum."},400);if(await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return json({error:"Ce compte existe déjà."},409);const id=uid();await e.DB.prepare("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)").bind(id,email,await hashPass(pw)).run();return session(id,email,e)}
- if(r.method==="POST"&&p==="/api/login"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase(),u=await e.DB.prepare("SELECT id,email,password_hash,is_active FROM users WHERE email=?").bind(email).first();if(!u||!u.is_active||!(await verify(String(b.password||""),u.password_hash)))return json({error:"Identifiants incorrects."},401);return session(u.id,u.email,e)}
+ if(r.method==="POST"&&p==="/api/login"){const b=await r.json(),email=String(b.email||"").trim().toLowerCase().slice(0,200),keys=loginKeys(r,email),wait=await loginWaitMinutes(e,keys);if(wait>0)return json({error:`Trop de tentatives de connexion. Réessaie dans ${wait} minute${wait>1?"s":""}.`},429);const u=await e.DB.prepare("SELECT id,email,password_hash,is_active FROM users WHERE email=?").bind(email).first();if(!u||!u.is_active||!(await verify(String(b.password||""),u.password_hash))){const now=Math.floor(Date.now()/1000);await e.DB.batch([e.DB.prepare("INSERT INTO login_attempts(attempt_key,attempted_at) VALUES(?,?)").bind(keys.email,now),e.DB.prepare("INSERT INTO login_attempts(attempt_key,attempted_at) VALUES(?,?)").bind(keys.ip,now)]);return json({error:"Identifiants incorrects."},401)}await e.DB.prepare("DELETE FROM login_attempts WHERE attempt_key=?").bind(keys.email).run();return session(u.id,u.email,e)}
  if(r.method==="POST"&&p==="/api/logout"){const t=cookie(r,"cfplanner_session");if(t)await e.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(await sha(t)).run();return json({ok:true},200,{"set-cookie":setCookie("",0)})}
  if(r.method==="GET"&&p==="/api/me"){const u=await me(r,e);return json({user:u||null,is_admin:u?.email===adminEmail})}
  const u=await me(r,e);if(!u)return json({error:"Connexion requise."},401);const admin=u.email===adminEmail;let m;
@@ -199,4 +207,4 @@ m=p.match(/^\/api\/programs\/([\w-]+)\/order$/);if(m&&r.method==="PUT"){const pi
  if(r.method==="GET"&&p==="/api/stats"){const x=await e.DB.prepare("SELECT w.id,w.name,w.planned_comment,COUNT(s.id) AS sessions_count,COALESCE(SUM(s.session_count),0) AS total_sessions FROM program_wods w LEFT JOIN training_sessions s ON s.wod_id=w.id AND s.user_id=w.user_id WHERE w.user_id=? AND w.name<>'__AUTRES__' GROUP BY w.id ORDER BY total_sessions DESC,w.name").bind(u.id).all();return json({stats:x.results})}
  return json({error:"Route inconnue."},404)
 }
-export default {async scheduled(controller,e,ctx){ctx.waitUntil(e.DB.prepare("DELETE FROM sessions WHERE expires_at<=?").bind(Math.floor(Date.now()/1000)).run())},async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner", {name:err?.name, message:err?.message, stack:err?.stack, cause:err?.cause});return json({error:"Erreur serveur. Réessaie."},500)}}};
+export default {async scheduled(controller,e,ctx){const now=Math.floor(Date.now()/1000);ctx.waitUntil(ensureV2Schema(e).then(()=>e.DB.batch([e.DB.prepare("DELETE FROM sessions WHERE expires_at<=?").bind(now),e.DB.prepare("DELETE FROM login_attempts WHERE attempted_at<=?").bind(now-86400)])))},async fetch(r,e){const u=new URL(r.url);if(!u.pathname.startsWith("/api/"))return e.ASSETS.fetch(r);try{await ensureV2Schema(e);return await api(r,e,u.pathname)}catch(err){console.error("CFPlanner", {name:err?.name, message:err?.message, stack:err?.stack, cause:err?.cause});return json({error:"Erreur serveur. Réessaie."},500)}}};
