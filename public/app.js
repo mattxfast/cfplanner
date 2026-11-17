@@ -4,7 +4,8 @@ const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOff
 const fmt=s=>new Intl.DateTimeFormat("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(s+"T12:00:00"));
 const addDays=(s,n)=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const mondayOf=s=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
-async function api(path,opts={}){const r=await fetch("/api"+path,{...opts,headers:{"content-type":"application/json",...(opts.headers||{})}});const d=await r.json();if(!r.ok)throw Error(d.error||"Erreur");return d}
+const OFFLINE_MESSAGE="Pas de connexion internet : réessaie quand le réseau revient.";
+async function api(path,opts={}){let r;try{r=await fetch("/api"+path,{...opts,headers:{"content-type":"application/json",...(opts.headers||{})}})}catch{throw Error(OFFLINE_MESSAGE)}const d=await r.json();if(!r.ok)throw Error(d.error||"Erreur");return d}
 function toast(t){$("#toast").textContent=t;$("#toast").classList.add("show");setTimeout(()=>$("#toast").classList.remove("show"),2200)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function showAuth(){$("#auth").hidden=false;$("#dashboard").hidden=true;$("#userbar").innerHTML=""}
@@ -167,7 +168,7 @@ $("#closesession").onclick=()=>$("#sessiondialog").close();
 async function saveSession(event){if(event)event.preventDefault();const form=$("#sessionform");if(!form.reportValidity())return;const f=new FormData(form),id=f.get("session_id");if(f.get("session_date")>today()){$("#sessionerror").textContent="Impossible d’enregistrer une séance à une date future.";return}const button=$("#savesession");button.disabled=true;$("#sessionerror").textContent="";const body={program_id:f.get("program_id"),wod_id:f.get("wod_id"),session_date:f.get("session_date"),activity_id:f.get("activity_id"),duration_minutes:Number(f.get("duration_minutes")),started_at:new Date(f.get("session_date")+"T"+f.get("start_time")).toISOString(),actual_comment:f.get("actual_comment"),movement_ids:[...form.querySelectorAll('input[name="movement_ids"]:checked')].map(x=>x.value),catalog_movement_ids:[...form.querySelectorAll('input[name="catalog_movement_ids"]:checked')].map(x=>x.value)};try{await api(id?"/sessions/"+id:"/sessions",{method:id?"PUT":"POST",body:JSON.stringify(body)});await api("/weekly-plans",{method:"DELETE",body:JSON.stringify({week_start:mondayOf(body.session_date),wod_id:body.wod_id})});$("#sessiondialog").close();selectedWeekStart=mondayOf(body.session_date);await loadSessions();renderWeek();toast(id?"Séance modifiée.":"Séance enregistrée.")}catch(x){$("#sessionerror").textContent=x.message}finally{button.disabled=false}}
 $("#sessionform").onsubmit=saveSession;
 $("#savesession").onclick=()=>saveSession();
-(async()=>{try{const d=await api("/me");if(d.user){user=d.user;isAdmin=!!d.is_admin;showApp()}else showAuth()}catch{showAuth()}})();
+(async()=>{try{const d=await api("/me");if(d.user){user=d.user;isAdmin=!!d.is_admin;showApp()}else showAuth()}catch(e){showAuth();if(e.message===OFFLINE_MESSAGE)$("#autherror").textContent=OFFLINE_MESSAGE}})();
 
 async function loadAdmin(){if(!isAdmin)return;const [a,u,m]=await Promise.all([api("/admin/activities"),api("/admin/users"),api("/admin/movements")]);activities=a.activities;renderAdmin(u.users,m.movements)}
 document.querySelectorAll("[data-admin-add]").forEach(b=>b.onclick=()=>{const form=$("#"+b.dataset.adminAdd),dialog=$(b.dataset.adminAdd==="movementcatalogform"?"#movementcatalogdialog":"#activitydialog");form.reset();delete form.dataset.editId;if(form.elements.id)form.elements.id.value="";if(b.dataset.adminAdd==="movementcatalogform")$("#movementcatalogdialogtitle").textContent="Ajouter un mouvement";if(b.dataset.adminAdd==="activityform")$("#activitydialogtitle").textContent="Ajouter une activité";if(b.dataset.adminAdd==="movementcatalogform")$("#movementcatalogerror").textContent="";dialog.showModal();dialog.querySelector("input:not([type=hidden])")?.focus()});
@@ -280,3 +281,6 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme)
 // Bloque le défilement de la page derrière une fenêtre ouverte (y compris sur iOS Safari).
 let lockedScrollY=0;function syncScrollLock(){const open=!!document.querySelector("dialog[open]"),body=document.body;if(open&&!body.classList.contains("modal-open")){lockedScrollY=window.scrollY;body.style.top=-lockedScrollY+"px";body.classList.add("modal-open")}else if(!open&&body.classList.contains("modal-open")){body.classList.remove("modal-open");body.style.top="";window.scrollTo(0,lockedScrollY)}}
 new MutationObserver(syncScrollLock).observe(document.body,{subtree:true,attributes:true,attributeFilter:["open"]});
+
+// Application installable (PWA) : enregistre le service worker.
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
