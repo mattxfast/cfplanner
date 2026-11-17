@@ -33,21 +33,26 @@ function renderWodWeeklyProgramming(program, wod) {
     weeks
       .map(
         (week, index) =>
-          '<div class="wod-week-row"><label><b>S' +
+          // Ligne 1 : numéro de semaine, date et bouton ; ligne 2 : champ de saisie sur toute la largeur.
+          '<div class="wod-week-row"><div class="wod-week-head"><b>S' +
           (index + 1) +
           "</b><small>" +
           fmt(week) +
-          '</small><textarea rows="2" maxlength="2000" data-wod-week-content="' +
+          '</small><button type="button" class="smallbtn save-wod-week" data-wod="' +
+          wod.id +
+          '" data-week="' +
+          week +
+          '">Enregistrer</button></div><textarea rows="2" maxlength="2000" aria-label="Contenu prévu, semaine ' +
+          (index + 1) +
+          " du " +
+          fmt(week) +
+          '" data-wod-week-content="' +
           wod.id +
           '" data-week="' +
           week +
           '" placeholder="Contenu prévu pour ce WOD…">' +
           esc(weeklyWodContent(wod.id, week)) +
-          '</textarea></label><button type="button" class="smallbtn save-wod-week" data-wod="' +
-          wod.id +
-          '" data-week="' +
-          week +
-          '">Enregistrer</button></div>'
+          "</textarea></div>"
       )
       .join("") +
     "</div></div>"

@@ -3646,33 +3646,37 @@ button:disabled {
 }
 .wod-week-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: end;
+  gap: 6px;
   padding: 8px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.wod-week-row label {
-  margin: 0;
-  font-size: 12px;
+.wod-week-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
-.wod-week-row label small {
-  margin-left: 8px;
+.wod-week-head b {
+  font-size: 13px;
+}
+.wod-week-head small {
   color: var(--muted);
+  font-size: 12px;
   font-weight: 400;
+}
+.wod-week-head .smallbtn {
+  margin-left: auto;
+  white-space: nowrap;
 }
 .wod-week-row textarea {
   display: block;
   width: 100%;
-  margin-top: 5px;
+  margin: 0;
   min-height: 48px;
   resize: vertical;
   font-size: 12px;
-}
-.wod-week-row .smallbtn {
-  white-space: nowrap;
 }
 
 .checkbox-label {
