@@ -249,32 +249,29 @@
           </form>
         </dialog>
         <section id="view-account" hidden>
-          <div class="toolbar"><h2>Mon compte</h2></div>
-          <form id="profileform" class="card profile-card">
+          <div class="page-banner"><h2>Mon compte</h2></div>
+          <div class="account-heading"><h3>Profil</h3></div>
+          <form id="profileform" class="profile-card">
             <label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required /></label
             ><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required /></label
             ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label
             ><button class="primary">Enregistrer mes informations</button>
             <div id="profileerror" class="error"></div>
           </form>
-          <section class="card profile-export-card">
-            <div>
-              <h3>Apparence</h3>
-              <p class="muted">Thème de l’application sur cet appareil.</p>
-            </div>
+          <div class="account-heading"><h3>Apparence</h3></div>
+          <section class="profile-export-card">
+            <p class="muted">Thème de l’application sur cet appareil.</p>
             <div id="themechoice" class="theme-choice" role="radiogroup" aria-label="Thème">
               <label><input type="radio" name="theme" value="auto" />Automatique (selon le téléphone)</label
               ><label><input type="radio" name="theme" value="light" />Clair</label
               ><label><input type="radio" name="theme" value="dark" />Sombre</label>
             </div>
           </section>
-          <section class="card profile-export-card" id="remindercard">
-            <div>
-              <h3>Rappels</h3>
-              <p class="muted">
-                Une notification sur ce téléphone si tu n’as pas enregistré de séance depuis quelques jours.
-              </p>
-            </div>
+          <div class="account-heading"><h3>Rappels</h3></div>
+          <section class="profile-export-card" id="remindercard">
+            <p class="muted">
+              Une notification sur ce téléphone si tu n’as pas enregistré de séance depuis quelques jours.
+            </p>
             <p id="reminderhint" class="reminder-hint" hidden></p>
             <label class="reminder-switch"
               ><input type="checkbox" id="reminderenabled" />Activer les rappels sur ce téléphone</label
@@ -293,11 +290,9 @@
             </div>
             <div id="reminderstatus" class="error" role="status"></div>
           </section>
-          <section class="card profile-export-card">
-            <div>
-              <h3>Export Excel</h3>
-              <p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p>
-            </div>
+          <div class="account-heading"><h3>Export Excel</h3></div>
+          <section class="profile-export-card">
+            <p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p>
             <button type="button" class="primary" id="exportexcel">Exporter les données</button>
             <div id="exportexcelstatus" class="error" role="status"></div>
           </section>
