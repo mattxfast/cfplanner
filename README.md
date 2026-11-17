@@ -43,6 +43,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 
 ### Compte et administration
 - Choix du thème dans « Mon compte » : Automatique (selon le réglage du téléphone), Clair ou Sombre. La préférence est mémorisée sur l'appareil.
+- Export Excel dans « Mon compte » : un seul onglet « Bilan » où les programmes sont empilés (titre et période, en-têtes, une ligne par semaine ISO avec le nombre de séances, les WOD réalisés et les mouvements travaillés).
 - Création de compte et connexion par e-mail et mot de passe.
 - Modification du prénom et du nom.
 - Administration réservée au compte défini par `ADMIN_EMAIL`.

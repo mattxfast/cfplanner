@@ -82,11 +82,6 @@ function loadXlsxLibrary(){
  });
  return window.cfXlsxLoading;
 }
-function excelSheetName(name,used){
- let base=String(name||"Programme").replace(/[\\/?*[\\]:]/g," ").trim().slice(0,31)||"Programme",candidate=base,n=2;
- while(used.has(candidate.toLowerCase())){const suffix=" ("+n+++ ")";candidate=base.slice(0,31-suffix.length)+suffix}
- used.add(candidate.toLowerCase());return candidate;
-}
 async function exportWeeklyExcel(){
  const button=$("#exportexcel"),status=$("#exportexcelstatus");
  button.disabled=true;button.textContent="Génération…";status.textContent="";
@@ -100,7 +95,9 @@ async function exportWeeklyExcel(){
    if(!checksBySession.has(check.session_id))checksBySession.set(check.session_id,new Set());
    checksBySession.get(check.session_id).add(check.movement_id);
   }
-  const workbook=XLSX.utils.book_new(),usedSheetNames=new Set();
+  // Un seul onglet « Bilan » : les programmes sont empilés (titre, deux lignes d’en-tête, une ligne par semaine, ligne vide).
+  const workbook=XLSX.utils.book_new(),rows=[],merges=[],colWidths=[15,14];
+  const widen=(index,width)=>{colWidths[index]=Math.max(colWidths[index]||0,width)};
   for(const program of programs){
    const programWods=wods.filter(w=>w.program_id===program.id).slice(0,7);
    const wodColumns=Array.from({length:7},(_,i)=>programWods[i]?.name||"—");
@@ -117,27 +114,30 @@ async function exportWeeklyExcel(){
      if(checksBySession.get(session.id)?.has(movement.id))row.movements.set(movement.id,(row.movements.get(movement.id)||0)+1);
     }
    }
-   const topRow=["Semaine ISO","Nb de séances","WOD réalisés",...Array(6).fill("")];
+   if(rows.length)rows.push([]);
+   const titleRow=rows.length,lastColumn=8+programMovements.length;
+   rows.push([program.name+" ("+fmt(program.start_monday)+" → "+fmt(program.end_monday)+")"]);
+   merges.push({s:{r:titleRow,c:0},e:{r:titleRow,c:lastColumn}});
+   const head=titleRow+1,topRow=["Semaine ISO","Nb de séances","WOD réalisés",...Array(6).fill("")];
    if(programMovements.length)topRow.push("Focus mouvement",...Array(programMovements.length-1).fill(""));
-   const rows=[topRow,["Année-Semaine","Total",...wodColumns,...programMovements.map(m=>m.name)]];
+   rows.push(topRow,["Année-Semaine","Total",...wodColumns,...programMovements.map(m=>m.name)]);
+   merges.push({s:{r:head,c:0},e:{r:head+1,c:0}},{s:{r:head,c:1},e:{r:head+1,c:1}},{s:{r:head,c:2},e:{r:head,c:8}});
+   if(programMovements.length)merges.push({s:{r:head,c:9},e:{r:head,c:lastColumn}});
    const weeks=[...grouped.values()].sort((a,b)=>a.year-b.year||a.week-b.week);
    for(const week of weeks){
     const weekLabel=week.year+"-S"+String(week.week).padStart(2,"0");
     rows.push([weekLabel,week.total,...Array.from({length:7},(_,i)=>week.wods.get(i)||0),...programMovements.map(m=>week.movements.get(m.id)||0)]);
    }
-   const sheet=XLSX.utils.aoa_to_sheet(rows);
-   const movementStart=9,movementEnd=movementStart+programMovements.length-1,lastColumn=8+programMovements.length;
-   sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},{s:{r:0,c:2},e:{r:0,c:8}}];
-   if(programMovements.length)sheet["!merges"].push({s:{r:0,c:movementStart},e:{r:0,c:movementEnd}});
-   sheet["!cols"]=[{wch:15},{wch:14},...wodColumns.map(n=>({wch:Math.max(12,Math.min(28,n.length+2))})),...programMovements.map(m=>({wch:Math.max(10,Math.min(22,m.name.length+2))}))];
-   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn}})};
-   sheet["!freeze"]={xSplit:2,ySplit:2,topLeftCell:"C3",activePane:"bottomRight",state:"frozen"};
-   XLSX.utils.book_append_sheet(workbook,sheet,excelSheetName(program.name,usedSheetNames));
+   if(!weeks.length)rows.push(["Aucune séance"]);
+   wodColumns.forEach((n,i)=>widen(2+i,Math.max(12,Math.min(28,n.length+2))));
+   programMovements.forEach((m,i)=>widen(9+i,Math.max(10,Math.min(22,m.name.length+2))));
   }
-  if(!programs.length){
-   const sheet=XLSX.utils.aoa_to_sheet([["Aucun programme enregistré"]]);
-   XLSX.utils.book_append_sheet(workbook,sheet,"Programmes");
-  }
+  if(!programs.length)rows.push(["Aucun programme enregistré"]);
+  const sheet=XLSX.utils.aoa_to_sheet(rows);
+  sheet["!merges"]=merges;
+  sheet["!cols"]=Array.from(colWidths,w=>({wch:w||10}));
+  sheet["!freeze"]={xSplit:1,ySplit:0,topLeftCell:"B1",activePane:"topRight",state:"frozen"};
+  XLSX.utils.book_append_sheet(workbook,sheet,"Bilan");
   const stamp=new Date().toISOString().slice(0,10);
   XLSX.writeFile(workbook,"FitFactory_bilan_programmes_"+stamp+".xlsx");
   status.textContent="Export Excel généré : "+programs.length+" programme(s).";
