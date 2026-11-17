@@ -95,7 +95,7 @@ function renderSessions() {
         (b.onclick = async () => {
           if (confirm("Supprimer cette séance ?")) {
             await api("/sessions/" + b.dataset.delSession, {method: "DELETE"});
-            await loadSessions();
+            await load(); // recharge aussi les programmes (un programme sans séance redevient supprimable)
           }
         })
     );

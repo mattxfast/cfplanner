@@ -202,7 +202,7 @@ async function saveSession(event) {
     });
     $("#sessiondialog").close();
     selectedWeekStart = mondayOf(body.session_date);
-    await loadSessions();
+    await load(); // recharge aussi les programmes (état « contient des séances »)
     renderWeek();
     toast(id ? "Séance modifiée." : "Séance enregistrée.");
   } catch (x) {
