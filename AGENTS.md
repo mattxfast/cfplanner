@@ -10,7 +10,7 @@ FitFactory (anciennement CFPlanner ; dépôt GitHub, Worker Cloudflare et base D
 ## Architecture
 
 - `src/worker.js` : backend Cloudflare Worker (toutes les routes `/api/*`, authentification, migrations applicatives, tâche cron).
-- `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `app.js`, `style.css`, `manifest.webmanifest`). Pas de framework, pas d'étape de build.
+- `public/` : frontend statique servi par le binding `ASSETS` (`index.html`, `app.js`, `style.css`, `manifest.webmanifest`). Pas de framework, pas d'étape de build. Polices dans `public/fonts/` (DM Sans, Manrope, OFL) et bibliothèque Excel dans `public/vendor/` (SheetJS 0.18.5, Apache-2.0) : aucune ressource externe chargée par l'application.
 - Base de données : Cloudflare D1, binding `DB`.
 - `wrangler.toml` : bindings, variable `ADMIN_EMAIL` (compte administrateur), cron quotidien de purge des sessions expirées.
 - `migrations/0001_init.sql` : socle initial appliqué par Wrangler.

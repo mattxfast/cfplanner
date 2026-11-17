@@ -1,4 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+/* Polices hébergées dans public/fonts (sous-ensemble latin, licence OFL) : pas d’appel externe au chargement. */
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/dm-sans-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/dm-sans-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/dm-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/dm-sans-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/manrope-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/manrope-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/manrope-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:800;font-display:swap;src:url(/fonts/manrope-latin-800-normal.woff2) format('woff2')}
 /* Palette de couleurs : toutes les couleurs de l’interface sont définies ici, par rôle.
    Pour essayer d’autres couleurs, il suffit de modifier ces variables. */
 :root{

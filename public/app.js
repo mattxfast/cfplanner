@@ -75,9 +75,9 @@ function loadXlsxLibrary(){
  if(window.cfXlsxLoading)return window.cfXlsxLoading;
  window.cfXlsxLoading=new Promise((resolve,reject)=>{
   const script=document.createElement("script");
-  script.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  script.src="/vendor/xlsx.full.min.js";
   script.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error("La bibliothèque Excel n'a pas pu être chargée."));
-  script.onerror=()=>{window.cfXlsxLoading=null;reject(new Error("Impossible de charger le module Excel. Vérifie ta connexion puis réessaie."))};
+  script.onerror=()=>{window.cfXlsxLoading=null;reject(new Error("Impossible de charger le module Excel. Réessaie après avoir rouvert l’application."))};
   document.head.appendChild(script);
  });
  return window.cfXlsxLoading;

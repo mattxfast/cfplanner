@@ -97,6 +97,8 @@ Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont p
 
 `wrangler.toml` déclare le Worker `fitfactory` (adresse `fitfactory.mattxfast.workers.dev`), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `fitfactory` → Logs, ou via `npx wrangler tail fitfactory`). La base D1 s'appelle `fitfactory` (copie de l'ancienne base `cfplanner`, une base D1 ne se renommant pas) ; le cookie de session et la préférence de thème gardent l'identifiant technique `cfplanner`. Cette adresse identifie le compte administrateur et le propriétaire du référentiel commun des activités.
 
+Les polices (DM Sans et Manrope, sous-ensemble latin, licence OFL) sont hébergées dans `public/fonts/` et la bibliothèque Excel (SheetJS 0.18.5, Apache-2.0) dans `public/vendor/` : l'application ne charge aucune ressource externe.
+
 Pour un autre environnement, configurez `ADMIN_EMAIL` avec l'adresse du compte administrateur de cet environnement. La variable n'est pas un secret. Les mots de passe, jetons et clés privées ne doivent jamais être enregistrés dans le dépôt.
 
 ## Développement et déploiement
