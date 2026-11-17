@@ -173,6 +173,109 @@
   --modal-shadow: #000000aa;
   --overlay: #000000b3;
 }
+/* Thème « Massilia CrossFit » (logo noir et blanc, rouge) : fond clair, bandeaux noirs cernés de rouge, actions rouges. */
+:root[data-theme="massilia"] {
+  color-scheme: light;
+  --bg: #f4f4f4;
+  --surface: #fff;
+  --on-accent: #fff;
+  --ink: #111;
+  --ink-soft: #222;
+  --muted: #6b6b6b;
+  --muted-strong: #4a4a4a;
+  --disabled-ink: #a5a5a5;
+  --line: #e0e0e0;
+  --navy: #111;
+  --logo-bg: #111;
+  --banner-bg: #111;
+  --banner-bg-hover: #262626;
+  --banner-border: #d62828;
+  --banner-border-soft: #d62828;
+  --banner-border-width: 2px;
+  --banner-ink: #fff;
+  --banner-ink-soft: #d0d0d0;
+  --orange: #d62828;
+  --orange-strong: #b51f1f;
+  --orange-soft: #f2a5a5;
+  --planned-ink: #b51f1f;
+  --nav-ink: #8a8a8a;
+  --nav-active: #111;
+  --nav-bar: #d62828;
+  --section-bg: #e9e9e9;
+  --section-border: #d4d4d4;
+  --content-bg: #fafafa;
+  --content-border: #e6e6e6;
+  --neutral-bg: #ebebeb;
+  --neutral-border: #cfcfcf;
+  --blue: #d62828;
+  --blue-hover: #b51f1f;
+  --accent-soft: #fde8e8;
+  --accent-soft-ink: #8a1414;
+  --action-ink: #b51f1f;
+  --focus-ring: #d6282840;
+  --focus-ring-strong: #d6282880;
+  --danger: #9b1c2c;
+  --danger-soft: #f9e3e6;
+  --green: #17804f;
+  --success-soft: #e7f4ec;
+  --success-border: #c3e4cf;
+  --shadow: 0 8px 24px #1111110d;
+  --shadow-color: #11111114;
+  --modal-shadow: #1111114d;
+  --overlay: #11111188;
+}
+/* Thème « Massilia CrossFit 2 » (logo coloré) : fond noir, bandeaux magenta cernés d'orange, dégradé rose → orange,
+   vert-jaune « Since 2013 » pour les actions secondaires. */
+:root[data-theme="massilia2"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #181818;
+  --on-accent: #fff;
+  --ink: #f5f5f5;
+  --ink-soft: #e0e0e0;
+  --muted: #9a9a9a;
+  --muted-strong: #bdbdbd;
+  --disabled-ink: #5c5c5c;
+  --line: #2b2b2b;
+  --navy: #222;
+  --logo-bg: linear-gradient(135deg, #ff1f8e, #ff8a1f);
+  --banner-bg: #c4006c;
+  --banner-bg-hover: #d9157f;
+  --banner-border: #ff8a1f;
+  --banner-border-soft: #ff8a1f;
+  --banner-border-width: 2px;
+  --banner-ink: #fff;
+  --banner-ink-soft: #ffd2e6;
+  --orange: #ff1f8e;
+  --orange-strong: #e0007a;
+  --orange-soft: #ff8ac2;
+  --planned-ink: #d7ef3c;
+  --nav-ink: #8c6a7c;
+  --nav-active: #ff2d95;
+  --nav-bar: #ff8a1f;
+  --section-bg: #262626;
+  --section-border: #353535;
+  --content-bg: #141414;
+  --content-border: #2a2a2a;
+  --neutral-bg: #333;
+  --neutral-border: #444;
+  --blue: #ff1f8e;
+  --blue-hover: #ff4aa3;
+  --accent-soft: #2f2a10;
+  --accent-soft-ink: #e6f57a;
+  --action-ink: #d7ef3c;
+  --focus-ring: #ff1f8e40;
+  --focus-ring-strong: #ff1f8e80;
+  --danger: #ff5a6e;
+  --danger-soft: #4a2229;
+  --green: #3ddc84;
+  --success-soft: #1d3527;
+  --success-border: #2f6b47;
+  --shadow: 0 12px 36px #00000066;
+  --shadow-color: #00000077;
+  --modal-shadow: #000000aa;
+  --overlay: #000000b3;
+}
 * {
   box-sizing: border-box;
 }
@@ -1404,7 +1507,7 @@ button:disabled {
 #weekboard .weekdate-label {
   font-size: 15px;
   font-weight: 700;
-  color: var(--ink-soft);
+  color: var(--banner-ink);
   gap: 10px;
   flex: 1;
 }
@@ -3470,27 +3573,6 @@ button:disabled {
 .sync-status.offline {
   border-color: var(--orange);
   color: var(--orange-strong);
-}
-.theme-choice {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.theme-choice label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-size: 14px;
-  color: var(--ink);
-  cursor: pointer;
-}
-.theme-choice input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--blue);
 }
 @media (max-width: 520px) {
   .profile-export-card {

@@ -80,7 +80,7 @@
         try {
           var t = localStorage.getItem("fitfactory-theme") || localStorage.getItem("cfplanner-theme") || "auto",
             d = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.dataset.theme = d ? "dark" : "light";
+          document.documentElement.dataset.theme = t === "massilia" || t === "massilia2" ? t : d ? "dark" : "light";
         } catch (e) {}
       })();
     </script>
@@ -314,11 +314,15 @@
           <div class="account-heading"><h3>Apparence</h3></div>
           <section class="profile-export-card">
             <p class="muted">Thème de l’application sur cet appareil.</p>
-            <div id="themechoice" class="theme-choice" role="radiogroup" aria-label="Thème">
-              <label><input type="radio" name="theme" value="auto" />Automatique (selon le téléphone)</label
-              ><label><input type="radio" name="theme" value="light" />Clair</label
-              ><label><input type="radio" name="theme" value="dark" />Sombre</label>
-            </div>
+            <label class="theme-select"
+              >Thème<select id="themeselect">
+                <option value="auto">Automatique (selon le téléphone)</option>
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+                <option value="massilia">Massilia CrossFit</option>
+                <option value="massilia2">Massilia CrossFit 2</option>
+              </select></label
+            >
           </section>
           <div class="account-heading"><h3>Rappels</h3></div>
           <section class="profile-export-card" id="remindercard">

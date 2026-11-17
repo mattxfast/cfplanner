@@ -31,20 +31,25 @@ function themePreference() {
     return "auto";
   }
 }
+// Thèmes : « auto » suit le téléphone (clair/sombre) ; les autres sont appliqués tels quels (data-theme sur <html>).
+const THEME_BAR_COLORS = {light: "#f5f5f0", dark: "#121212", massilia: "#f4f4f4", massilia2: "#0d0d0d"};
 function applyTheme() {
   const pref = themePreference(),
-    dark = pref === "dark" || (pref === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#121212" : "#f5f5f0");
+    theme =
+      THEME_BAR_COLORS[pref] && pref !== "auto"
+        ? pref
+        : matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLORS[theme]);
 }
-document.querySelectorAll("#themechoice input").forEach(input => {
-  input.checked = input.value === themePreference();
-  input.onchange = () => {
-    try {
-      localStorage.setItem("fitfactory-theme", input.value);
-    } catch {}
-    applyTheme();
-  };
-});
+$("#themeselect").value = THEME_BAR_COLORS[themePreference()] ? themePreference() : "auto";
+$("#themeselect").onchange = e => {
+  try {
+    localStorage.setItem("fitfactory-theme", e.target.value);
+  } catch {}
+  applyTheme();
+};
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 applyTheme();
