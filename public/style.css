@@ -19,6 +19,7 @@
   --banner-bg-hover:#fffaf4; /* fond au survol */
   --banner-border:#e7bd91; /* bordure */
   --banner-border-soft:#f2d5b2; /* bordure légère */
+  --banner-border-width:1px; /* épaisseur de la bordure des bandeaux */
   --banner-ink:#633f1c; /* texte */
   --banner-ink-soft:#94632f; /* texte secondaire */
   --orange:#f28c28; /* orange vif (courbes PR, accents) */
@@ -64,7 +65,7 @@
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#121212;--surface:#1c1c1c;--on-accent:#1a1a1a;--ink:#f2f2f2;--ink-soft:#d9d9d9;--muted:#9e9e9e;--muted-strong:#b8b8b8;--disabled-ink:#666;--line:#2e2e2e;--navy:#2c2c2c;--logo-bg:#ffe600;
-  --banner-bg:#d4a90f;--banner-bg-hover:#e0b622;--banner-border:#ffd60a;--banner-border-soft:#ffd60a;--banner-ink:#1a1a1a;--banner-ink-soft:#3d3208;--orange:#ffd60a;--orange-strong:#f5c400;--orange-soft:#ffe45c;--planned-ink:#ffd60a;--nav-ink:#a08a2e;--nav-active:#ffd60a;
+  --banner-bg:#d4a90f;--banner-bg-hover:#e0b622;--banner-border:#ffd60a;--banner-border-soft:#ffd60a;--banner-border-width:2px;--banner-ink:#1a1a1a;--banner-ink-soft:#3d3208;--orange:#ffd60a;--orange-strong:#f5c400;--orange-soft:#ffe45c;--planned-ink:#ffd60a;--nav-ink:#a08a2e;--nav-active:#ffd60a;
   --section-bg:#444;--section-border:#555;
   --content-bg:#171717;--content-border:#323232;
   --neutral-bg:#404040;--neutral-border:#4d4d4d;
@@ -125,7 +126,7 @@ header{height:50px;margin-bottom:16px}
 @media(max-width:500px){.inline-add{align-items:stretch}.inline-add .smallbtn{white-space:nowrap}}
 
 /* Dashboard visual hierarchy */
-.weekbar{background:var(--banner-bg);border-color:var(--banner-border-soft);box-shadow:none}.weekbar small{color:var(--banner-ink-soft)}.weekbar strong{color:var(--banner-ink)}.weekheading,.section-toolbar{background:var(--content-bg);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin:16px 0 9px}.weekheading h2,.section-toolbar h2{font-size:15px;font-weight:800;color:var(--ink-soft)}.weekheading span{margin-left:auto;background:var(--surface);color:var(--muted-strong)}.section-toolbar{margin-top:22px;display:flex;align-items:center;justify-content:space-between;gap:12px}.weekwodlist{gap:6px}.weekwod{padding:9px 12px;margin-bottom:0;min-height:0}.weekwod b{font-size:13px}.weekcount strong{font-size:17px}.weekcount small{font-size:10px}.addsession-compact{font-size:11px;padding:8px 10px;border-radius:8px;white-space:nowrap;flex:0 0 auto}.weekstats{gap:8px;padding:8px 10px}.weekstat{padding:2px 9px}.weekstat strong{font-size:18px}#weekaddsession{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}@media(max-width:650px){.section-toolbar{align-items:center;flex-direction:row}.section-toolbar h2{font-size:14px}.weekstats{gap:4px;padding:7px 6px}.weekstat{padding:2px 6px}.weekstat strong{font-size:16px}.weekstat span{font-size:9px}.addsession-compact{font-size:10px;padding:7px 8px;max-width:145px;white-space:normal;line-height:1.15;text-align:center}.weekwod{padding:8px 10px}.weekheading{padding:9px 11px}}
+.weekbar{background:var(--banner-bg);border-color:var(--banner-border-soft);border-width:var(--banner-border-width);box-shadow:none}.weekbar small{color:var(--banner-ink-soft)}.weekbar strong{color:var(--banner-ink)}.weekheading,.section-toolbar{background:var(--content-bg);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin:16px 0 9px}.weekheading h2,.section-toolbar h2{font-size:15px;font-weight:800;color:var(--ink-soft)}.weekheading span{margin-left:auto;background:var(--surface);color:var(--muted-strong)}.section-toolbar{margin-top:22px;display:flex;align-items:center;justify-content:space-between;gap:12px}.weekwodlist{gap:6px}.weekwod{padding:9px 12px;margin-bottom:0;min-height:0}.weekwod b{font-size:13px}.weekcount strong{font-size:17px}.weekcount small{font-size:10px}.addsession-compact{font-size:11px;padding:8px 10px;border-radius:8px;white-space:nowrap;flex:0 0 auto}.weekstats{gap:8px;padding:8px 10px}.weekstat{padding:2px 9px}.weekstat strong{font-size:18px}#weekaddsession{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}@media(max-width:650px){.section-toolbar{align-items:center;flex-direction:row}.section-toolbar h2{font-size:14px}.weekstats{gap:4px;padding:7px 6px}.weekstat{padding:2px 6px}.weekstat strong{font-size:16px}.weekstat span{font-size:9px}.addsession-compact{font-size:10px;padding:7px 8px;max-width:145px;white-space:normal;line-height:1.15;text-align:center}.weekwod{padding:8px 10px}.weekheading{padding:9px 11px}}
 
 /* Historique : nom du WOD et date sur une seule ligne */
 .session-title-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:6px}.session-title-line h3{margin:0}.session-title-line .sessiondate{margin:0;white-space:nowrap}
@@ -254,7 +255,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #sessionlist .session-title-line{margin:0!important;min-width:0}
 #sessionlist .session-history-heading .entryactions{flex:0 0 auto}
 #sessionlist .session-history-content>p{margin:5px 0 0}
-#view-programs .programhead{border:1px solid var(--banner-border)!important;border-radius:11px!important;margin:0 0 2px!important}
+#view-programs .programhead{border:var(--banner-border-width) solid var(--banner-border)!important;border-radius:11px!important;margin:0 0 2px!important}
 #view-programs .program-section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-programs .program-section-toolbar .addwod{width:34px;height:34px;min-width:34px;padding:0;margin:0;border-radius:8px;font-size:21px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 #view-programs .program-actions{display:none!important}
@@ -561,7 +562,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-admin .admin-group-title{
   background:var(--banner-bg)!important;
   color:var(--banner-ink)!important;
-  border:1px solid var(--banner-border)!important;
+  border:var(--banner-border-width) solid var(--banner-border)!important;
   border-radius:11px!important;
 }
 #view-admin .admin-group-title>span{color:var(--banner-ink)!important}
@@ -792,7 +793,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* Harmonisation des titres PR avec l'en-tête des programmes. */
 #view-prs .pr-section-title{
   background:var(--banner-bg)!important;
-  border:1px solid var(--banner-border)!important;
+  border:var(--banner-border-width) solid var(--banner-border)!important;
   border-radius:11px!important;
   color:var(--banner-ink)!important;
   min-height:52px!important;
@@ -833,7 +834,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 }
 #prhistorydialog .pr-history-page-title{
   background:var(--banner-bg)!important;
-  border:1px solid var(--banner-border)!important;
+  border:var(--banner-border-width) solid var(--banner-border)!important;
   border-radius:11px!important;
   color:var(--banner-ink)!important;
   padding:10px 14px!important;
