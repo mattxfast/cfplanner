@@ -28,6 +28,8 @@ export async function startWorker(port = 8790 + Math.floor(Math.random() * 100))
       String(port),
       "--ip",
       "127.0.0.1",
+      "--inspector-port",
+      String(port + 1000),
       "--var",
       `ADMIN_EMAIL:${ADMIN_EMAIL}`,
     ],
