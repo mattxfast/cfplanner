@@ -55,7 +55,7 @@ async function loadPrs() {
 }
 function switchView(v) {
   document.querySelectorAll(".navtab").forEach(b => b.classList.toggle("active", b.dataset.view === v));
-  ["sessions", "programs", "prs", "account", "admin"].forEach(x => ($("#view-" + x).hidden = x !== v));
+  ["sessions", "programs", "prs", "timer", "account", "admin"].forEach(x => ($("#view-" + x).hidden = x !== v));
 }
 document.querySelectorAll(".navtab").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
 function renderSessions() {

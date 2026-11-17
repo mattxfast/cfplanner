@@ -3663,3 +3663,145 @@ button:active:not(:disabled) {
     transition: none !important;
   }
 }
+
+/* Chrono (onglet « Chrono ») : réglages par pastilles et boutons −/＋, grand affichage coloré selon la phase. */
+.timer-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--page-content-gap);
+}
+#view-timer.timer-active .timer-setup {
+  display: none;
+}
+.timer-hint {
+  margin: 0;
+  font-size: 13px;
+}
+.timer-fields {
+  display: grid;
+  gap: 10px;
+}
+.timer-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 12px;
+}
+.timer-field-label {
+  font: 700 14px Manrope;
+  color: var(--ink-soft);
+}
+.timer-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer-stepper .smallbtn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+.timer-stepper output {
+  min-width: 72px;
+  text-align: center;
+  font: 800 16px Manrope;
+  color: var(--ink);
+}
+.timer-display {
+  padding: 22px 16px 18px;
+  text-align: center;
+  background: var(--content-bg);
+  border: var(--banner-border-width) solid var(--content-border);
+  border-radius: 16px;
+  color: var(--ink);
+}
+.timer-phase {
+  min-height: 20px;
+  font: 800 15px Manrope;
+  color: var(--muted-strong);
+}
+.timer-clock {
+  margin: 6px 0;
+  font: 800 clamp(64px, 24vw, 128px) / 1.05 Manrope;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.timer-sub {
+  font-size: 14px;
+  color: var(--muted);
+}
+.timer-progress {
+  height: 6px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--line);
+}
+.timer-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--orange);
+}
+#view-timer[data-phase="work"] .timer-display,
+#view-timer[data-phase="done"] .timer-display {
+  background: var(--banner-bg);
+  border-color: var(--banner-border);
+  color: var(--banner-ink);
+}
+#view-timer[data-phase="work"] .timer-phase,
+#view-timer[data-phase="work"] .timer-sub,
+#view-timer[data-phase="done"] .timer-phase,
+#view-timer[data-phase="done"] .timer-sub {
+  color: var(--banner-ink-soft);
+}
+#view-timer[data-phase="work"] .timer-progress span,
+#view-timer[data-phase="done"] .timer-progress span {
+  background: var(--banner-ink);
+}
+#view-timer[data-phase="rest"] .timer-display {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+}
+#view-timer[data-phase="rest"] .timer-clock,
+#view-timer[data-phase="rest"] .timer-phase {
+  color: var(--green);
+}
+#view-timer[data-phase="rest"] .timer-progress span {
+  background: var(--green);
+}
+.timer-round {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 18px;
+  border: 2px dashed var(--section-border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 800 18px Manrope;
+}
+.timer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.timer-actions .primary {
+  flex: 1;
+  padding: 16px;
+  font-size: 16px;
+}
+.timer-actions .smallbtn {
+  padding: 0 16px;
+}
+#timerround[hidden],
+#timerfinish[hidden] {
+  display: none;
+}

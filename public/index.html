@@ -140,7 +140,12 @@
               <path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2" />
             </svg></button
           ><button class="navtab" data-view="prs" aria-label="PR" title="PR">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 4.5 14h7l-1 7.5 9-11.5h-7z" /></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 4.5 14h7l-1 7.5 9-11.5h-7z" /></svg></button
+          ><button class="navtab" data-view="timer" aria-label="Chrono" title="Chrono">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="13.5" r="7.5" />
+              <path d="M12 13.5V9.5M10 2.5h4M18.4 6.6l1.6-1.6" />
+            </svg>
           </button>
         </nav>
         <section id="view-sessions">
@@ -176,6 +181,28 @@
             </button>
           </div>
           <div id="prcards" class="pr-grid"></div>
+        </section>
+        <section id="view-timer" hidden>
+          <div class="page-banner"><h2>Chrono</h2></div>
+          <div class="timer-setup">
+            <div id="timermodes" class="choice-chips timer-modes" role="radiogroup" aria-label="Type de chrono"></div>
+            <p id="timerhint" class="muted timer-hint"></p>
+            <div id="timerfields" class="timer-fields"></div>
+          </div>
+          <div class="timer-display" aria-live="polite">
+            <div id="timerphase" class="timer-phase"></div>
+            <div id="timerclock" class="timer-clock">00:00</div>
+            <div id="timersub" class="timer-sub"></div>
+            <div id="timerprogress" class="timer-progress"><span></span></div>
+          </div>
+          <button type="button" id="timerround" class="timer-round" hidden>
+            +1 tour · <span id="timerroundcount">0</span>
+          </button>
+          <div class="timer-actions">
+            <button type="button" class="primary" id="timerstart">Démarrer</button
+            ><button type="button" class="primary" id="timerfinish" hidden>Terminé</button
+            ><button type="button" class="smallbtn" id="timerreset">Réinitialiser</button>
+          </div>
         </section>
         <section id="view-admin" hidden>
           <section class="admin-group" data-admin-group>
@@ -454,6 +481,7 @@
     <script src="/js/reminders.js"></script>
     <script src="/js/admin.js"></script>
     <script src="/js/prs.js"></script>
+    <script src="/js/timer.js"></script>
     <script src="/js/account.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/boot.js"></script>
