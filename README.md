@@ -64,6 +64,7 @@ Les dates de séance ne peuvent pas être dans le futur. Un programme doit couvr
 ## Architecture technique
 
 - **Frontend** : HTML, CSS et JavaScript dans `public/`.
+- **Couleurs** : toutes définies dans la palette en tête de `public/style.css` (variables `:root` nommées par rôle : bandeau, rubrique, contenu, action, suppression…). Changer de thème revient à modifier ces variables.
 - **Backend** : Cloudflare Worker dans `src/worker.js`.
 - **Base de données** : Cloudflare D1, binding `DB`.
 - **Assets statiques** : binding Cloudflare `ASSETS`.
