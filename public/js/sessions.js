@@ -117,6 +117,23 @@ function programForDate(date) {
     null
   );
 }
+// Rubrique « Focus mouvement » de la semaine : mouvements du programme, ou à défaut (programme sans mouvement,
+// séances hors programme) les mouvements du catalogue cochés dans les séances de la semaine.
+function weekMovementsSection(week, programMovements, folded) {
+  const movementCounts = programMovements.length
+    ? programMovements.map(m => ({
+        movement: m,
+        count: week.filter(s => movementChecks.some(c => c.session_id === s.id && c.movement_id === m.id)).length,
+      }))
+    : movementCatalog
+        .map(m => ({
+          movement: m,
+          count: week.filter(s => catalogChecks.some(c => c.session_id === s.id && c.catalog_movement_id === m.id))
+            .length,
+        }))
+        .filter(x => x.count > 0);
+  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? movementCounts.filter(x => x.count > 0).length + "/" + movementCounts.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement travaillé cette semaine."}</p>`}</div></div></section>`;
+}
 function renderWeek() {
   const now = today();
   if (!selectedWeekStart) selectedWeekStart = mondayOf(now);
@@ -134,24 +151,12 @@ function renderWeek() {
   } else if (!p || isFallbackProgram(p)) {
     // Semaine sans programme : les séances sont enregistrées « hors programme ».
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><div class="card empty">Aucun programme ne couvre cette semaine : tes séances sont enregistrées « hors programme ».</div>`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><div class="card empty">Aucun programme ne couvre cette semaine : tes séances sont enregistrées « hors programme ».</div>${weekMovementsSection(week, [], folded)}`;
   } else {
     const ws = visibleWods(p.id),
       countFor = w => week.filter(x => x.wod_id === w.id).length,
       done = ws.filter(w => countFor(w) > 0);
-    const programMovements = movementsByProgram[p.id] || [],
-      movementCounts = programMovements.length
-        ? programMovements.map(m => ({
-            movement: m,
-            count: week.filter(s => movementChecks.some(c => c.session_id === s.id && c.movement_id === m.id)).length,
-          }))
-        : movementCatalog
-            .map(m => ({
-              movement: m,
-              count: week.filter(s => catalogChecks.some(c => c.session_id === s.id && c.catalog_movement_id === m.id))
-                .length,
-            }))
-            .filter(x => x.count > 0);
+    const programMovements = movementsByProgram[p.id] || [];
     $("#weekboard").innerHTML =
       `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><div class="weekstat weekstat-program"><strong>${done.length}/${ws.length}</strong><span>Nombre de séances de la programmation</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance" ${future ? "disabled" : ""}>＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>${done.length}/${ws.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
         ws.length
@@ -167,7 +172,7 @@ function renderWeek() {
               })
               .join("")
           : `<div class="card empty">Aucun WOD dans ce programme.</div>`
-      }</div></div></section><section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? movementCounts.filter(x => x.count > 0).length + "/" + movementCounts.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement travaillé cette semaine."}</p>`}</div></div></section>`;
+      }</div></div></section>${weekMovementsSection(week, programMovements, folded)}`;
   }
   $("#weekboard")
     .querySelectorAll("[data-session-fold]")
