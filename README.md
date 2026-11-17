@@ -56,7 +56,14 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Icône barre de musculation (noire sur fond jaune), plein écran et nom « FitFactory » sur l'écran d'accueil.
 - iPhone : ouvrir le site dans Safari, bouton Partager, puis « Sur l'écran d'accueil ».
 - Android : ouvrir le site dans Chrome, menu ⋮, puis « Installer l'application ».
-- Service worker (`public/sw.js`) en « réseau d'abord » : la dernière version publiée est toujours chargée ; hors connexion, l'application s'ouvre depuis le cache et affiche un message clair. Les appels `/api/` ne sont jamais mis en cache.
+- Service worker (`public/sw.js`) en « réseau d'abord » : la dernière version publiée est toujours chargée ; hors connexion, l'application (pages, scripts, polices) s'ouvre depuis le cache. Le service worker ne met jamais en cache les appels `/api/`.
+- Mode hors ligne (`public/offline.js`) :
+  - chaque lecture `/api/…` réussie est gardée sur le téléphone (localStorage) ; sans réseau, la dernière copie est affichée, y compris au démarrage ;
+  - sans réseau, les modifications (séances, PR, planification, compétition, programmes…) sont mises en file d'attente dans l'ordre et appliquées tout de suite à l'affichage, puis rejouées automatiquement au retour du réseau (événement « online », retour sur l'application, ou toutes les 20 s) ;
+  - un bandeau sous l'en-tête indique « Hors ligne » et le nombre de modifications en attente (toucher le bandeau relance la synchronisation) ;
+  - les créations de séance et de PR envoient un `client_id` (UUID généré sur le téléphone) : `POST /api/sessions` et `POST /api/prs` l'utilisent comme identifiant et ne créent jamais de doublon en cas de rejeu ;
+  - une modification refusée par le serveur lors du rejeu (par exemple une donnée devenue invalide) est retirée de la file avec un message ;
+  - connexion, création de compte, déconnexion et administration nécessitent le réseau ; la déconnexion avertit s'il reste des modifications non synchronisées et efface les données locales.
 - Icônes dans `public/icons/` (SVG source + PNG 180, 192, 512 et 512 « maskable »).
 - Écran de démarrage : fond jaune, barre de musculation et « FitFactory ». Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
 

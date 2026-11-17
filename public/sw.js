@@ -1,8 +1,8 @@
 // FitFactory — service worker : rend l'application installable et utilisable hors connexion.
 // Stratégie « réseau d'abord » : la dernière version publiée est toujours servie quand le réseau répond ;
 // le cache ne sert que de secours hors connexion. Les appels /api/ ne sont jamais mis en cache.
-const CACHE="fitfactory-v2";
-const SHELL=["/","/index.html","/app.js","/style.css","/manifest.webmanifest","/icons/icon.svg","/icons/icon-192.png","/icons/icon-512.png","/icons/apple-touch-icon.png"];
+const CACHE="fitfactory-v3";
+const SHELL=["/","/index.html","/app.js","/style.css","/manifest.webmanifest","/offline.js","/fonts/dm-sans-latin-400-normal.woff2","/fonts/dm-sans-latin-500-normal.woff2","/fonts/dm-sans-latin-600-normal.woff2","/fonts/dm-sans-latin-700-normal.woff2","/fonts/manrope-latin-500-normal.woff2","/fonts/manrope-latin-600-normal.woff2","/fonts/manrope-latin-700-normal.woff2","/fonts/manrope-latin-800-normal.woff2","/icons/icon.svg","/icons/icon-192.png","/icons/icon-512.png","/icons/apple-touch-icon.png"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener("fetch",event=>{
