@@ -14,7 +14,7 @@ CFPlanner est une application web responsive de planification et de suivi de l'e
 - Planification d'un WOD sur une semaine, indépendamment de son enregistrement réel.
 - Indicateur de semaine de compétition.
 - Historique des séances avec modification et suppression.
-- Enregistrement de la date, de l'heure de départ, de la durée, de l'activité, des notes et des mouvements travaillés.
+- Enregistrement de la date, de l'activité, des notes et des mouvements travaillés. L'heure de départ et la durée sont masquées pour l'instant : elles restent renseignées automatiquement (durée par défaut du WOD ou de l'activité).
 - Si le programme n'a aucun mouvement à travailler, la séance permet de cocher n'importe quel mouvement du catalogue ; ces mouvements apparaissent dans le récapitulatif de la semaine et dans l'export Excel.
 
 Une planification n'est pas une séance réalisée : elle sert de repère dans la semaine. La séance n'est comptabilisée qu'après son enregistrement.

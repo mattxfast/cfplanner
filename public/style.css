@@ -507,9 +507,10 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .weekwod.planned .weekcount strong{color:var(--planned-ink)}
 .wod-choice-modal .wod-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .wod-choice-modal .wod-choice-actions button{width:100%;min-height:44px}
-#sessionform .session-time-row{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;width:100%;min-width:0}
+#sessionform .session-time-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;width:100%;min-width:0}
 #sessionform .session-time-row label{min-width:0!important;width:100%!important;max-width:none!important;font-size:12px}
-#sessionform .session-time-row input{width:100%!important;min-width:0!important;max-width:100%;box-sizing:border-box;padding:8px;font-size:14px}
+#sessionform .session-time-row input,#sessionform .session-time-row select{width:100%!important;min-width:0!important;max-width:100%;box-sizing:border-box;height:44px!important;padding:8px;font-size:14px}
+#sessionform .session-time-row label[hidden]{display:none!important}
 @media(max-width:420px){#sessionform .session-time-row{gap:6px!important}#sessionform .session-time-row label{font-size:11px}#sessionform .session-time-row input{padding:7px 5px;font-size:13px}}
 
 /* Administration: accordion sections and compact grey data rows */
