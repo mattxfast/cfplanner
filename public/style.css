@@ -648,7 +648,12 @@ button:disabled{opacity:.35;cursor:not-allowed}
 /* Module PR : cartes de records et graphiques d’évolution. */
 #view-prs .pr-section-title{background:var(--banner-bg)!important;border-color:var(--banner-border)!important;color:var(--banner-ink)!important;display:flex;align-items:center;justify-content:space-between;gap:12px}
 #view-prs .pr-section-title h2{color:var(--banner-ink)!important}
-#view-prs .pr-section-title{min-height:48px}\n.pr-section-toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:transparent;border:0;padding:0;color:inherit;text-align:left;cursor:pointer}\n.pr-section-toggle h2{margin:0}\n.pr-collapse-indicator{display:grid;place-items:center;width:23px;height:23px;border:1px solid var(--banner-border);border-radius:6px;font:700 17px/1 Manrope;color:var(--banner-ink);flex:none}\n.pr-add{display:grid;place-items:center;width:34px;height:34px;flex:none;border:0;border-radius:8px;background:var(--orange);color:var(--on-accent);font:700 24px/1 Manrope;cursor:pointer}\n.pr-add:hover{background:var(--orange-strong)}
+#view-prs .pr-section-title{min-height:48px}
+.pr-section-toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:transparent;border:0;padding:0;color:inherit;text-align:left;cursor:pointer}
+.pr-section-toggle h2{margin:0}
+.pr-collapse-indicator{display:grid;place-items:center;width:23px;height:23px;border:1px solid var(--banner-border);border-radius:6px;font:700 17px/1 Manrope;color:var(--banner-ink);flex:none}
+.pr-add{display:grid;place-items:center;width:34px;height:34px;flex:none;border:0;border-radius:8px;background:var(--orange);color:var(--on-accent);font:700 24px/1 Manrope;cursor:pointer}
+.pr-add:hover{background:var(--orange-strong)}
 .pr-grid,.pr-evolution-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 24px}
 .pr-card{padding:14px 15px;box-shadow:none;background:var(--content-bg);border-color:var(--content-border);min-width:0}
 .pr-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -673,7 +678,9 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .pr-history-row strong{font:700 15px Manrope}
 @media(max-width:760px){.pr-grid,.pr-evolution-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pr-card{padding:12px}}
 @media(max-width:480px){.pr-grid,.pr-evolution-grid{grid-template-columns:1fr 1fr}.pr-card h3{font-size:12px}.pr-best{font-size:21px}.pr-chart-card{padding:10px}}
-\n#view-prs .pr-grid[hidden],#view-prs .pr-evolution-grid[hidden]{display:none}\n
+
+#view-prs .pr-grid[hidden],#view-prs .pr-evolution-grid[hidden]{display:none}
+
 
 /* PR : tuiles de records nettement plus compactes, sans date. */
 #view-prs #prcards.pr-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:8px 0 20px}
