@@ -31,6 +31,15 @@ FFOffline.init({
 });
 $("#syncstatus").onclick = () => FFOffline.flush();
 (async () => {
+  // Lien « mot de passe oublié » : ?reset=<jeton> ouvre directement le formulaire de nouveau mot de passe.
+  const params = new URLSearchParams(location.search);
+  if (params.has("reset")) {
+    resetToken = params.get("reset");
+    history.replaceState(null, "", location.pathname);
+    showAuth();
+    showAuthPanel("reset");
+    return;
+  }
   try {
     const d = await api("/me");
     if (d.user) {

@@ -8,7 +8,7 @@ const FFOffline = (() => {
   const CACHE = "ff-cache:",
     QUEUE = "ff-queue",
     OWNER = "ff-cache-owner";
-  const NEVER_QUEUED = /^\/(login|register|logout|admin\/|admin$|push\/)/;
+  const NEVER_QUEUED = /^\/(login|register|logout|admin\/|admin$|push\/|password\/)/;
   const store = {
     get(key) {
       try {

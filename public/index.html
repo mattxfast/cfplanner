@@ -125,6 +125,32 @@
           ><button class="primary" id="authsubmit">Se connecter</button>
           <p class="hint" id="authhint">Mot de passe de 12 caractères minimum.</p>
           <div id="autherror" class="error"></div>
+          <button type="button" class="ghost auth-link" id="forgotlink">Mot de passe oublié ?</button>
+        </form>
+        <form id="forgotform" class="auth-panel" hidden>
+          <h2>Mot de passe oublié</h2>
+          <p class="hint">Indique ton adresse e-mail : tu recevras un lien pour choisir un nouveau mot de passe.</p>
+          <label>E-mail<input name="email" type="email" autocomplete="email" required /></label
+          ><button class="primary">Recevoir un lien</button>
+          <div id="forgotmessage" class="auth-message" role="status"></div>
+          <button type="button" class="ghost auth-link" data-auth-back>Retour à la connexion</button>
+        </form>
+        <form id="resetform" class="auth-panel" hidden>
+          <h2>Nouveau mot de passe</h2>
+          <label
+            >Nouveau mot de passe<input
+              name="password"
+              type="password"
+              minlength="12"
+              autocomplete="new-password"
+              required /></label
+          ><label
+            >Confirmation<input name="confirm" type="password" minlength="12" autocomplete="new-password" required
+          /></label>
+          <p class="hint">12 caractères minimum. Tu seras déconnecté de tes autres appareils.</p>
+          <button class="primary">Enregistrer et me connecter</button>
+          <div id="reseterror" class="error"></div>
+          <button type="button" class="ghost auth-link" data-auth-back>Retour à la connexion</button>
         </form>
       </section>
       <section id="dashboard" hidden>

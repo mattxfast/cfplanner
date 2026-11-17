@@ -250,6 +250,12 @@ async function ensureV2Schema(env) {
         "CREATE TABLE IF NOT EXISTS reminder_settings (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, days INTEGER NOT NULL DEFAULT 3, hour INTEGER NOT NULL DEFAULT 18, last_sent_on TEXT)"
       ).run();
     });
+    await runMigration("v10-password-resets", async () => {
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, used_at INTEGER)"
+      ).run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -306,6 +312,31 @@ async function sendReminders(e) {
     await pushToUser(e, row.user_id, {title: "FitFactory", body, tag: "reminder", url: "/"});
     await e.DB.prepare("UPDATE reminder_settings SET last_sent_on=? WHERE user_id=?").bind(today, row.user_id).run();
   }
+}
+// Mot de passe oublié : lien à usage unique valable 30 minutes (seule l'empreinte du jeton est gardée en base).
+// Envoi par e-mail via Resend si RESEND_API_KEY et MAIL_FROM sont configurés ; sinon le lien est écrit dans les logs
+// du Worker (visibles du seul propriétaire du compte Cloudflare) et l'administrateur peut aussi le générer.
+const RESET_MINUTES = 30;
+async function createResetLink(e, userId, origin) {
+  const token = b64(crypto.getRandomValues(new Uint8Array(32)));
+  await e.DB.prepare("INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,?)")
+    .bind(await sha(token), userId, Math.floor(Date.now() / 1000) + RESET_MINUTES * 60)
+    .run();
+  return origin + "/?reset=" + encodeURIComponent(token);
+}
+async function sendResetEmail(e, to, link) {
+  if (!e.RESEND_API_KEY || !e.MAIL_FROM) {
+    console.log("FitFactory réinitialisation (aucun service d’e-mail configuré)", {email: to, lien: link});
+    return false;
+  }
+  const text = `Bonjour,\n\nPour choisir un nouveau mot de passe FitFactory, ouvre ce lien (valable ${RESET_MINUTES} minutes, utilisable une seule fois) :\n${link}\n\nSi tu n’es pas à l’origine de cette demande, ignore simplement ce message.`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {Authorization: "Bearer " + e.RESEND_API_KEY, "content-type": "application/json"},
+    body: JSON.stringify({from: e.MAIL_FROM, to, subject: "Réinitialiser ton mot de passe FitFactory", text}),
+  });
+  if (!res.ok) console.error("FitFactory e-mail", {status: res.status});
+  return res.ok;
 }
 // Identifiant généré par le téléphone (mode hors ligne) : rend la création rejouable sans doublon.
 const clientId = v =>
@@ -409,6 +440,58 @@ async function api(r, e, p) {
       .bind(id, email, await hashPass(pw))
       .run();
     return session(id, email, e);
+  }
+  if (r.method === "POST" && p === "/api/password/forgot") {
+    // Réponse identique que le compte existe ou non (pas de divulgation des adresses inscrites).
+    const b = await r.json(),
+      email = String(b.email || "")
+        .trim()
+        .toLowerCase()
+        .slice(0, 200),
+      ip = r.headers.get("CF-Connecting-IP") || "inconnue",
+      since = Math.floor(Date.now() / 1000) - 3600,
+      count = async key =>
+        (
+          await e.DB.prepare("SELECT COUNT(*) AS n FROM login_attempts WHERE attempt_key=? AND attempted_at>?")
+            .bind(key, since)
+            .first()
+        ).n,
+      allowed =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+        (await count("reset:" + email)) < 3 &&
+        (await count("reset-ip:" + ip)) < 10;
+    if (allowed) {
+      const now = Math.floor(Date.now() / 1000);
+      await e.DB.batch([
+        e.DB.prepare("INSERT INTO login_attempts(attempt_key,attempted_at) VALUES(?,?)").bind("reset:" + email, now),
+        e.DB.prepare("INSERT INTO login_attempts(attempt_key,attempted_at) VALUES(?,?)").bind("reset-ip:" + ip, now),
+      ]);
+      const account = await e.DB.prepare("SELECT id FROM users WHERE email=? AND is_active=1").bind(email).first();
+      if (account) await sendResetEmail(e, email, await createResetLink(e, account.id, new URL(r.url).origin));
+    }
+    return json({ok: true});
+  }
+  if (r.method === "POST" && p === "/api/password/reset") {
+    const b = await r.json(),
+      pw = String(b.password || ""),
+      token = String(b.token || "").slice(0, 200),
+      now = Math.floor(Date.now() / 1000);
+    if (pw.length < 12) return json({error: "Mot de passe : 12 caractères minimum."}, 400);
+    const hash = await sha(token),
+      reset = await e.DB.prepare(
+        "SELECT pr.user_id,u.email FROM password_resets pr JOIN users u ON u.id=pr.user_id WHERE pr.token_hash=? AND pr.used_at IS NULL AND pr.expires_at>? AND u.is_active=1"
+      )
+        .bind(hash, now)
+        .first();
+    if (!reset) return json({error: "Lien invalide ou expiré : demande un nouveau lien."}, 400);
+    await e.DB.batch([
+      e.DB.prepare("UPDATE users SET password_hash=? WHERE id=?").bind(await hashPass(pw), reset.user_id),
+      e.DB.prepare("UPDATE password_resets SET used_at=? WHERE token_hash=?").bind(now, hash),
+      e.DB.prepare("DELETE FROM password_resets WHERE user_id=? AND token_hash<>?").bind(reset.user_id, hash),
+      e.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(reset.user_id),
+      e.DB.prepare("DELETE FROM login_attempts WHERE attempt_key=?").bind("email:" + reset.email),
+    ]);
+    return session(reset.user_id, reset.email, e);
   }
   if (r.method === "POST" && p === "/api/login") {
     const b = await r.json(),
@@ -642,6 +725,11 @@ async function api(r, e, p) {
     if (r.method === "GET" && p === "/api/admin/users") {
       const x = await e.DB.prepare("SELECT id,email,is_active FROM users ORDER BY email").all();
       return json({users: x.results});
+    }
+    if (r.method === "POST" && (m = p.match(/^\/api\/admin\/users\/([\w-]+)\/reset-link$/))) {
+      const target = await e.DB.prepare("SELECT id FROM users WHERE id=? AND is_active=1").bind(m[1]).first();
+      if (!target) return json({error: "Utilisateur introuvable ou inactif."}, 404);
+      return json({ok: true, link: await createResetLink(e, target.id, new URL(r.url).origin), minutes: RESET_MINUTES});
     }
     if (r.method === "PUT" && (m = p.match(/^\/api\/admin\/users\/([\w-]+)$/))) {
       const b = await r.json();
@@ -1492,6 +1580,7 @@ export default {
           ? e.DB.batch([
               e.DB.prepare("DELETE FROM sessions WHERE expires_at<=?").bind(now),
               e.DB.prepare("DELETE FROM login_attempts WHERE attempted_at<=?").bind(now - 86400),
+              e.DB.prepare("DELETE FROM password_resets WHERE expires_at<=?").bind(now - 86400),
             ])
           : sendReminders(e)
       )

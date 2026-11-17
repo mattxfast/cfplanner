@@ -149,10 +149,60 @@ document.querySelectorAll(".tab").forEach(
       tab = b.dataset.tab;
       document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === b));
       $("#authsubmit").textContent = tab === "login" ? "Se connecter" : "Créer mon compte";
+      $("#forgotlink").hidden = tab !== "login";
       $("#authhint").textContent =
         tab === "login" ? "Connecte-toi pour retrouver tes programmes." : "Mot de passe de 12 caractères minimum.";
     })
 );
+// Écran de connexion : panneau « connexion / création », « mot de passe oublié » ou « nouveau mot de passe ».
+function showAuthPanel(panel) {
+  $("#auth .tabs").hidden = panel !== "login";
+  $("#authform").hidden = panel !== "login";
+  $("#forgotform").hidden = panel !== "forgot";
+  $("#resetform").hidden = panel !== "reset";
+  $("#forgotlink").hidden = tab !== "login";
+}
+$("#forgotlink").onclick = () => {
+  $("#forgotform").elements.email.value = $("#authform").elements.email.value;
+  $("#forgotmessage").textContent = "";
+  showAuthPanel("forgot");
+};
+document.querySelectorAll("[data-auth-back]").forEach(b => (b.onclick = () => showAuthPanel("login")));
+$("#forgotform").onsubmit = async e => {
+  e.preventDefault();
+  const button = e.target.querySelector("button.primary");
+  button.disabled = true;
+  try {
+    await sendApi("/password/forgot", "POST", {email: e.target.elements.email.value});
+    $("#forgotmessage").textContent =
+      "Si un compte existe pour cette adresse, un lien de réinitialisation (valable 30 minutes) vient d’être envoyé.";
+  } catch (x) {
+    $("#forgotmessage").textContent = x.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+let resetToken = "";
+$("#resetform").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  $("#reseterror").textContent = "";
+  if (f.password.value !== f.confirm.value) {
+    $("#reseterror").textContent = "Les deux mots de passe ne sont pas identiques.";
+    return;
+  }
+  try {
+    const d = await sendApi("/password/reset", "POST", {token: resetToken, password: f.password.value});
+    user = d.user;
+    isAdmin = !!d.is_admin;
+    FFOffline.setOwner(user.id);
+    showAuthPanel("login");
+    showApp();
+    toast("Mot de passe modifié.");
+  } catch (x) {
+    $("#reseterror").textContent = x.message;
+  }
+};
 $("#authform").onsubmit = async e => {
   e.preventDefault();
   $("#autherror").textContent = "";

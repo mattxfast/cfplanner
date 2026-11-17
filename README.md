@@ -48,6 +48,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Export Excel dans « Mon compte » : un seul tableau « Bilan », une ligne par semaine ISO dans l'ordre chronologique, tous programmes confondus (une semaine qui chevauche deux programmes a une ligne par programme). Toujours 7 colonnes « WOD 1 » à « WOD 7 », par position (le 1er WOD de son programme compte en WOD 1, etc.) ; à chaque changement de programme, une ligne rappelle le nom du programme et de ses 7 WOD. Les colonnes de mouvements travaillés sont fixes pour tout le fichier : regroupées par nom (un même mouvement présent dans plusieurs programmes garde une seule colonne), limitées aux mouvements cochés au moins une fois.
 - Création de compte et connexion par e-mail et mot de passe.
 - Protection contre les essais de mots de passe : après 5 échecs en 15 minutes pour un même e-mail (ou 20 depuis une même adresse IP), la connexion est refusée avec le délai d'attente restant. Une connexion réussie remet le compteur de l'e-mail à zéro ; la tâche quotidienne purge les tentatives de plus de 24 h.
+- Mot de passe oublié : lien « Mot de passe oublié ? » sur la page de connexion. La réponse est identique que l'adresse soit inscrite ou non ; 3 demandes par heure et par adresse. Le lien (valable 30 minutes, utilisable une seule fois, seule son empreinte est gardée en base) ouvre le formulaire « Nouveau mot de passe », connecte directement et ferme les sessions des autres appareils. Envoi par e-mail si un service est configuré (voir Configuration) ; sinon le lien est écrit dans les logs du Worker, et l'administrateur peut générer un lien pour n'importe quel compte (bouton 🔑 dans la liste des utilisateurs).
 - Modification du prénom et du nom.
 - Administration réservée au compte défini par `ADMIN_EMAIL`.
 - Gestion des utilisateurs (activation / désactivation).
@@ -103,6 +104,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V7 ajoute la table `session_catalog_movement_checks` (mouvements du catalogue cochés dans une séance d'un programme sans mouvement à travailler).
 - V8 ajoute la table `login_attempts` (tentatives de connexion échouées, indexées par clé e-mail/IP et date).
 - V9 ajoute les tables `app_settings` (clés VAPID), `push_subscriptions` (un abonnement par téléphone) et `reminder_settings` (jours sans séance, heure, dernier envoi).
+- V10 ajoute la table `password_resets` (empreinte du jeton, utilisateur, expiration, date d'utilisation).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
@@ -111,6 +113,14 @@ Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont p
 `wrangler.toml` déclare le Worker `fitfactory` (adresse `fitfactory.mattxfast.workers.dev`), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `fitfactory` → Logs, ou via `npx wrangler tail fitfactory`). La base D1 s'appelle `fitfactory` (copie de l'ancienne base `cfplanner`, une base D1 ne se renommant pas) . Le cookie de session s'appelle `fitfactory_session` et la préférence de thème `fitfactory-theme` ; les anciens noms (`cfplanner_session`, `cfplanner-theme`) sont encore acceptés et remplacés automatiquement, sans déconnexion. Cette adresse identifie le compte administrateur et le propriétaire du référentiel commun des activités.
 
 Les polices (DM Sans et Manrope, sous-ensemble latin, licence OFL) sont hébergées dans `public/fonts/` et la bibliothèque Excel (SheetJS 0.18.5, Apache-2.0) dans `public/vendor/` : l'application ne charge aucune ressource externe.
+
+Envoi des e-mails « mot de passe oublié » (facultatif) via [Resend](https://resend.com) : créer une clé d'API, puis
+
+```bash
+npx wrangler secret put RESEND_API_KEY
+```
+
+et ajouter dans `wrangler.toml`, section `[vars]`, l'expéditeur : `MAIL_FROM = "FitFactory <adresse@domaine-verifie>"` (sans domaine vérifié, Resend n'autorise que `onboarding@resend.dev` vers l'adresse du compte Resend). Sans cette configuration, le lien est écrit dans les logs du Worker.
 
 Pour un autre environnement, configurez `ADMIN_EMAIL` avec l'adresse du compte administrateur de cet environnement. La variable n'est pas un secret. Les mots de passe, jetons et clés privées ne doivent jamais être enregistrés dans le dépôt.
 

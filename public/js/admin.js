@@ -114,7 +114,7 @@ function renderAdmin(users, movements = []) {
     users
       .map(
         u =>
-          `<div class="admin-row"><span>${esc(u.email)} · ${u.is_active ? "actif" : "inactif"}</span><span class="admin-row-actions"><button class="smallbtn delete" data-toggle-user="${u.id}" aria-label="${u.is_active ? "Désactiver" : "Réactiver"}" title="${u.is_active ? "Désactiver" : "Réactiver"}" ${u.email === user.email ? "disabled" : ""}>${u.is_active ? "×" : "↻"}</button></span></div>`
+          `<div class="admin-row"><span>${esc(u.email)} · ${u.is_active ? "actif" : "inactif"}</span><span class="admin-row-actions"><button class="smallbtn" data-reset-user="${u.id}" aria-label="Lien de réinitialisation du mot de passe" title="Lien de réinitialisation du mot de passe" ${u.is_active ? "" : "disabled"}>🔑</button><button class="smallbtn delete" data-toggle-user="${u.id}" aria-label="${u.is_active ? "Désactiver" : "Réactiver"}" title="${u.is_active ? "Désactiver" : "Réactiver"}" ${u.email === user.email ? "disabled" : ""}>${u.is_active ? "×" : "↻"}</button></span></div>`
       )
       .join("") || `<p class="muted">Aucun utilisateur.</p>`;
   $("#activitylist")
@@ -166,6 +166,27 @@ function renderAdmin(users, movements = []) {
         })
     );
 
+  // Lien de réinitialisation à transmettre à l’utilisateur (copié dans le presse-papiers si possible).
+  $("#userlist")
+    .querySelectorAll("[data-reset-user]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const u = users.find(x => x.id === b.dataset.resetUser);
+          if (!confirm("Créer un lien de réinitialisation du mot de passe pour " + u.email + " ?")) return;
+          try {
+            const r = await sendApi("/admin/users/" + u.id + "/reset-link", "POST", {});
+            try {
+              await navigator.clipboard.writeText(r.link);
+              toast("Lien copié : à transmettre à " + u.email + " (valable " + r.minutes + " min).");
+            } catch {
+              prompt("Lien à transmettre (valable " + r.minutes + " min) :", r.link);
+            }
+          } catch (e) {
+            toast(e.message);
+          }
+        })
+    );
   $("#userlist")
     .querySelectorAll("[data-toggle-user]")
     .forEach(

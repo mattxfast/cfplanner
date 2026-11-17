@@ -150,3 +150,35 @@ test("rappels : configuration, validation de l'abonnement et des réglages", asy
   assert.equal((await alice.post("/push/unsubscribe", {endpoint: "https://web.push.apple.com/abc"})).status, 200);
   assert.equal((await alice.get("/push/config")).data.devices, 0);
 });
+
+test("mot de passe oublié : réponse identique, lien unique, ancien mot de passe refusé", async () => {
+  const unknown = await client(worker.base).post("/password/forgot", {email: "personne@test.local"});
+  const known = await client(worker.base).post("/password/forgot", {email: "alice@test.local"});
+  assert.equal(unknown.status, 200);
+  assert.deepEqual(unknown.data, known.data);
+  // lien généré par l'administrateur (pas d'e-mail en test)
+  const users = (await admin.get("/admin/users")).data.users;
+  const carol = client(worker.base);
+  await carol.post("/register", {email: "carol@test.local", password: PASSWORD});
+  const id = (await admin.get("/admin/users")).data.users.find(u => u.email === "carol@test.local").id;
+  assert.ok(users.length > 0);
+  assert.equal((await alice.post(`/admin/users/${id}/reset-link`)).status, 403);
+  const link = (await admin.post(`/admin/users/${id}/reset-link`)).data.link;
+  const token = decodeURIComponent(new URL(link).searchParams.get("reset"));
+  const c = client(worker.base);
+  assert.equal((await c.post("/password/reset", {token, password: "court"})).status, 400);
+  const ok = await c.post("/password/reset", {token, password: "NouveauMotDePasse-1"});
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.user.email, "carol@test.local");
+  assert.equal((await carol.get("/me")).data.user, null, "les autres sessions sont fermées");
+  assert.equal(
+    (await c.post("/password/reset", {token, password: "EncoreAutre-1234"})).status,
+    400,
+    "lien à usage unique"
+  );
+  assert.equal((await client(worker.base).post("/login", {email: "carol@test.local", password: PASSWORD})).status, 401);
+  assert.equal(
+    (await client(worker.base).post("/login", {email: "carol@test.local", password: "NouveauMotDePasse-1"})).status,
+    200
+  );
+});
