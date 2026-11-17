@@ -41,8 +41,8 @@
   --focus-ring:#4268e82b; /* halo de focus */
   --focus-ring-strong:#4268e855; /* halo de focus appuyé */
   /* Barre d’onglets du bas */
-  --nav-ink:#778197; /* icône d’onglet */
-  --nav-active:#4268e8; /* onglet actif */
+  --nav-ink:#c0772f; /* icône d’onglet (orange atténué) */
+  --nav-active:#f28c28; /* onglet actif (orange vif) */
   /* Suppression */
   --danger:#bd3446; /* rouge */
   --danger-soft:#fff0f1; /* fond */
