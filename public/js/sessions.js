@@ -120,19 +120,42 @@ function programForDate(date) {
 // Rubrique « Focus mouvement » de la semaine : mouvements du programme, ou à défaut (programme sans mouvement,
 // séances hors programme) les mouvements du catalogue cochés dans les séances de la semaine.
 function weekMovementsSection(week, programMovements, folded) {
-  const movementCounts = programMovements.length
-    ? programMovements.map(m => ({
-        movement: m,
-        count: week.filter(s => movementChecks.some(c => c.session_id === s.id && c.movement_id === m.id)).length,
-      }))
-    : movementCatalog
-        .map(m => ({
-          movement: m,
-          count: week.filter(s => catalogChecks.some(c => c.session_id === s.id && c.catalog_movement_id === m.id))
-            .length,
-        }))
-        .filter(x => x.count > 0);
-  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? movementCounts.filter(x => x.count > 0).length + "/" + movementCounts.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement travaillé cette semaine."}</p>`}</div></div></section>`;
+  // Liste de base : mouvements du programme de la semaine, ou à défaut (semaine sans programme) tout le catalogue.
+  // On y ajoute tout autre mouvement coché dans les séances de la semaine (séance rattachée à un autre programme, etc.).
+  // Les mouvements sont regroupés par nom ; chaque séance compte une fois par mouvement.
+  const key = name =>
+      String(name || "")
+        .trim()
+        .toLowerCase(),
+    allProgramMovements = Object.values(movementsByProgram).flat(),
+    items = new Map();
+  for (const m of programMovements.length ? programMovements : movementCatalog)
+    if (!items.has(key(m.name))) items.set(key(m.name), {movement: {name: m.name}, count: 0, base: true});
+  for (const s of week) {
+    const names = new Set(
+      [
+        ...movementChecks
+          .filter(c => c.session_id === s.id)
+          .map(c => allProgramMovements.find(m => m.id === c.movement_id)?.name),
+        ...catalogChecks
+          .filter(c => c.session_id === s.id)
+          .map(c => movementCatalog.find(m => m.id === c.catalog_movement_id)?.name),
+      ]
+        .filter(Boolean)
+        .map(key)
+    );
+    for (const k of names) {
+      if (!items.has(k)) {
+        const name =
+          allProgramMovements.find(m => key(m.name) === k)?.name || movementCatalog.find(m => key(m.name) === k)?.name;
+        items.set(k, {movement: {name}, count: 0, base: false});
+      }
+      items.get(k).count++;
+    }
+  }
+  const movementCounts = [...items.values()],
+    baseItems = movementCounts.filter(x => x.base);
+  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${baseItems.filter(x => x.count > 0).length + "/" + baseItems.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement dans le catalogue."}</p>`}</div></div></section>`;
 }
 function renderWeek() {
   const now = today();
@@ -151,7 +174,7 @@ function renderWeek() {
   } else if (!p || isFallbackProgram(p)) {
     // Semaine sans programme : les séances sont enregistrées « hors programme ».
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><div class="card empty">Aucun programme ne couvre cette semaine : tes séances sont enregistrées « hors programme ».</div>${weekMovementsSection(week, [], folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><div class="card empty">Aucun programme ne couvre cette semaine : les nouvelles séances sont enregistrées « hors programme ».</div>${weekMovementsSection(week, [], folded)}`;
   } else {
     const ws = visibleWods(p.id),
       countFor = w => week.filter(x => x.wod_id === w.id).length,
