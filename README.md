@@ -56,6 +56,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Android : ouvrir le site dans Chrome, menu ⋮, puis « Installer l'application ».
 - Service worker (`public/sw.js`) en « réseau d'abord » : la dernière version publiée est toujours chargée ; hors connexion, l'application s'ouvre depuis le cache et affiche un message clair. Les appels `/api/` ne sont jamais mis en cache.
 - Icônes dans `public/icons/` (SVG source + PNG 180, 192, 512 et 512 « maskable »).
+- Écran de démarrage : fond orange, kettlebell et « FitFactory ». Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
 
 ## Utilisation
 
