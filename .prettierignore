@@ -1,0 +1,6 @@
+public/vendor/
+public/fonts/
+public/icons/
+public/splash/
+node_modules/
+.wrangler/
