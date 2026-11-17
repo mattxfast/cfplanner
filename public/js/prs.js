@@ -283,13 +283,23 @@ function syncPrForm() {
   f.elements.rep_count.required = load;
   f.elements.rep_count.disabled = !load;
 }
-function openPrForm() {
+// Ouvre le formulaire de PR : vide pour une création, pré-rempli pour la modification d'un PR existant.
+function openPrForm(record = null) {
   const f = $("#prform");
   f.reset();
   f.elements.record_date.value = today();
   f.elements.movement_id.innerHTML = movementCatalog
     .map(m => '<option value="' + m.id + '">' + esc(m.name) + "</option>")
     .join("");
+  f.elements.pr_id.value = record?.id || "";
+  if (record) {
+    f.elements.movement_id.value = record.movement_id;
+    f.elements.record_date.value = record.record_date;
+    f.elements.value.value = record.value;
+    if (record.rep_count) f.elements.rep_count.value = String(record.rep_count);
+  }
+  $("#prformtitle").textContent = record ? "Modifier le PR" : "Nouveau PR";
+  $("#prformsubmit").textContent = record ? "Enregistrer les modifications" : "Enregistrer le PR";
   $("#prformerror").textContent = "";
   syncPrForm();
   if (!movementCatalog.length) {
@@ -298,7 +308,7 @@ function openPrForm() {
   }
   $("#prdialog").showModal();
 }
-$("#newpr").onclick = openPrForm;
+$("#newpr").onclick = () => openPrForm();
 $("#closepr").onclick = () => $("#prdialog").close();
 $("#prform").elements.movement_id.onchange = syncPrForm;
 $("#prform").onsubmit = async e => {

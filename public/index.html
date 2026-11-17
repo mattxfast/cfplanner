@@ -405,7 +405,7 @@
         <form id="prform">
           <input type="hidden" name="pr_id" />
           <div class="sectionhead">
-            <h2>Nouveau PR</h2>
+            <h2 id="prformtitle">Nouveau PR</h2>
             <button type="button" class="iconbtn" id="closepr">×</button>
           </div>
           <label>Mouvement<select name="movement_id" required></select></label
@@ -436,7 +436,7 @@
               <option value="19">19 RM</option>
               <option value="20">20 RM</option>
             </select></label
-          ><button type="submit" class="primary">Enregistrer le PR</button>
+          ><button type="submit" class="primary" id="prformsubmit">Enregistrer le PR</button>
           <div id="prformerror" class="error"></div>
         </form>
       </dialog>
