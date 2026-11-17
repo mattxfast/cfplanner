@@ -42,7 +42,7 @@ Les mouvements du catalogue sont répartis en quatre familles :
 Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les enregistrements peuvent être supprimés depuis leur historique.
 
 ### Compte et administration
-- Choix du thème dans « Mon compte » : Automatique (selon le réglage du téléphone), Clair ou Sombre. La préférence est mémorisée sur l'appareil.
+- Choix du thème dans « Mon compte », par trois cases exclusives : Automatique (selon le réglage du téléphone), Clair ou Sombre. La préférence est mémorisée sur l'appareil.
 - Export Excel dans « Mon compte » : un seul tableau « Bilan », une ligne par semaine ISO dans l'ordre chronologique, tous programmes confondus (colonne « Programme » à titre indicatif). Les colonnes de WOD réalisés et de mouvements travaillés sont fixes pour tout le fichier : regroupées par nom (un même mouvement présent dans plusieurs programmes garde une seule colonne), limitées aux WOD et mouvements réalisés au moins une fois.
 - Création de compte et connexion par e-mail et mot de passe.
 - Modification du prénom et du nom.

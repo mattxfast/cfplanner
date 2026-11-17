@@ -268,7 +268,7 @@ $("#closeprhistory").onclick=()=>$("#prhistorydialog").close();
 // Thème clair / sombre : préférence mémorisée sur l’appareil, « auto » suit le réglage du téléphone.
 function themePreference(){try{return localStorage.getItem("cfplanner-theme")||"auto"}catch{return "auto"}}
 function applyTheme(){const pref=themePreference(),dark=pref==="dark"||(pref==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=dark?"dark":"light";document.querySelector('meta[name="theme-color"]')?.setAttribute("content",dark?"#0f1420":"#151b2b")}
-$("#themeselect").value=themePreference();$("#themeselect").onchange=e=>{try{localStorage.setItem("cfplanner-theme",e.target.value)}catch{}applyTheme()};
+document.querySelectorAll("#themechoice input").forEach(input=>{input.checked=input.value===themePreference();input.onchange=()=>{try{localStorage.setItem("cfplanner-theme",input.value)}catch{}applyTheme()}});
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme);applyTheme();
 
 // Bloque le défilement de la page derrière une fenêtre ouverte (y compris sur iOS Safari).
