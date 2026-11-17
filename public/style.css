@@ -3786,6 +3786,9 @@ button:active:not(:disabled) {
   gap: 12px;
   margin-bottom: var(--page-content-gap);
 }
+.timer-modes {
+  justify-content: center;
+}
 #view-timer.timer-active .timer-setup {
   display: none;
 }
