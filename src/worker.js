@@ -262,6 +262,13 @@ async function ensureV2Schema(env) {
         "UPDATE programs SET name='Hors programme' WHERE is_default=1 AND NOT EXISTS(SELECT 1 FROM program_wods w WHERE w.program_id=programs.id AND w.name<>'__AUTRES__') AND NOT EXISTS(SELECT 1 FROM program_movements m WHERE m.program_id=programs.id)"
       ).run();
     });
+    await runMigration("v12-restore-hors-programme", async () => {
+      // Répare le programme technique « Hors programme » dont le marqueur avait été retiré par la modification
+      // d'un autre programme (bug corrigé) : il redevient caché, s'il n'y a pas déjà un programme par défaut.
+      await env.DB.prepare(
+        "UPDATE programs SET is_default=1 WHERE name='Hors programme' AND is_default=0 AND start_monday='1970-01-01' AND end_monday='2100-12-31' AND NOT EXISTS(SELECT 1 FROM program_wods w WHERE w.program_id=programs.id AND w.name<>'__AUTRES__') AND NOT EXISTS(SELECT 1 FROM program_movements mv WHERE mv.program_id=programs.id) AND NOT EXISTS(SELECT 1 FROM programs d WHERE d.user_id=programs.user_id AND d.is_default=1)"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -1184,8 +1191,12 @@ async function api(r, e, p) {
         .first();
       if (overlap) return json({error: "Les dates chevauchent un autre programme."}, 409);
     }
+    // Le marqueur « par défaut » (programme technique « Hors programme ») n'est déplacé que si ce programme le demande :
+    // modifier un programme ordinaire ne doit jamais retirer le marqueur du programme technique.
     await e.DB.batch([
-      e.DB.prepare("UPDATE programs SET is_default=0 WHERE user_id=? AND is_default=1").bind(u.id),
+      ...(isDefault
+        ? [e.DB.prepare("UPDATE programs SET is_default=0 WHERE user_id=? AND is_default=1 AND id<>?").bind(u.id, m[1])]
+        : []),
       e.DB.prepare("UPDATE programs SET name=?,start_monday=?,end_monday=?,is_default=? WHERE id=? AND user_id=?").bind(
         name,
         start,

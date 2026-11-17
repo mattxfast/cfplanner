@@ -220,3 +220,33 @@ test("séance hors programme : programme technique créé à la demande, sans co
   });
   assert.equal(created.status, 200, JSON.stringify(created.data));
 });
+
+test("modifier un programme ne rend pas visible le programme technique « Hors programme »", async () => {
+  const erin = client(worker.base);
+  await erin.post("/register", {email: "erin@test.local", password: PASSWORD});
+  await erin.post("/sessions", {
+    program_id: "none",
+    wod_id: "other",
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 45,
+    movement_ids: [],
+    catalog_movement_ids: [],
+  });
+  const start = mondayOf(today());
+  await erin.post("/programs", {name: "Bloc", start, end: addDays(start, 27)});
+  const bloc = (await erin.get("/programs")).data.programs.find(x => x.name === "Bloc");
+  const edit = await erin.put(`/programs/${bloc.id}`, {
+    name: "Bloc",
+    start: addDays(start, 7),
+    end: addDays(start, 27),
+  });
+  assert.equal(edit.status, 200, JSON.stringify(edit.data));
+  const fallback = (await erin.get("/programs")).data.programs.find(x => x.name === "Hors programme");
+  assert.equal(fallback.is_default, 1, "le programme technique reste marqué (donc caché)");
+  // un second programme sur d'autres dates reste possible (pas de chevauchement avec 1970 → 2100)
+  assert.equal(
+    (await erin.post("/programs", {name: "Bloc 2", start: addDays(start, 35), end: addDays(start, 55)})).status,
+    200
+  );
+});

@@ -85,7 +85,7 @@ function openSession(s = null, presetWodId = "") {
     programs
       .filter(p => !isFallbackProgram(p))
       .map(p => `<option value="${p.id}">${esc(p.name)}</option>`)
-      .join("") + `<option value="none">Hors programme</option>`;
+      .join("") + `<option value="none">Sans programme</option>`;
   let selectedProgram = s ? programs.find(p => p.id === s.program_id) : null;
   if (!selectedProgram && presetWodId)
     selectedProgram = programs.find(p => (wodsByProgram[p.id] || []).some(x => x.id === presetWodId));
