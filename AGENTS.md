@@ -5,7 +5,7 @@ Plusieurs agents interviennent **à tour de rôle** : ce fichier est la référe
 
 ## Le projet
 
-FitFactory (anciennement CFPlanner ; dépôt GitHub, Worker Cloudflare et base D1 : `fitfactory` ; le cookie de session et la préférence de thème gardent l’identifiant technique `cfplanner`) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
+FitFactory (anciennement CFPlanner ; dépôt GitHub, Worker Cloudflare, base D1, cookie de session et préférence de thème : `fitfactory` ; les anciens noms `cfplanner_session` et `cfplanner-theme` restent acceptés pour la transition) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
 
 ## Architecture
 
