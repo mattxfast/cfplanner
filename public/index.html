@@ -326,6 +326,36 @@
             <div id="boxformerror" class="error"></div>
           </form>
         </dialog>
+        <dialog id="boxwoddialog" class="modal">
+          <form id="boxwodform">
+            <div class="sectionhead">
+              <h2 id="boxwoddialogtitle">Ajouter un WOD</h2>
+              <button type="button" class="iconbtn" data-close-dialog="boxwoddialog">×</button>
+            </div>
+            <input type="hidden" name="id" />
+            <div class="two">
+              <label>Date<input name="wod_date" type="date" required /></label
+              ><label
+                >Score<select name="score_type" required>
+                  <option value="time">Temps (For Time)</option>
+                  <option value="reps">Répétitions (AMRAP)</option>
+                  <option value="load">Charge (kg)</option>
+                  <option value="none">Sans score</option>
+                </select></label
+              >
+            </div>
+            <label>Nom (facultatif)<input name="name" maxlength="100" /></label
+            ><label
+              >Contenu<textarea
+                name="content"
+                rows="6"
+                maxlength="3000"
+                placeholder="Échauffement, WOD, consignes…"
+              ></textarea></label
+            ><button class="primary">Enregistrer le WOD</button>
+            <div id="boxwoderror" class="error"></div>
+          </form>
+        </dialog>
         <dialog id="activitydialog" class="modal">
           <form id="activityform">
             <div class="sectionhead">

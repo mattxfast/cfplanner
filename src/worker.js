@@ -288,6 +288,12 @@ async function ensureV2Schema(env) {
       ])
         await env.DB.prepare(statement).run();
     });
+    await runMigration("v15-box-wods", async () => {
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS box_wods (id TEXT PRIMARY KEY, box_id TEXT NOT NULL REFERENCES boxes(id) ON DELETE CASCADE, wod_date TEXT NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', score_type TEXT NOT NULL DEFAULT 'time' CHECK(score_type IN ('time','reps','load','none')), created_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+      ).run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS box_wods_box_date ON box_wods(box_id,wod_date)").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -397,6 +403,29 @@ const boxRole = (e, userId, boxId, role) =>
   e.DB.prepare("SELECT 1 FROM box_members WHERE box_id=? AND user_id=? AND role=? AND status='approved'")
     .bind(boxId, userId, role)
     .first();
+// WOD de box : nom facultatif (« WOD du JJ/MM/AAAA » par défaut), date, contenu et type de score.
+const SCORE_TYPES = ["time", "reps", "load", "none"];
+const frenchDate = d => d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4);
+function boxWodInput(b) {
+  const date = String(b.wod_date || ""),
+    type = String(b.score_type || "");
+  if (!validDate(date)) return {error: "Date du WOD invalide."};
+  if (!SCORE_TYPES.includes(type)) return {error: "Type de score invalide."};
+  return {
+    date,
+    type,
+    name: boxText(b.name, 100) || "WOD du " + frenchDate(date),
+    content: String(b.content || "").slice(0, 3000),
+  };
+}
+// Période de lecture des WOD de box (au plus 93 jours).
+function wodRange(r) {
+  const q = new URL(r.url).searchParams,
+    from = q.get("from"),
+    to = q.get("to");
+  if (!validDate(from) || !validDate(to) || from > to || daysBetween(from, to) > 92) return null;
+  return {from, to};
+}
 const boxText = (v, max) =>
   String(v ?? "")
     .trim()
@@ -1019,6 +1048,17 @@ async function api(r, e, p) {
       .run();
     return json({ok: true});
   }
+  // WOD des box dont l'utilisateur est membre validé, sur une période.
+  if (r.method === "GET" && p === "/api/box-wods") {
+    const range = wodRange(r);
+    if (!range) return json({error: "Période invalide."}, 400);
+    const x = await e.DB.prepare(
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
+    )
+      .bind(u.id, range.from, range.to)
+      .all();
+    return json({wods: x.results});
+  }
   if (p.startsWith("/api/manage/")) {
     // Espace gestionnaire : chaque route vérifie que l'utilisateur gère la box concernée.
     const managed = async boxId => !!boxId && !!(await boxRole(e, u.id, boxId, "manager"));
@@ -1060,6 +1100,46 @@ async function api(r, e, p) {
           .run();
         return json({ok: true});
       }
+    }
+    if ((m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/wods$/)) && (r.method === "GET" || r.method === "POST")) {
+      if (!(await managed(m[1]))) return deny();
+      if (r.method === "GET") {
+        const range = wodRange(r);
+        if (!range) return json({error: "Période invalide."}, 400);
+        const x = await e.DB.prepare(
+          "SELECT id,box_id,wod_date,name,content,score_type FROM box_wods WHERE box_id=? AND wod_date>=? AND wod_date<=? ORDER BY wod_date,created_at"
+        )
+          .bind(m[1], range.from, range.to)
+          .all();
+        return json({wods: x.results});
+      }
+      const b = await r.json(),
+        input = boxWodInput(b),
+        id = clientId(b.client_id) || uid();
+      if (input.error) return json({error: input.error}, 400);
+      if (await e.DB.prepare("SELECT 1 FROM box_wods WHERE id=?").bind(id).first()) return json({ok: true, id});
+      await e.DB.prepare(
+        "INSERT INTO box_wods(id,box_id,wod_date,name,content,score_type,created_by) VALUES(?,?,?,?,?,?,?)"
+      )
+        .bind(id, m[1], input.date, input.name, input.content, input.type, u.id)
+        .run();
+      return json({ok: true, id});
+    }
+    if ((m = p.match(/^\/api\/manage\/wods\/([\w-]+)$/)) && (r.method === "PUT" || r.method === "DELETE")) {
+      const wod = await e.DB.prepare("SELECT id,box_id FROM box_wods WHERE id=?").bind(m[1]).first();
+      if (!wod || !(await managed(wod.box_id))) return json({error: "WOD introuvable."}, 404);
+      if (r.method === "DELETE") {
+        await e.DB.prepare("DELETE FROM box_wods WHERE id=?").bind(m[1]).run();
+        return json({ok: true});
+      }
+      const input = boxWodInput(await r.json());
+      if (input.error) return json({error: input.error}, 400);
+      await e.DB.prepare(
+        "UPDATE box_wods SET wod_date=?,name=?,content=?,score_type=?,updated_at=CURRENT_TIMESTAMP WHERE id=?"
+      )
+        .bind(input.date, input.name, input.content, input.type, m[1])
+        .run();
+      return json({ok: true});
     }
     if (r.method === "POST" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/categories$/))) {
       if (!(await managed(m[1]))) return deny();

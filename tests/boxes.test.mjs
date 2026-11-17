@@ -1,7 +1,7 @@
 // Tests d'intégration : administrateurs multiples, box, gestionnaires, adhésions, WOD de box, scores, programmes publics.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {startWorker, client, ADMIN_EMAIL} from "./helpers.mjs";
+import {startWorker, client, ADMIN_EMAIL, today, mondayOf, addDays} from "./helpers.mjs";
 
 let worker, admin, alice, bob, carol;
 const PASSWORD = "MotDePasse-Test-123";
@@ -113,4 +113,51 @@ test("box : adhésion validée par un gestionnaire de la box, catégories param�
   cats = (await alice.get(`/manage/boxes/${boxId}`)).data.categories;
   assert.equal(cats[0].name, "Masters 40+");
   assert.equal((await alice.del(`/manage/categories/${cid}`)).status, 200);
+});
+
+let boxWodId;
+test("WOD de box : saisis par le gestionnaire (passés et à venir), visibles des seuls membres", async () => {
+  const day = today(),
+    from = mondayOf(day),
+    to = addDays(from, 6),
+    cid = "0b7e5a9c-3f1d-4e2a-9c8b-7a6d5e4f3c2b";
+  // nom par défaut « WOD du JJ/MM/AAAA », création rejouable sans doublon
+  const created = await alice.post(`/manage/boxes/${boxId}/wods`, {
+    client_id: cid,
+    wod_date: day,
+    content: "21-15-9 Thrusters / Pull-ups",
+    score_type: "time",
+  });
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+  boxWodId = created.data.id;
+  assert.equal(boxWodId, cid);
+  await alice.post(`/manage/boxes/${boxId}/wods`, {client_id: cid, wod_date: day, score_type: "time"});
+  const upcoming = await alice.post(`/manage/boxes/${boxId}/wods`, {
+    wod_date: addDays(day, 30),
+    name: "Murph",
+    score_type: "time",
+  });
+  assert.equal(upcoming.status, 200);
+  assert.equal((await alice.post(`/manage/boxes/${boxId}/wods`, {wod_date: day, score_type: "x"})).status, 400);
+  assert.equal((await bob.post(`/manage/boxes/${boxId}/wods`, {wod_date: day, score_type: "time"})).status, 404);
+  const list = (await alice.get(`/manage/boxes/${boxId}/wods?from=${from}&to=${to}`)).data.wods;
+  assert.equal(list.length, 1);
+  const [d, mo, y] = [day.slice(8, 10), day.slice(5, 7), day.slice(0, 4)];
+  assert.equal(list[0].name, `WOD du ${d}/${mo}/${y}`);
+  // un membre validé voit les WOD de sa box ; un non-membre ne voit rien
+  assert.equal((await bob.get(`/box-wods?from=${from}&to=${to}`)).data.wods.length, 1);
+  const outsider = client(worker.base);
+  await outsider.post("/register", {email: "dehors@test.local", password: PASSWORD});
+  assert.equal((await outsider.get(`/box-wods?from=${from}&to=${to}`)).data.wods.length, 0);
+  assert.equal((await bob.get(`/box-wods?from=${from}&to=${addDays(from, 200)}`)).status, 400);
+  // modification par le gestionnaire seulement, puis suppression
+  assert.equal((await bob.put(`/manage/wods/${upcoming.data.id}`, {wod_date: day, score_type: "reps"})).status, 404);
+  const edit = await alice.put(`/manage/wods/${upcoming.data.id}`, {
+    wod_date: addDays(day, 31),
+    name: "Murph",
+    content: "1 mile run…",
+    score_type: "time",
+  });
+  assert.equal(edit.status, 200);
+  assert.equal((await alice.del(`/manage/wods/${upcoming.data.id}`)).status, 200);
 });

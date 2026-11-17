@@ -5,7 +5,14 @@ let boxes = [],
   boxMemberships = [],
   managedBoxId = "",
   managedBox = null,
+  managedWodWeek = "",
   boxCategoryReorder = false;
+const SCORE_LABELS = {time: "Temps (For Time)", reps: "Répétitions (AMRAP)", load: "Charge (kg)", none: "Sans score"};
+const defaultWodName = date => "WOD du " + fmt(date);
+const wodDay = date =>
+  new Intl.DateTimeFormat("fr-FR", {weekday: "short", day: "2-digit", month: "2-digit"}).format(
+    new Date(date + "T12:00:00")
+  );
 const boxFolded = new Set();
 const BOX_ICONS = {
   edit: '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>',
@@ -120,8 +127,16 @@ async function loadManagedBox() {
     $("#boxmanager").innerHTML = "";
     return;
   }
+  if (!managedWodWeek) managedWodWeek = mondayOf(today());
+  const id = managedBoxId,
+    week = managedWodWeek;
   try {
-    managedBox = await api("/manage/boxes/" + managedBoxId);
+    const [d, w] = await Promise.all([
+      api("/manage/boxes/" + id),
+      api("/manage/boxes/" + id + "/wods?from=" + week + "&to=" + addDays(week, 6)),
+    ]);
+    if (id !== managedBoxId || week !== managedWodWeek) return;
+    managedBox = {...d, wods: w.wods};
     renderManagedBox();
   } catch (e) {
     toast(e.message);
@@ -132,8 +147,68 @@ function boxGroup(key, title, actions, body) {
   const folded = boxFolded.has(key);
   return `<section class="admin-group ${folded ? "collapsed" : ""}" data-box-group="${key}"><div class="admin-group-title" role="button" tabindex="0" aria-expanded="${!folded}"><span class="admin-collapse-indicator">${folded ? "＋" : "−"}</span><span>${title}</span>${actions}</div><div class="admin-group-body"><div class="admin-data-list">${body}</div></div></section>`;
 }
-// Rubriques supplémentaires (WOD de la box) ajoutées par d’autres scripts.
-const boxManagerSections = [];
+// WOD de la box : navigation par semaine (WOD passés et à venir), ajout, modification, suppression.
+function boxWodsGroup(d) {
+  const week = managedWodWeek,
+    nav = `<div class="weeknav box-wod-nav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="boxwodweek" type="date" value="${week}"></label><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
+  return boxGroup(
+    "wods",
+    "WOD",
+    `<button type="button" class="admin-add" id="addboxwod" aria-label="Ajouter un WOD">＋</button>`,
+    nav +
+      (d.wods
+        .map(
+          w =>
+            `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(w.name)}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
+        )
+        .join("") || `<p class="muted">Aucun WOD cette semaine. Touche ＋ pour en ajouter un.</p>`)
+  );
+}
+function openBoxWod(w = null) {
+  const f = $("#boxwodform"),
+    now = today(),
+    weekEnd = addDays(managedWodWeek, 6);
+  f.reset();
+  f.elements.id.value = w?.id || "";
+  f.elements.wod_date.value = w?.wod_date || (now >= managedWodWeek && now <= weekEnd ? now : managedWodWeek);
+  f.elements.name.value = w?.name && w.name !== defaultWodName(w.wod_date) ? w.name : "";
+  f.elements.name.placeholder = defaultWodName(f.elements.wod_date.value);
+  f.elements.score_type.value = w?.score_type || "time";
+  f.elements.content.value = w?.content || "";
+  $("#boxwoddialogtitle").textContent = w ? "Modifier le WOD" : "Ajouter un WOD";
+  $("#boxwoderror").textContent = "";
+  $("#boxwoddialog").showModal();
+}
+$("#boxwodform").elements.wod_date.onchange = e =>
+  ($("#boxwodform").elements.name.placeholder = defaultWodName(e.target.value || today()));
+$("#boxwodform").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements,
+    id = f.id.value,
+    body = {
+      wod_date: f.wod_date.value,
+      name: f.name.value.trim(),
+      score_type: f.score_type.value,
+      content: f.content.value,
+    };
+  if (!id) body.client_id = crypto.randomUUID?.();
+  try {
+    await api(id ? "/manage/wods/" + id : "/manage/boxes/" + managedBoxId + "/wods", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    $("#boxwoddialog").close();
+    managedWodWeek = mondayOf(body.wod_date);
+    await loadManagedBox();
+    toast(id ? "WOD modifié." : "WOD ajouté.");
+  } catch (x) {
+    $("#boxwoderror").textContent = x.message;
+  }
+};
+function changeManagedWodWeek(week) {
+  managedWodWeek = week;
+  loadManagedBox();
+}
 function renderManagedBox() {
   const d = managedBox;
   if (!d) return;
@@ -143,7 +218,7 @@ function renderManagedBox() {
     cats = d.categories;
   const person = x => `${esc(personName(x))} <small class="muted">${esc(x.email)}</small>`;
   $("#boxmanager").innerHTML =
-    boxManagerSections.map(section => section(d)).join("") +
+    boxWodsGroup(d) +
     boxGroup(
       "requests",
       `Demandes d’adhésion (${pending.length})`,
@@ -227,6 +302,21 @@ function bindManagedBox() {
         const x = d.members.find(m => m.user_id === b.dataset.removeMember);
         if (confirm("Retirer " + personName(x) + " de la box ?"))
           boxAction("/manage/boxes/" + d.box.id + "/members/" + x.user_id, "DELETE", null, "Membre retiré.");
+      })
+  );
+  $("#addboxwod").onclick = () => openBoxWod();
+  $("#boxwodprev").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, -7));
+  $("#boxwodnext").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, 7));
+  $("#boxwodweek").onchange = e => e.target.value && changeManagedWodWeek(mondayOf(e.target.value));
+  root
+    .querySelectorAll("[data-edit-boxwod]")
+    .forEach(b => (b.onclick = () => openBoxWod(d.wods.find(w => w.id === b.dataset.editBoxwod))));
+  root.querySelectorAll("[data-del-boxwod]").forEach(
+    b =>
+      (b.onclick = () => {
+        const w = d.wods.find(x => x.id === b.dataset.delBoxwod);
+        if (confirm("Supprimer « " + w.name + " » ?"))
+          boxAction("/manage/wods/" + w.id, "DELETE", null, "WOD supprimé.");
       })
   );
   const add = $("#addcategory");

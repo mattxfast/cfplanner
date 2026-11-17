@@ -44,6 +44,7 @@ const FFOffline = (() => {
       send: null,
       describeSession: () => ({}),
       describePr: () => ({}),
+      describeBoxWod: () => ({}),
       onChange: () => {},
       onSynced: () => {},
       onDropped: () => {},
@@ -96,6 +97,28 @@ const FFOffline = (() => {
       ...(data.catalogChecks || []),
       ...(body.catalog_movement_ids || []).map(catalog_movement_id => ({session_id: session.id, catalog_movement_id})),
     ];
+  }
+  // WOD de box (liste du gestionnaire ou WOD des box de l'utilisateur) : création, modification, suppression.
+  function patchBoxWods(data, view, op, body) {
+    let m;
+    const wods = (data.wods || []).filter(w => !(op.method === "POST" && w.id === body.client_id));
+    if (op.method === "POST" && (m = op.path.match(/^\/manage\/boxes\/([\w-]+)\/wods$/))) {
+      if ((!view.box || view.box === m[1]) && body.wod_date >= view.from && body.wod_date <= view.to)
+        wods.push({
+          ...body,
+          id: body.client_id,
+          box_id: m[1],
+          pending: 1,
+          ...hooks.describeBoxWod({...body, box_id: m[1]}),
+        });
+    } else if ((m = op.path.match(/^\/manage\/wods\/([\w-]+)$/))) {
+      const i = wods.findIndex(w => w.id === m[1]);
+      if (i >= 0) {
+        if (op.method === "DELETE" || body.wod_date < view.from || body.wod_date > view.to) wods.splice(i, 1);
+        else wods[i] = {...wods[i], ...body, pending: 1, ...hooks.describeBoxWod({...wods[i], ...body})};
+      }
+    }
+    data.wods = wods.sort((a, b) => String(a.wod_date).localeCompare(String(b.wod_date)));
   }
   // Espace gestionnaire d'une box : adhésions et catégories.
   function patchManagedBox(data, boxId, op, body) {
@@ -150,6 +173,8 @@ const FFOffline = (() => {
     } else if (path === "/boxes" && (m = op.path.match(/^\/boxes\/([\w-]+)\/requests$/))) {
       data.memberships = (data.memberships || []).filter(x => !(x.box_id === m[1] && x.role === body.role));
       if (op.method === "POST") data.memberships.push({box_id: m[1], role: body.role, status: "pending"});
+    } else if ((m = path.match(/^\/(?:manage\/boxes\/([\w-]+)\/wods|box-wods)\?from=([\d-]+)&to=([\d-]+)$/))) {
+      patchBoxWods(data, {box: m[1], from: m[2], to: m[3]}, op, body);
     } else if ((m = path.match(/^\/manage\/boxes\/([\w-]+)$/))) {
       patchManagedBox(data, m[1], op, body);
     } else if (path === "/prs") {

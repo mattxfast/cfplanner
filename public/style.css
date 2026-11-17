@@ -3997,3 +3997,20 @@ button:active:not(:disabled) {
 #boxcard label {
   margin: 0;
 }
+/* WOD de la box (onglet « Ma box ») : semaine affichée et contenu du WOD sous son titre. */
+.box-wod-nav {
+  justify-content: space-between;
+  margin: 0 0 4px;
+}
+#view-box .box-wod-row {
+  align-items: flex-start;
+}
+.box-wod-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+  white-space: pre-line;
+  color: var(--muted);
+}
