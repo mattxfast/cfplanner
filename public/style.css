@@ -1018,13 +1018,15 @@ button:disabled{opacity:.35;cursor:not-allowed}
 #view-programs .programhead .entryactions .smallbtn,
 #sessionlist .entryactions .smallbtn,
 #prhistorylist .entryactions .smallbtn,
-#view-sessions .weekcount .smallbtn.delete,
+#view-sessions .weekcount .smallbtn,
 #view-admin .admin-row-actions .smallbtn{
   width:var(--list-button-size)!important;height:var(--list-button-size)!important;min-width:var(--list-button-size)!important;
   min-height:var(--list-button-size)!important;flex:0 0 var(--list-button-size)!important;padding:0!important;
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
   border-radius:8px!important;font-size:16px!important;line-height:1!important;
 }
+/* Icônes des boutons d’action : même dessin, même taille et même trait partout. */
+.btn-icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;flex:0 0 auto}
 
 /* Même rythme sur petit écran : seuls les espacements internes sont légèrement réduits. */
 @media(max-width:650px){
