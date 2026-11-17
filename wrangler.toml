@@ -9,8 +9,8 @@ not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "cfplanner"
-database_id = "d91dd250-7ef6-4242-9b5f-b7ba313be883"
+database_name = "fitfactory"
+database_id = "adad0c5a-186a-4511-84e6-342420d78d10"
 migrations_dir = "migrations"
 
 [vars]
