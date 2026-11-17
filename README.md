@@ -51,8 +51,8 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
 - Protection contre les essais de mots de passe : après 5 échecs en 15 minutes pour un même e-mail (ou 20 depuis une même adresse IP), la connexion est refusée avec le délai d'attente restant. Une connexion réussie remet le compteur de l'e-mail à zéro ; la tâche quotidienne purge les tentatives de plus de 24 h.
 - Mot de passe oublié : lien « Mot de passe oublié ? » sur la page de connexion. La réponse est identique que l'adresse soit inscrite ou non ; 3 demandes par heure et par adresse. Le lien (valable 30 minutes, utilisable une seule fois, seule son empreinte est gardée en base) ouvre le formulaire « Nouveau mot de passe », connecte directement et ferme les sessions des autres appareils. Envoi par e-mail si un service est configuré (voir Configuration) ; sinon le lien est écrit dans les logs du Worker, et l'administrateur peut générer un lien pour n'importe quel compte (bouton 🔑 dans la liste des utilisateurs).
 - Modification du prénom et du nom.
-- Administration réservée au compte défini par `ADMIN_EMAIL`.
-- Gestion des utilisateurs (activation / désactivation).
+- Administration réservée aux administrateurs : le compte défini par `ADMIN_EMAIL` (administrateur principal, qui ne peut être ni rétrogradé ni désactivé) et les comptes qu'un administrateur a nommés (bouton bouclier dans la liste des utilisateurs). Un administrateur ne peut pas retirer ses propres droits.
+- Gestion des utilisateurs (activation / désactivation, droits d'administration).
 - Gestion de la « Liste des mouvements » (catalogue commun), de leur catégorie et de leur ordre ; les flèches de tri s'affichent via le bouton ⇅ du titre.
 - Gestion des activités proposées lors de la création d'un WOD ou d'une séance.
 
@@ -108,12 +108,13 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V10 ajoute la table `password_resets` (empreinte du jeton, utilisateur, expiration, date d'utilisation).
 - V11 renomme « Hors programme » un ancien programme par défaut qui n'a ni WOD visible ni mouvement (il devient le programme technique caché).
 - V12 rétablit le marqueur `is_default` du programme technique « Hors programme » s'il avait été retiré par la modification d'un autre programme (bug corrigé).
+- V13 ajoute la colonne `users.is_admin` (administrateurs nommés en plus du compte `ADMIN_EMAIL`).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
 ### Configuration
 
-`wrangler.toml` déclare le Worker `fitfactory` (adresse `fitfactory.mattxfast.workers.dev`), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `fitfactory` → Logs, ou via `npx wrangler tail fitfactory`). La base D1 s'appelle `fitfactory` (copie de l'ancienne base `cfplanner`, supprimée depuis ; une base D1 ne se renomme pas). Le cookie de session s'appelle `fitfactory_session` et la préférence de thème `fitfactory-theme` ; les anciens noms (`cfplanner_session`, `cfplanner-theme`) sont encore acceptés et remplacés automatiquement, sans déconnexion. Cette adresse identifie le compte administrateur et le propriétaire du référentiel commun des activités.
+`wrangler.toml` déclare le Worker `fitfactory` (adresse `fitfactory.mattxfast.workers.dev`), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `fitfactory` → Logs, ou via `npx wrangler tail fitfactory`). La base D1 s'appelle `fitfactory` (copie de l'ancienne base `cfplanner`, supprimée depuis ; une base D1 ne se renomme pas). Le cookie de session s'appelle `fitfactory_session` et la préférence de thème `fitfactory-theme` ; les anciens noms (`cfplanner_session`, `cfplanner-theme`) sont encore acceptés et remplacés automatiquement, sans déconnexion. Cette adresse identifie l'administrateur principal et le propriétaire du référentiel commun des activités (les autres administrateurs gèrent ce même référentiel).
 
 Les polices (DM Sans et Manrope, sous-ensemble latin, licence OFL) sont hébergées dans `public/fonts/` et la bibliothèque Excel (SheetJS 0.18.5, Apache-2.0) dans `public/vendor/` : l'application ne charge aucune ressource externe.
 

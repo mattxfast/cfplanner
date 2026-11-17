@@ -54,7 +54,7 @@ async function me(r, e) {
   const t = sessionToken(r);
   if (!t) return null;
   return await e.DB.prepare(
-    "SELECT u.id,u.email,u.first_name,u.last_name FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>? AND u.is_active=1"
+    "SELECT u.id,u.email,u.first_name,u.last_name,u.is_admin FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>? AND u.is_active=1"
   )
     .bind(await sha(t), Math.floor(Date.now() / 1000))
     .first();
@@ -65,20 +65,23 @@ async function session(id, email, e) {
   await e.DB.prepare("INSERT INTO sessions(id_hash,user_id,expires_at) VALUES(?,?,?)")
     .bind(await sha(t), id, exp)
     .run();
-  const profile = await e.DB.prepare("SELECT first_name,last_name FROM users WHERE id=?").bind(id).first();
+  const profile = await e.DB.prepare("SELECT first_name,last_name,is_admin FROM users WHERE id=?").bind(id).first();
   return json(
     {
       ok: true,
       user: {id, email, first_name: profile?.first_name || "", last_name: profile?.last_name || ""},
-      is_admin:
-        String(e.ADMIN_EMAIL || "")
-          .trim()
-          .toLowerCase() === email,
+      is_admin: isAdminUser(e, {email, is_admin: profile?.is_admin}),
     },
     200,
     {"set-cookie": setCookie(t, SESSION_DAYS * 86400)}
   );
 }
+// Administrateurs : le compte ADMIN_EMAIL (administrateur principal, non modifiable) et les comptes nommés par un admin.
+const ownerEmail = e =>
+  String(e.ADMIN_EMAIL || "")
+    .trim()
+    .toLowerCase();
+const isAdminUser = (e, u) => !!u && (u.email === ownerEmail(e) || !!u.is_admin);
 const validDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
 const addDays = (s, n) => {
   const d = new Date(s + "T12:00:00Z");
@@ -269,6 +272,11 @@ async function ensureV2Schema(env) {
         "UPDATE programs SET is_default=1 WHERE name='Hors programme' AND is_default=0 AND start_monday='1970-01-01' AND end_monday='2100-12-31' AND NOT EXISTS(SELECT 1 FROM program_wods w WHERE w.program_id=programs.id AND w.name<>'__AUTRES__') AND NOT EXISTS(SELECT 1 FROM program_movements mv WHERE mv.program_id=programs.id) AND NOT EXISTS(SELECT 1 FROM programs d WHERE d.user_id=programs.user_id AND d.is_default=1)"
       ).run();
     });
+    await runMigration("v13-admins", async () => {
+      const columns = await env.DB.prepare("PRAGMA table_info(users)").all();
+      if (!columns.results.some(column => column.name === "is_admin"))
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -450,9 +458,7 @@ async function movementCheckStatements(env, userId, sessionId, programId, ids = 
   ];
 }
 async function api(r, e, p) {
-  const adminEmail = String(e.ADMIN_EMAIL || "")
-    .trim()
-    .toLowerCase();
+  const adminEmail = ownerEmail(e);
   if (r.method === "POST" && p === "/api/register") {
     const b = await r.json(),
       email = String(b.email || "")
@@ -555,11 +561,14 @@ async function api(r, e, p) {
   }
   if (r.method === "GET" && p === "/api/me") {
     const u = await me(r, e);
-    return json({user: u || null, is_admin: u?.email === adminEmail});
+    return json({
+      user: u ? {id: u.id, email: u.email, first_name: u.first_name, last_name: u.last_name} : null,
+      is_admin: isAdminUser(e, u),
+    });
   }
   const u = await me(r, e);
   if (!u) return json({error: "Connexion requise."}, 401);
-  const admin = u.email === adminEmail;
+  const admin = isAdminUser(e, u);
   let m;
   if (p.startsWith("/api/push/")) {
     if (r.method === "GET" && p === "/api/push/config") {
@@ -649,6 +658,10 @@ async function api(r, e, p) {
   }
   if (p.startsWith("/api/admin/")) {
     if (!admin) return json({error: "Accès administrateur requis."}, 403);
+    // Les activités appartiennent au compte administrateur principal (ADMIN_EMAIL), quel que soit l'admin connecté.
+    const ownerId = (await e.DB.prepare("SELECT id FROM users WHERE email=?").bind(adminEmail).first())?.id;
+    if (p.startsWith("/api/admin/activities") && !ownerId)
+      return json({error: "Le compte administrateur principal n’existe pas encore."}, 409);
     if (r.method === "GET" && p === "/api/admin/movements") {
       const x = await e.DB.prepare(
         "SELECT id,name,measurement_method FROM movement_catalog ORDER BY sort_order,name COLLATE NOCASE"
@@ -751,7 +764,11 @@ async function api(r, e, p) {
       return json({ok: true});
     }
     if (r.method === "GET" && p === "/api/admin/users") {
-      const x = await e.DB.prepare("SELECT id,email,is_active FROM users ORDER BY email").all();
+      const x = await e.DB.prepare(
+        "SELECT id,email,first_name,last_name,is_active,is_admin,email=? AS is_owner FROM users ORDER BY email"
+      )
+        .bind(adminEmail)
+        .all();
       return json({users: x.results});
     }
     if (r.method === "POST" && (m = p.match(/^\/api\/admin\/users\/([\w-]+)\/reset-link$/))) {
@@ -760,11 +777,25 @@ async function api(r, e, p) {
       return json({ok: true, link: await createResetLink(e, target.id, new URL(r.url).origin), minutes: RESET_MINUTES});
     }
     if (r.method === "PUT" && (m = p.match(/^\/api\/admin\/users\/([\w-]+)$/))) {
-      const b = await r.json();
-      if (m[1] === u.id) return json({error: "Impossible de désactiver le compte administrateur."}, 400);
-      await e.DB.prepare("UPDATE users SET is_active=? WHERE id=?")
-        .bind(b.is_active ? 1 : 0, m[1])
-        .run();
+      const b = await r.json(),
+        target = await e.DB.prepare("SELECT id,email FROM users WHERE id=?").bind(m[1]).first();
+      if (!target) return json({error: "Utilisateur introuvable."}, 404);
+      if (b.is_active !== undefined) {
+        if (target.id === u.id || target.email === adminEmail)
+          return json({error: "Impossible de désactiver ce compte administrateur."}, 400);
+        await e.DB.prepare("UPDATE users SET is_active=? WHERE id=?")
+          .bind(b.is_active ? 1 : 0, m[1])
+          .run();
+      }
+      if (b.is_admin !== undefined) {
+        if (target.email === adminEmail)
+          return json({error: "Le compte administrateur principal reste toujours administrateur."}, 400);
+        if (target.id === u.id && !b.is_admin)
+          return json({error: "Tu ne peux pas retirer tes propres droits d’administration."}, 400);
+        await e.DB.prepare("UPDATE users SET is_admin=? WHERE id=?")
+          .bind(b.is_admin ? 1 : 0, m[1])
+          .run();
+      }
       return json({ok: true});
     }
     if (r.method === "PUT" && p === "/api/admin/activities/order") {
@@ -774,7 +805,7 @@ async function api(r, e, p) {
       if (![-1, 1].includes(d)) return json({error: "Déplacement invalide."}, 400);
       const rows = (
           await e.DB.prepare("SELECT id FROM activities WHERE user_id=? ORDER BY sort_order,is_default DESC,name")
-            .bind(u.id)
+            .bind(ownerId)
             .all()
         ).results,
         i = rows.findIndex(x => x.id === id),
@@ -783,14 +814,14 @@ async function api(r, e, p) {
       [rows[i], rows[j]] = [rows[j], rows[i]];
       await e.DB.batch(
         rows.map((x, n) =>
-          e.DB.prepare("UPDATE activities SET sort_order=? WHERE id=? AND user_id=?").bind(n, x.id, u.id)
+          e.DB.prepare("UPDATE activities SET sort_order=? WHERE id=? AND user_id=?").bind(n, x.id, ownerId)
         )
       );
       return json({ok: true});
     }
     if (r.method === "DELETE" && (m = p.match(/^\/api\/admin\/activities\/([\w-]+)$/))) {
       const activity = await e.DB.prepare("SELECT id,is_default FROM activities WHERE id=? AND user_id=?")
-        .bind(m[1], u.id)
+        .bind(m[1], ownerId)
         .first();
       if (!activity) return json({error: "Activité introuvable."}, 404);
       const used =
@@ -805,16 +836,16 @@ async function api(r, e, p) {
             },
             400
           );
-        await e.DB.prepare("UPDATE activities SET is_active=0 WHERE id=? AND user_id=?").bind(m[1], u.id).run();
+        await e.DB.prepare("UPDATE activities SET is_active=0 WHERE id=? AND user_id=?").bind(m[1], ownerId).run();
         return json({ok: true, action: "deactivated"});
       }
-      const result = await e.DB.prepare("DELETE FROM activities WHERE id=? AND user_id=?").bind(m[1], u.id).run();
+      const result = await e.DB.prepare("DELETE FROM activities WHERE id=? AND user_id=?").bind(m[1], ownerId).run();
       if (!result.meta?.changes) return json({error: "Activité introuvable."}, 404);
       return json({ok: true, action: "deleted"});
     }
     if (r.method === "GET" && p === "/api/admin/activities") {
       const x = await e.DB.prepare("SELECT * FROM activities WHERE user_id=? ORDER BY sort_order,is_default DESC,name")
-        .bind(u.id)
+        .bind(ownerId)
         .all();
       return json({activities: x.results});
     }
@@ -827,21 +858,21 @@ async function api(r, e, p) {
       if (!name || !Number.isInteger(duration) || duration < 1 || duration > 600)
         return json({error: "Nom et durée valides requis."}, 400);
       const id = uid();
-      if (b.is_default) await e.DB.prepare("UPDATE activities SET is_default=0 WHERE user_id=?").bind(u.id).run();
+      if (b.is_default) await e.DB.prepare("UPDATE activities SET is_default=0 WHERE user_id=?").bind(ownerId).run();
       await e.DB.prepare(
         "INSERT INTO activities(id,user_id,name,duration_minutes,is_default,sort_order) VALUES(?,?,?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM activities WHERE user_id=?),0))"
       )
-        .bind(id, u.id, name, duration, b.is_default ? 1 : 0, u.id)
+        .bind(id, ownerId, name, duration, b.is_default ? 1 : 0, ownerId)
         .run();
       return json({ok: true, id});
     }
     if (r.method === "PUT" && (m = p.match(/^\/api\/admin\/activities\/([\w-]+)$/))) {
       const b = await r.json(),
-        a = await e.DB.prepare("SELECT id FROM activities WHERE id=? AND user_id=?").bind(m[1], u.id).first();
+        a = await e.DB.prepare("SELECT id FROM activities WHERE id=? AND user_id=?").bind(m[1], ownerId).first();
       if (!a) return json({error: "Activité introuvable."}, 404);
       if (b.is_active === false && a.is_default)
         return json({error: "Définis une autre activité par défaut avant de désactiver celle-ci."}, 400);
-      if (b.is_default) await e.DB.prepare("UPDATE activities SET is_default=0 WHERE user_id=?").bind(u.id).run();
+      if (b.is_default) await e.DB.prepare("UPDATE activities SET is_default=0 WHERE user_id=?").bind(ownerId).run();
       const sets = [],
         args = [];
       if (b.name !== undefined) {
@@ -864,7 +895,7 @@ async function api(r, e, p) {
       }
       if (sets.length)
         await e.DB.prepare("UPDATE activities SET " + sets.join(",") + " WHERE id=? AND user_id=?")
-          .bind(...args, m[1], u.id)
+          .bind(...args, m[1], ownerId)
           .run();
       return json({ok: true});
     }

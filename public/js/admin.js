@@ -114,7 +114,7 @@ function renderAdmin(users, movements = []) {
     users
       .map(
         u =>
-          `<div class="admin-row"><span>${esc(u.email)} · ${u.is_active ? "actif" : "inactif"}</span><span class="admin-row-actions"><button class="smallbtn" data-reset-user="${u.id}" aria-label="Lien de réinitialisation du mot de passe" title="Lien de réinitialisation du mot de passe" ${u.is_active ? "" : "disabled"}>🔑</button><button class="smallbtn delete" data-toggle-user="${u.id}" aria-label="${u.is_active ? "Désactiver" : "Réactiver"}" title="${u.is_active ? "Désactiver" : "Réactiver"}" ${u.email === user.email ? "disabled" : ""}>${u.is_active ? "×" : "↻"}</button></span></div>`
+          `<div class="admin-row"><span>${esc([u.first_name, u.last_name].filter(Boolean).join(" ") || u.email)}${u.first_name || u.last_name ? ` <small class="muted">${esc(u.email)}</small>` : ""} <small class="muted">· ${u.is_owner ? "admin principal" : u.is_admin ? "admin" : "utilisateur"}${u.is_active ? "" : " · inactif"}</small></span><span class="admin-row-actions"><button class="smallbtn reorder-toggle ${u.is_admin || u.is_owner ? "active" : ""}" data-admin-user="${u.id}" aria-pressed="${!!(u.is_admin || u.is_owner)}" aria-label="${u.is_admin ? "Retirer les droits d’administration" : "Nommer administrateur"}" title="${u.is_owner ? "Administrateur principal (ADMIN_EMAIL)" : u.is_admin ? "Retirer les droits d’administration" : "Nommer administrateur"}" ${u.is_owner || u.id === user.id || !u.is_active ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6z"/></svg></button><button class="smallbtn" data-reset-user="${u.id}" aria-label="Lien de réinitialisation du mot de passe" title="Lien de réinitialisation du mot de passe" ${u.is_active ? "" : "disabled"}>🔑</button><button class="smallbtn delete" data-toggle-user="${u.id}" aria-label="${u.is_active ? "Désactiver" : "Réactiver"}" title="${u.is_active ? "Désactiver" : "Réactiver"}" ${u.id === user.id || u.is_owner ? "disabled" : ""}>${u.is_active ? "×" : "↻"}</button></span></div>`
       )
       .join("") || `<p class="muted">Aucun utilisateur.</p>`;
   $("#activitylist")
@@ -182,6 +182,30 @@ function renderAdmin(users, movements = []) {
             } catch {
               prompt("Lien à transmettre (valable " + r.minutes + " min) :", r.link);
             }
+          } catch (e) {
+            toast(e.message);
+          }
+        })
+    );
+  $("#userlist")
+    .querySelectorAll("[data-admin-user]")
+    .forEach(
+      b =>
+        (b.onclick = async () => {
+          const u = users.find(x => x.id === b.dataset.adminUser),
+            label = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email;
+          if (
+            !confirm(
+              u.is_admin
+                ? "Retirer les droits d’administration de " + label + " ?"
+                : "Nommer " + label + " administrateur ?"
+            )
+          )
+            return;
+          try {
+            await api("/admin/users/" + u.id, {method: "PUT", body: JSON.stringify({is_admin: !u.is_admin})});
+            await loadAdmin();
+            toast(u.is_admin ? "Droits d’administration retirés." : "Administrateur ajouté.");
           } catch (e) {
             toast(e.message);
           }
