@@ -120,8 +120,8 @@ function programForDate(date) {
 // Rubrique « Focus mouvement » de la semaine : mouvements du programme, ou à défaut (programme sans mouvement,
 // séances hors programme) les mouvements du catalogue cochés dans les séances de la semaine.
 function weekMovementsSection(week, programMovements, folded) {
-  // Liste de base : mouvements du programme de la semaine, ou à défaut (semaine sans programme) tout le catalogue.
-  // On y ajoute tout autre mouvement coché dans les séances de la semaine (séance rattachée à un autre programme, etc.).
+  // Avec un programme : ses mouvements (y compris à 0×), plus tout autre mouvement coché dans les séances de la semaine.
+  // Sans programme (ou programme sans mouvement) : uniquement les mouvements cochés dans les séances de la semaine.
   // Les mouvements sont regroupés par nom ; chaque séance compte une fois par mouvement.
   const key = name =>
       String(name || "")
@@ -129,7 +129,7 @@ function weekMovementsSection(week, programMovements, folded) {
         .toLowerCase(),
     allProgramMovements = Object.values(movementsByProgram).flat(),
     items = new Map();
-  for (const m of programMovements.length ? programMovements : movementCatalog)
+  for (const m of programMovements)
     if (!items.has(key(m.name))) items.set(key(m.name), {movement: {name: m.name}, count: 0, base: true});
   for (const s of week) {
     const names = new Set(
@@ -155,7 +155,7 @@ function weekMovementsSection(week, programMovements, folded) {
   }
   const movementCounts = [...items.values()],
     baseItems = movementCounts.filter(x => x.base);
-  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${baseItems.filter(x => x.count > 0).length + "/" + baseItems.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement dans le catalogue."}</p>`}</div></div></section>`;
+  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? baseItems.filter(x => x.count > 0).length + "/" + baseItems.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement travaillé cette semaine."}</p>`}</div></div></section>`;
 }
 function renderWeek() {
   const now = today();
