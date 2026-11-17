@@ -138,7 +138,7 @@ async function exportWeeklyExcel(){
    XLSX.utils.book_append_sheet(workbook,sheet,"Programmes");
   }
   const stamp=new Date().toISOString().slice(0,10);
-  XLSX.writeFile(workbook,"CFPlanner_bilan_programmes_"+stamp+".xlsx");
+  XLSX.writeFile(workbook,"FitFactory_bilan_programmes_"+stamp+".xlsx");
   status.textContent="Export Excel généré : "+programs.length+" programme(s).";
  }catch(error){status.textContent=error.message||"Erreur lors de la génération de l'export."}
  finally{button.disabled=false;button.textContent="Exporter les données"}

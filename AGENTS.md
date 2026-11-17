@@ -1,11 +1,11 @@
-# AGENTS.md — CFPlanner
+# AGENTS.md — FitFactory
 
 Instructions communes à tous les agents IA qui travaillent sur ce dépôt (Claude Code, Codex ou autre).
 Plusieurs agents interviennent **à tour de rôle** : ce fichier est la référence partagée. Lis-le en entier avant toute modification.
 
 ## Le projet
 
-CFPlanner est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
+FitFactory (anciennement CFPlanner ; dépôt, Worker, base D1 et cookie gardent l’identifiant technique `cfplanner`) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
 
 ## Architecture
 
