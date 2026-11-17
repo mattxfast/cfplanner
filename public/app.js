@@ -96,39 +96,37 @@ async function exportWeeklyExcel(){
    checksBySession.get(check.session_id).add(check.movement_id);
   }
   // Un seul tableau « Bilan » : une ligne par semaine ISO, tous programmes confondus, dans l’ordre chronologique.
-  // Colonnes WOD et mouvements fixes pour tout le fichier (regroupées par nom), dans l’ordre des programmes puis de leur tri.
+  // Toujours 7 colonnes WOD, par position (WOD 1 = 1er WOD de son programme…) ; colonnes mouvements fixes, regroupées par nom.
   const keyOf=name=>String(name||"").trim().toLowerCase(),programOrder=new Map(programs.map((p,i)=>[p.id,i]));
   const byProgram=(a,b)=>(programOrder.get(a.program_id)??1e9)-(programOrder.get(b.program_id)??1e9);
-  const wodKeyById=new Map(wods.map(w=>[w.id,keyOf(w.name)])),movementKeyById=new Map(movements.map(m=>[m.id,keyOf(m.name)]));
-  const programName=new Map(programs.map(p=>[p.id,p.name]));
-  const doneWodKeys=new Set(sessions.map(s=>wodKeyById.get(s.wod_id)).filter(Boolean));
+  const wodIndexById=new Map();
+  for(const program of programs)wods.filter(w=>w.program_id===program.id).slice(0,7).forEach((w,i)=>wodIndexById.set(w.id,i));
+  const movementKeyById=new Map(movements.map(m=>[m.id,keyOf(m.name)]));
   const doneMovementKeys=new Set(checks.map(c=>movementKeyById.get(c.movement_id)).filter(Boolean));
   const columnsFrom=(items,done)=>{const seen=new Map();for(const item of [...items].sort(byProgram)){const key=keyOf(item.name);if(done.has(key)&&!seen.has(key))seen.set(key,String(item.name).trim())}return [...seen].map(([key,name])=>({key,name}))};
-  const wodColumns=columnsFrom(wods,doneWodKeys),movementColumns=columnsFrom(movements,doneMovementKeys);
+  const wodColumns=Array.from({length:7},(_,i)=>"WOD "+(i+1)),movementColumns=columnsFrom(movements,doneMovementKeys);
   const grouped=new Map();
   for(const session of sessions){
    const {year,week}=isoWeekParts(session.session_date),key=year+"-"+String(week).padStart(2,"0");
-   if(!grouped.has(key))grouped.set(key,{year,week,total:0,programs:new Set(),wods:new Map(),movements:new Map()});
-   const row=grouped.get(key);row.total++;row.programs.add(programName.get(session.program_id)||"");
-   const wodKey=wodKeyById.get(session.wod_id);if(wodKey)row.wods.set(wodKey,(row.wods.get(wodKey)||0)+1);
+   if(!grouped.has(key))grouped.set(key,{year,week,total:0,wods:new Map(),movements:new Map()});
+   const row=grouped.get(key);row.total++;
+   const wodIndex=wodIndexById.get(session.wod_id);if(wodIndex!==undefined)row.wods.set(wodIndex,(row.wods.get(wodIndex)||0)+1);
    const sessionMovements=new Set([...(checksBySession.get(session.id)||[])].map(id=>movementKeyById.get(id)).filter(Boolean));
    for(const movementKey of sessionMovements)row.movements.set(movementKey,(row.movements.get(movementKey)||0)+1);
   }
-  const firstWod=3,firstMovement=firstWod+wodColumns.length,lastColumn=Math.max(2,firstMovement+movementColumns.length-1);
-  const topRow=["Semaine ISO","Programme","Nb de séances"];
-  if(wodColumns.length)topRow.push("WOD réalisés",...Array(wodColumns.length-1).fill(""));
+  const firstWod=2,firstMovement=firstWod+wodColumns.length,lastColumn=firstMovement+movementColumns.length-1;
+  const topRow=["Semaine ISO","Nb de séances","WOD réalisés",...Array(wodColumns.length-1).fill("")];
   if(movementColumns.length)topRow.push("Focus mouvement",...Array(movementColumns.length-1).fill(""));
-  const rows=[topRow,["Année-Semaine","Programme","Total",...wodColumns.map(c=>c.name),...movementColumns.map(c=>c.name)]];
+  const rows=[topRow,["Année-Semaine","Total",...wodColumns,...movementColumns.map(c=>c.name)]];
   const weeks=[...grouped.values()].sort((a,b)=>a.year-b.year||a.week-b.week);
   for(const week of weeks){
-   rows.push([week.year+"-S"+String(week.week).padStart(2,"0"),[...week.programs].filter(Boolean).join(" / "),week.total,...wodColumns.map(c=>week.wods.get(c.key)||0),...movementColumns.map(c=>week.movements.get(c.key)||0)]);
+   rows.push([week.year+"-S"+String(week.week).padStart(2,"0"),week.total,...wodColumns.map((_,i)=>week.wods.get(i)||0),...movementColumns.map(c=>week.movements.get(c.key)||0)]);
   }
   if(!weeks.length)rows.push(["Aucune séance enregistrée"]);
   const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet(rows);
-  sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},{s:{r:0,c:2},e:{r:1,c:2}}];
-  if(wodColumns.length>1)sheet["!merges"].push({s:{r:0,c:firstWod},e:{r:0,c:firstMovement-1}});
+  sheet["!merges"]=[{s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},{s:{r:0,c:firstWod},e:{r:0,c:firstMovement-1}}];
   if(movementColumns.length>1)sheet["!merges"].push({s:{r:0,c:firstMovement},e:{r:0,c:lastColumn}});
-  sheet["!cols"]=[{wch:15},{wch:Math.max(12,Math.min(30,...programs.map(p=>p.name.length+2)))},{wch:13},...wodColumns.map(c=>({wch:Math.max(10,Math.min(28,c.name.length+2))})),...movementColumns.map(c=>({wch:Math.max(10,Math.min(22,c.name.length+2))}))];
+  sheet["!cols"]=[{wch:15},{wch:13},...wodColumns.map(()=>({wch:9})),...movementColumns.map(c=>({wch:Math.max(10,Math.min(22,c.name.length+2))}))];
   sheet["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:1,c:0},e:{r:Math.max(1,rows.length-1),c:lastColumn}})};
   XLSX.utils.book_append_sheet(workbook,sheet,"Bilan");
   const stamp=new Date().toISOString().slice(0,10);
