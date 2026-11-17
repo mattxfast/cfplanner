@@ -61,8 +61,10 @@ function renderPrograms() {
     count > 1
       ? `<button type="button" class="smallbtn reorder-toggle ${reordering.has(key) ? "active" : ""}" data-toggle-reorder="${key}" aria-pressed="${reordering.has(key)}" aria-label="${label}" title="${label}">⇅</button>`
       : "";
-  $("#programlist").innerHTML = programs.length
-    ? programs
+  // Le programme technique « Hors programme » n'est pas affiché (voir isFallbackProgram).
+  const shown = programs.filter(p => !isFallbackProgram(p));
+  $("#programlist").innerHTML = shown.length
+    ? shown
         .map(
           p =>
             `<article class="program card ${collapsed.has(p.id) ? "collapsed" : ""}"><div class="programhead"><div class="program-title"><button class="smallbtn collapse-program" data-toggle-program="${p.id}" aria-expanded="${!collapsed.has(p.id)}">${collapsed.has(p.id) ? "＋" : "−"}</button><div><h3>${esc(p.name)}</h3><small>${p.is_default ? "Programme par défaut · 01/01/1970 → 31/12/2100" : fmt(p.start_monday) + " → " + fmt(p.end_monday)}</small></div></div><div class="entryactions"><button class="smallbtn" data-edit-program="${p.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete ${p.has_sessions ? "is-disabled" : ""}" data-del-program="${p.id}" aria-label="Supprimer le programme" title="${p.has_sessions ? "Ce programme a déjà une séance réalisée et ne peut pas être supprimé" : "Supprimer le programme"}" ${p.has_sessions ? 'aria-disabled="true"' : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div><div class="programbody"><div class="program-section program-subsection ${folded.has(p.id + ":wods") ? "collapsed" : ""}"><div class="program-section-heading program-section-toolbar"><button class="smallbtn section-collapse program-section-toggle" data-toggle-program-section="${p.id}:wods" aria-label="Replier les WOD" aria-expanded="${!folded.has(p.id + ":wods")}">${folded.has(p.id + ":wods") ? "＋" : "−"}</button><span>WOD</span>${reorderToggle(p.id + ":wods", visibleWods(p.id).length, "Réorganiser les WOD")}<button class="primary addsession-compact addwod" data-add-wod="${p.id}" aria-label="Ajouter un WOD" title="Ajouter un WOD">＋</button></div><div class="program-subsection-body"><div class="wodlist">${
@@ -334,6 +336,8 @@ function openProgram(p = null) {
   f.elements.program_id.value = p?.id || "";
   f.elements.name.value = p?.name || "";
   f.elements.is_default.checked = !!p?.is_default;
+  // L'option « programme par défaut » n'est plus proposée : elle n'apparaît que pour un ancien programme par défaut.
+  $("#programdefaultfield").hidden = !p?.is_default;
   f.elements.start.value = p && !p.is_default ? p.start_monday : "";
   f.elements.end.value = p && !p.is_default ? p.end_monday : "";
   syncProgramDateFields();

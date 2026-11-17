@@ -84,7 +84,7 @@ function renderSessions() {
             })()}${s.actual_comment ? `<p><b>Réalisé :</b> ${esc(s.actual_comment)}</p>` : ""}</div></article>`
         )
         .join("")
-    : `<div class="card empty">Aucune séance enregistrée. Crée un programme et ses WOD, puis enregistre ta première séance.</div>`;
+    : `<div class="card empty">Aucune séance enregistrée cette semaine. Touche ＋ pour en ajouter une.</div>`;
   $("#sessionlist")
     .querySelectorAll("[data-edit-session]")
     .forEach(b => (b.onclick = () => openSession(sessions.find(s => s.id === b.dataset.editSession))));
@@ -99,6 +99,10 @@ function renderSessions() {
           }
         })
     );
+}
+// Programme technique « Hors programme » (programme par défaut sans WOD visible ni mouvement) : jamais affiché comme un programme.
+function isFallbackProgram(p) {
+  return !!p?.is_default && !visibleWods(p.id).length && !(movementsByProgram[p.id] || []).length;
 }
 function programForDate(date) {
   return (
@@ -124,9 +128,13 @@ function renderWeek() {
   const week = sessions.filter(x => x.session_date >= from && x.session_date <= to);
   const folded = window.cfSessionFolded || (window.cfSessionFolded = new Set());
   const nav = `<div class="weeknav"><button class="smallbtn" id="prevweek" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="weekdate" type="date" value="${dateInput}" max="${now}"></label><button class="smallbtn" id="nextweek" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
-  if (!p) {
+  if (future && (!p || isFallbackProgram(p))) {
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="card empty">${future ? "Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée." : "Aucun programme ne couvre cette semaine."}</div>`;
+      `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>`;
+  } else if (!p || isFallbackProgram(p)) {
+    // Semaine sans programme : les séances sont enregistrées « hors programme ».
+    $("#weekboard").innerHTML =
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><div class="card empty">Aucun programme ne couvre cette semaine : tes séances sont enregistrées « hors programme ».</div>`;
   } else {
     const ws = visibleWods(p.id),
       countFor = w => week.filter(x => x.wod_id === w.id).length,

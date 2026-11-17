@@ -3838,3 +3838,6 @@ button:active:not(:disabled) {
 #timerfinish[hidden] {
   display: none;
 }
+#programdefaultfield[hidden] {
+  display: none;
+}

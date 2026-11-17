@@ -256,6 +256,12 @@ async function ensureV2Schema(env) {
       ).run();
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)").run();
     });
+    await runMigration("v11-hors-programme", async () => {
+      // Le programme par défaut sans WOD visible ni mouvement devient le programme technique « Hors programme ».
+      await env.DB.prepare(
+        "UPDATE programs SET name='Hors programme' WHERE is_default=1 AND NOT EXISTS(SELECT 1 FROM program_wods w WHERE w.program_id=programs.id AND w.name<>'__AUTRES__') AND NOT EXISTS(SELECT 1 FROM program_movements m WHERE m.program_id=programs.id)"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -312,6 +318,21 @@ async function sendReminders(e) {
     await pushToUser(e, row.user_id, {title: "FitFactory", body, tag: "reminder", url: "/"});
     await e.DB.prepare("UPDATE reminder_settings SET last_sent_on=? WHERE user_id=?").bind(today, row.user_id).run();
   }
+}
+// Séances « hors programme » : rattachées à un programme technique caché (is_default=1, 1970 → 2100), créé à la demande.
+// Le front envoie program_id = "none" ; aucun programme par défaut n'est à créer par l'utilisateur.
+async function fallbackProgramId(e, userId) {
+  const find = () => e.DB.prepare("SELECT id FROM programs WHERE user_id=? AND is_default=1").bind(userId).first();
+  let program = await find();
+  if (!program) {
+    await e.DB.prepare(
+      "INSERT OR IGNORE INTO programs(id,user_id,name,start_monday,end_monday,is_default) VALUES(?,?,'Hors programme','1970-01-01','2100-12-31',1)"
+    )
+      .bind(uid(), userId)
+      .run();
+    program = await find();
+  }
+  return program.id;
 }
 // Mot de passe oublié : lien à usage unique valable 30 minutes (seule l'empreinte du jeton est gardée en base).
 // Envoi par e-mail via Resend si RESEND_API_KEY et MAIL_FROM sont configurés ; sinon le lien est écrit dans les logs
@@ -1414,7 +1435,7 @@ async function api(r, e, p) {
   if (r.method === "POST" && p === "/api/sessions") {
     const b = await r.json(),
       date = b.session_date,
-      pid = b.program_id,
+      pid = b.program_id === "none" ? await fallbackProgramId(e, u.id) : b.program_id,
       cid = clientId(b.client_id);
     if (cid && (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE id=? AND user_id=?").bind(cid, u.id).first()))
       return json({ok: true, id: cid});
@@ -1489,6 +1510,7 @@ async function api(r, e, p) {
   m = p.match(/^\/api\/sessions\/([\w-]+)$/);
   if (m && r.method === "PUT") {
     const b = await r.json();
+    if (b.program_id === "none") b.program_id = await fallbackProgramId(e, u.id);
     if (!validDate(b.session_date)) return json({error: "Date invalide."}, 400);
     const act = await e.DB.prepare(
         "SELECT id FROM activities WHERE id=? AND user_id=(SELECT id FROM users WHERE email=?) AND is_active=1"

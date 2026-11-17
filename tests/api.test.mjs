@@ -182,3 +182,41 @@ test("mot de passe oublié : réponse identique, lien unique, ancien mot de pass
     200
   );
 });
+
+test("séance hors programme : programme technique créé à la demande, sans conflit de dates", async () => {
+  const dave = client(worker.base);
+  await dave.post("/register", {email: "dave@test.local", password: PASSWORD});
+  assert.equal((await dave.get("/programs")).data.programs.length, 0);
+  const res = await dave.post("/sessions", {
+    program_id: "none",
+    wod_id: "other",
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 45,
+    movement_ids: [],
+    catalog_movement_ids: [],
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  const programs = (await dave.get("/programs")).data.programs;
+  assert.equal(programs.length, 1);
+  assert.equal(programs[0].name, "Hors programme");
+  assert.equal(programs[0].is_default, 1);
+  // un second envoi réutilise le même programme technique
+  await dave.post("/sessions", {
+    program_id: "none",
+    wod_id: "other",
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 30,
+    movement_ids: [],
+    catalog_movement_ids: [],
+  });
+  assert.equal((await dave.get("/programs")).data.programs.length, 1);
+  // un vrai programme sur la même période reste possible
+  const created = await dave.post("/programs", {
+    name: "Bloc force",
+    start: mondayOf(today()),
+    end: addDays(mondayOf(today()), 27),
+  });
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+});

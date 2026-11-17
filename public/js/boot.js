@@ -11,7 +11,7 @@ FFOffline.init({
           : programs.flatMap(x => wodsByProgram[x.id] || []).find(x => x.id === b.wod_id),
       a = activities.find(x => x.id === b.activity_id);
     return {
-      ...(p ? {program_name: p.name} : {}),
+      ...(p ? {program_name: p.name} : b.program_id === "none" ? {program_name: "Hors programme"} : {}),
       ...(w ? {wod_name: w.name === "__AUTRES__" ? "Autres" : w.name, planned_comment: w.planned_comment || ""} : {}),
       ...(a ? {activity_name: a.name} : {}),
     };

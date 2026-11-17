@@ -15,6 +15,7 @@ FitFactory (anciennement CFPlanner) est une application web responsive de planif
 - Planification d'un WOD sur une semaine, indépendamment de son enregistrement réel.
 - Indicateur de semaine de compétition.
 - Historique des séances avec modification et suppression.
+- Séances « hors programme » : une semaine qu'aucun programme ne couvre permet quand même d'enregistrer des séances (WOD « Autres »). Elles sont rattachées à un programme technique caché « Hors programme » (`is_default=1`, 1970 → 2100), créé automatiquement par le serveur quand le front envoie `program_id: "none"` ; il n'apparaît ni dans la liste des programmes ni comme option du formulaire de programme. Il n'y a donc plus de programme par défaut à créer.
 - Enregistrement de la date, de l'activité, des notes et des mouvements travaillés. L'heure de départ et la durée sont masquées pour l'instant : elles restent renseignées automatiquement (durée par défaut du WOD ou de l'activité).
 - Si le programme n'a aucun mouvement à travailler, la séance permet de cocher n'importe quel mouvement du catalogue ; ces mouvements apparaissent dans le récapitulatif de la semaine et dans l'export Excel.
 
@@ -105,6 +106,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V8 ajoute la table `login_attempts` (tentatives de connexion échouées, indexées par clé e-mail/IP et date).
 - V9 ajoute les tables `app_settings` (clés VAPID), `push_subscriptions` (un abonnement par téléphone) et `reminder_settings` (jours sans séance, heure, dernier envoi).
 - V10 ajoute la table `password_resets` (empreinte du jeton, utilisateur, expiration, date d'utilisation).
+- V11 renomme « Hors programme » un ancien programme par défaut qui n'a ni WOD visible ni mouvement (il devient le programme technique caché).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 

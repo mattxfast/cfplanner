@@ -14,7 +14,7 @@ function fillActivitySelect(select, selected = "") {
 }
 function fillWodOptions(pid, selected = "") {
   const f = $("#sessionform").elements.wod_id,
-    ws = wodsByProgram[pid] || [];
+    ws = pid === "none" ? [] : wodsByProgram[pid] || [];
   f.innerHTML =
     ws
       .filter(w => w.name !== "__AUTRES__")
@@ -80,14 +80,17 @@ function openSession(s = null, presetWodId = "") {
     defaultDate = selectedWeekStart > today() ? today() : weekEnd < today() ? weekEnd : today(),
     sessionDate = s?.session_date || defaultDate;
   f.elements.session_date.value = sessionDate;
-  f.elements.program_id.innerHTML = programs
-    .map(p => `<option value="${p.id}">${esc(p.name)}${p.is_default ? " (par défaut)" : ""}</option>`)
-    .join("");
+  // Programmes réels + « Hors programme » (programme technique caché, créé par le serveur si besoin).
+  f.elements.program_id.innerHTML =
+    programs
+      .filter(p => !isFallbackProgram(p))
+      .map(p => `<option value="${p.id}">${esc(p.name)}</option>`)
+      .join("") + `<option value="none">Hors programme</option>`;
   let selectedProgram = s ? programs.find(p => p.id === s.program_id) : null;
   if (!selectedProgram && presetWodId)
     selectedProgram = programs.find(p => (wodsByProgram[p.id] || []).some(x => x.id === presetWodId));
   if (!selectedProgram) selectedProgram = programForDate(sessionDate);
-  if (selectedProgram) f.elements.program_id.value = selectedProgram.id;
+  f.elements.program_id.value = selectedProgram && !isFallbackProgram(selectedProgram) ? selectedProgram.id : "none";
   const pid = f.elements.program_id.value;
   fillWodOptions(pid, s?.wod_name === "Autres" ? "other" : s?.wod_id || presetWodId);
   const selectedWod = (wodsByProgram[pid] || []).find(w => w.id === (s?.wod_id || presetWodId));
@@ -155,16 +158,6 @@ $("#choice-plan").onclick = async () => {
 function addSessionFromWeek() {
   if (selectedWeekStart > mondayOf(today())) {
     toast("Impossible de saisir une séance sur une semaine future.");
-    return;
-  }
-  if (!programs.length) {
-    toast("Crée un programme.");
-    switchView("programs");
-    return;
-  }
-  if (!programs.some(p => (wodsByProgram[p.id] || []).length)) {
-    toast("Ajoute un WOD au programme.");
-    switchView("programs");
     return;
   }
   openSession();
