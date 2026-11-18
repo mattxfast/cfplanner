@@ -1,4 +1,4 @@
-import {vapidKeys, sendPush, isAllowedEndpoint} from "./push.js";
+import {vapidKeys, sendPush, isAllowedEndpoint, localEcdhKeys} from "./push.js";
 const SESSION_DAYS = 30,
   enc = new TextEncoder();
 const json = (d, s = 200, h = {}) =>
@@ -128,11 +128,12 @@ async function ensureV2Schema(env) {
       "CREATE TABLE IF NOT EXISTS app_migrations (version TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('pending','running','done')), applied_at TEXT)"
     ).run();
 
+    // Une seule lecture des migrations déjà appliquées (au lieu d'une requête par migration à chaque démarrage).
+    const doneVersions = new Set(
+      (await env.DB.prepare("SELECT version FROM app_migrations WHERE status='done'").all()).results.map(r => r.version)
+    );
     const runMigration = async (version, apply) => {
-      const applied = await env.DB.prepare("SELECT version FROM app_migrations WHERE version=? AND status='done'")
-        .bind(version)
-        .first();
-      if (applied) return;
+      if (doneVersions.has(version)) return;
       await env.DB.prepare(
         "INSERT INTO app_migrations(version,status,applied_at) VALUES(?,'running',NULL) ON CONFLICT(version) DO UPDATE SET status='running'"
       )
@@ -346,6 +347,11 @@ async function ensureV2Schema(env) {
       await env.DB.prepare("UPDATE users SET theme=NULL WHERE theme='auto'").run();
       await env.DB.prepare("UPDATE app_settings SET value='dark' WHERE key='default_theme' AND value='auto'").run();
     });
+    await runMigration("v21-reminder-hour-index", async () => {
+      await env.DB.prepare(
+        "CREATE INDEX IF NOT EXISTS reminder_settings_hour ON reminder_settings(hour, last_sent_on)"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -423,26 +429,97 @@ async function pushToUser(e, userId, message) {
   }
   return {sent, devices: subs.length};
 }
+// Envoi des rappels compatible avec le plan gratuit de Cloudflare (10 ms de calcul, 50 appels sortants et 50 requêtes
+// D1 par exécution) : la tâche tourne chaque minute et envoie au plus REMINDER_BATCH notifications par passage (environ
+// 0,7 ms de calcul chacune) ; les suivantes partent aux passages suivants de la même heure (60 passages, soit jusqu'à
+// 600 notifications par créneau). Requêtes D1 par passage : environ 4, quel que soit le nombre de membres.
+const REMINDER_BATCH = 10;
 async function sendReminders(e) {
+  // TEST_PARIS_HOUR : uniquement pour les tests locaux (simule l'heure de Paris) ; jamais défini en production.
+  const hour = e.TEST_PARIS_HOUR ? Number(e.TEST_PARIS_HOUR) : parisHour();
+  if (!REMINDER_HOURS.includes(hour)) return {sent: 0};
   const today = localToday(),
-    hour = parisHour();
-  const rows = (
-    await e.DB.prepare(
-      "SELECT rs.user_id,rs.days,(SELECT MAX(session_date) FROM training_sessions s WHERE s.user_id=rs.user_id) AS last_date FROM reminder_settings rs WHERE rs.enabled=1 AND rs.hour=? AND (rs.last_sent_on IS NULL OR rs.last_sent_on<>?) AND EXISTS(SELECT 1 FROM push_subscriptions p WHERE p.user_id=rs.user_id)"
-    )
-      .bind(hour, today)
-      .all()
-  ).results;
+    rows = (
+      await e.DB.prepare(
+        "SELECT rs.user_id,rs.days,(SELECT MAX(session_date) FROM training_sessions s WHERE s.user_id=rs.user_id) AS last_date FROM reminder_settings rs WHERE rs.hour=? AND rs.enabled=1 AND (rs.last_sent_on IS NULL OR rs.last_sent_on<>?) AND EXISTS(SELECT 1 FROM push_subscriptions p WHERE p.user_id=rs.user_id) ORDER BY rs.user_id LIMIT 300"
+      )
+        .bind(hour, today)
+        .all()
+    ).results;
+  if (!rows.length) return {sent: 0};
+  // Séance récente : rien à envoyer aujourd'hui, marqué comme traité pour ne plus être relu.
+  const done = [],
+    due = [];
   for (const row of rows) {
     const since = row.last_date ? daysBetween(row.last_date, today) : null;
-    if (since !== null && since < row.days) continue;
-    const body =
-      since === null
-        ? "Aucune séance enregistrée pour l’instant : on commence aujourd’hui ?"
-        : `Aucune séance depuis ${since} jours. On s’y remet aujourd’hui ?`;
-    await pushToUser(e, row.user_id, {title: "MyFitFactory", body, tag: "reminder", url: "/"});
-    await e.DB.prepare("UPDATE reminder_settings SET last_sent_on=? WHERE user_id=?").bind(today, row.user_id).run();
+    if (since !== null && since < row.days) done.push(row.user_id);
+    else due.push({...row, since});
   }
+  const batchUsers = due.slice(0, REMINDER_BATCH),
+    subs = batchUsers.length
+      ? (
+          await e.DB.prepare(
+            `SELECT user_id,endpoint,p256dh,auth FROM push_subscriptions WHERE user_id IN (${batchUsers.map(() => "?").join(",")})`
+          )
+            .bind(...batchUsers.map(x => x.user_id))
+            .all()
+        ).results
+      : [];
+  // Respect du plafond : un membre n'est traité que si toutes ses notifications tiennent dans le paquet.
+  const sending = [];
+  for (const user of batchUsers) {
+    const own = subs.filter(x => x.user_id === user.user_id);
+    if (sending.length && sending.length + own.length > REMINDER_BATCH) break;
+    own.forEach(sub => sending.push({sub, user}));
+    done.push(user.user_id);
+  }
+  const gone = [];
+  let sent = 0;
+  if (sending.length) {
+    const keys = await vapidKeys(e.DB),
+      subject = "mailto:" + (String(e.ADMIN_EMAIL || "").trim() || "admin@fitfactory.invalid"),
+      batch = {localKeys: await localEcdhKeys(), jwts: new Map()};
+    await Promise.all(
+      sending.map(async ({sub, user}) => {
+        const body =
+          user.since === null
+            ? "Aucune séance enregistrée pour l’instant : on commence aujourd’hui ?"
+            : `Aucune séance depuis ${user.since} jours. On s’y remet aujourd’hui ?`;
+        try {
+          const status = await sendPush(
+            sub,
+            keys,
+            subject,
+            {title: "MyFitFactory", body, tag: "reminder", url: "/"},
+            fetch,
+            batch
+          );
+          if (status === 404 || status === 410) gone.push(sub.endpoint);
+          else if (status >= 200 && status < 300) sent++;
+          else console.error("MyFitFactory push", {status});
+        } catch (err) {
+          console.error("MyFitFactory push", {message: err?.message});
+        }
+      })
+    );
+  }
+  const statements = [];
+  if (done.length)
+    statements.push(
+      e.DB.prepare(
+        `UPDATE reminder_settings SET last_sent_on=? WHERE user_id IN (${done.map(() => "?").join(",")})`
+      ).bind(today, ...done)
+    );
+  if (gone.length)
+    statements.push(
+      e.DB.prepare(`DELETE FROM push_subscriptions WHERE endpoint IN (${gone.map(() => "?").join(",")})`).bind(...gone)
+    );
+  if (statements.length) await e.DB.batch(statements);
+  return {
+    sent,
+    processed: done.length,
+    remaining: due.length - batchUsers.filter(u => done.includes(u.user_id)).length,
+  };
 }
 // Séances « hors programme » : rattachées à un programme technique caché (is_default=1, 1970 → 2100), créé à la demande.
 // Le front envoie program_id = "none" ; aucun programme par défaut n'est à créer par l'utilisateur.

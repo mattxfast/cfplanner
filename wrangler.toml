@@ -21,5 +21,5 @@ enabled = true
 head_sampling_rate = 1
 
 [triggers]
-# 03:17 UTC : purge des sessions et tentatives expirées ; toutes les heures : rappels (heure de Paris).
-crons = ["17 3 * * *", "0 * * * *"]
+# 03:17 UTC : purge des sessions et tentatives expirées ; chaque minute : rappels par paquets (heure de Paris).
+crons = ["17 3 * * *", "* * * * *"]

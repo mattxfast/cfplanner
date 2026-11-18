@@ -65,11 +65,18 @@ async function hkdf(salt, ikm, info, length) {
 }
 
 // Chiffre le contenu pour un abonnement (clés p256dh et auth fournies par le navigateur).
-export async function encryptPayload(p256dh, auth, plaintext) {
+// localKeys (facultatif) : paire ECDH réutilisée pour plusieurs messages d'un même envoi groupé (le sel aléatoire reste
+// propre à chaque message, donc la clé de chiffrement aussi) ; économise le calcul d'une paire par message.
+export async function localEcdhKeys() {
+  const pair = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+  return {privateKey: pair.privateKey, publicRaw: new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey))};
+}
+export async function encryptPayload(p256dh, auth, plaintext, localKeys = null) {
   const uaPublic = unb64url(p256dh),
     authSecret = unb64url(auth);
-  const local = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
-  const asPublic = new Uint8Array(await crypto.subtle.exportKey("raw", local.publicKey));
+  const own = localKeys || (await localEcdhKeys()),
+    local = {privateKey: own.privateKey};
+  const asPublic = own.publicRaw;
   const uaKey = await crypto.subtle.importKey("raw", uaPublic, {name: "ECDH", namedCurve: "P-256"}, false, []);
   const shared = new Uint8Array(await crypto.subtle.deriveBits({name: "ECDH", public: uaKey}, local.privateKey, 256));
   const ikm = await hkdf(authSecret, shared, concat(te.encode("WebPush: info\0"), uaPublic, asPublic), 32);
@@ -88,9 +95,21 @@ export async function encryptPayload(p256dh, auth, plaintext) {
 }
 
 // Envoie une notification ; renvoie le statut HTTP du service de notification (404/410 : abonnement expiré).
-export async function sendPush(subscription, keys, subject, message, fetcher = fetch) {
-  const body = await encryptPayload(subscription.p256dh, subscription.auth, te.encode(JSON.stringify(message)));
-  const jwt = await vapidJwt(new URL(subscription.endpoint).origin, subject, keys.privateJwk);
+// batch (facultatif) : { localKeys, jwts: Map } partagés par un envoi groupé — une paire ECDH et une signature VAPID
+// par service de notification pour tout le paquet, au lieu d'une par message.
+export async function sendPush(subscription, keys, subject, message, fetcher = fetch, batch = null) {
+  const body = await encryptPayload(
+      subscription.p256dh,
+      subscription.auth,
+      te.encode(JSON.stringify(message)),
+      batch?.localKeys
+    ),
+    audience = new URL(subscription.endpoint).origin;
+  let jwt = batch?.jwts?.get(audience);
+  if (!jwt) {
+    jwt = await vapidJwt(audience, subject, keys.privateJwk);
+    batch?.jwts?.set(audience, jwt);
+  }
   const res = await fetcher(subscription.endpoint, {
     method: "POST",
     headers: {
