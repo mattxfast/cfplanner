@@ -425,3 +425,20 @@ test("WOD de box à venir : visibles du seul gestionnaire, ni listés ni enregis
   assert.equal(logged.status, 404);
   assert.equal((await alice.del(`/manage/wods/${created.data.id}`)).status, 200);
 });
+
+test("tâches à valider : adhésions pour le gestionnaire, demandes de gestionnaire pour l'admin", async () => {
+  const fred = client(worker.base);
+  await fred.post("/register", {email: "fred@test.local", password: PASSWORD});
+  await fred.put("/profile", {first_name: "Fred", last_name: "Test"});
+  const before = (await alice.get("/boxes")).data.pending.members;
+  assert.equal((await fred.post(`/boxes/${boxId}/requests`, {role: "member"})).status, 200);
+  assert.equal((await fred.post(`/boxes/${boxId}/requests`, {role: "manager"})).status, 200);
+  assert.equal((await alice.get("/boxes")).data.pending.members, before + 1);
+  assert.equal((await bob.get("/boxes")).data.pending.members, 0, "un simple membre n'a rien à valider");
+  assert.ok((await admin.get("/boxes")).data.pending.managers >= 1);
+  assert.equal((await alice.get("/boxes")).data.pending.managers, 0, "seul un admin voit les demandes de gestionnaire");
+  const fredId = await idOf("fred@test.local");
+  await alice.put(`/manage/boxes/${boxId}/members/${fredId}`, {approve: true});
+  await admin.put(`/admin/boxes/${boxId}/managers/${fredId}`, {approve: false});
+  assert.equal((await alice.get("/boxes")).data.pending.members, before);
+});

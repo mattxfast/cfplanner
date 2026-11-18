@@ -1250,7 +1250,18 @@ async function api(r, e, p) {
         .bind(u.id)
         .all(),
     ]);
-    return json({boxes: boxes.results, memberships: mine.results, categories: categories.results});
+    // Tâches à valider (icônes rouges en haut) : adhésions des box gérées, demandes de gestionnaire pour un admin.
+    const pending = await e.DB.prepare(
+      "SELECT (SELECT COUNT(*) FROM box_members r JOIN box_members g ON g.box_id=r.box_id AND g.user_id=? AND g.role='manager' AND g.status='approved' WHERE r.role='member' AND r.status='pending') AS members,(SELECT COUNT(*) FROM box_members WHERE role='manager' AND status='pending') AS managers"
+    )
+      .bind(u.id)
+      .first();
+    return json({
+      boxes: boxes.results,
+      memberships: mine.results,
+      categories: categories.results,
+      pending: {members: pending.members, managers: admin ? pending.managers : 0},
+    });
   }
   // Demande d'adhésion (role=member) ou de gestion (role=manager) : rejouable sans effet (mode hors ligne).
   if ((m = p.match(/^\/api\/boxes\/([\w-]+)\/requests$/)) && (r.method === "POST" || r.method === "DELETE")) {

@@ -2,6 +2,7 @@
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 
 let boxes = [],
+  boxPending = {members: 0, managers: 0},
   boxMemberships = [],
   boxCategories = [],
   managedBoxId = "",
@@ -54,6 +55,7 @@ function setBoxes(d) {
   boxes = d.boxes || [];
   boxMemberships = d.memberships || [];
   boxCategories = d.categories || [];
+  boxPending = d.pending || {members: 0, managers: 0};
   renderMyBoxes();
   renderBoxNav();
 }
@@ -299,6 +301,7 @@ async function boxAction(path, method, body, message) {
   try {
     await api(path, {method, body: body ? JSON.stringify(body) : undefined});
     await loadManagedBox();
+    loadBoxes().catch(() => {}); // met à jour l’alerte rouge de l’icône gestionnaire
     if (message) toast(message);
   } catch (e) {
     toast(e.message);

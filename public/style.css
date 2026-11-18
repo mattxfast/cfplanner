@@ -2074,6 +2074,12 @@ button:disabled {
   padding: 0;
   flex: 0 0 auto;
 }
+/* Icônes gestionnaire / administration en rouge tant qu’une demande est à valider (hors de leur espace). */
+#userbar .settings-icon.alert {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--surface);
+}
 /* Icônes du haut (profil, espace gestionnaire, administration) : mises en évidence sur leur page. */
 #userbar .account-icon.active,
 #userbar .settings-icon.active {
