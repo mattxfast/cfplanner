@@ -142,6 +142,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V19 ajoute les colonnes `users.theme` (thème du compte, vide = thème par défaut) et `reminder_settings.enabled` (rappels activés pour le compte). Les valeurs par défaut sont gardées dans `app_settings` (`default_theme`, `default_reminder_days`, `default_reminder_hour`, `default_reminders_enabled`).
 - V20 supprime le thème « Automatique (selon le téléphone) » : un compte réglé ainsi suit le thème par défaut, un thème par défaut « auto » devient « Sombre ».
 - V21 ajoute l'index `reminder_settings_hour` (heure du rappel, dernier envoi) pour les passages de la tâche des rappels.
+- V22 ajoute les index `programs_user` (programmes d'un utilisateur) et `box_members_role_status` (demandes en attente), pour une box de plusieurs centaines de membres.
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 

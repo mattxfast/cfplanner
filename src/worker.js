@@ -352,6 +352,11 @@ async function ensureV2Schema(env) {
         "CREATE INDEX IF NOT EXISTS reminder_settings_hour ON reminder_settings(hour, last_sent_on)"
       ).run();
     });
+    await runMigration("v22-load-indexes", async () => {
+      // Index pour une box de plusieurs centaines de membres : programmes d'un utilisateur, demandes en attente.
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS programs_user ON programs(user_id)").run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS box_members_role_status ON box_members(role,status)").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -1708,37 +1713,47 @@ async function api(r, e, p) {
     return json({ok: true});
   }
   if (r.method === "GET" && p === "/api/program-data") {
+    // Programmes accessibles calculés une seule fois (au lieu de répéter le filtre d'accès, qui relit tout l'historique
+    // des séances, dans chacune des 4 requêtes) ; seuls ces identifiants sont ensuite utilisés.
+    const accessIds = (
+        await e.DB.prepare(
+          "SELECT id FROM programs WHERE user_id=? UNION SELECT program_id FROM program_follows WHERE user_id=? UNION SELECT program_id FROM training_sessions WHERE user_id=?"
+        )
+          .bind(u.id, u.id, u.id)
+          .all()
+      ).results.map(r => r.id),
+      ACCESS = accessIds.length ? "p.id IN (" + accessIds.map(() => "?").join(",") + ")" : "0";
     const [p, w, mv, wp] = await Promise.all([
       e.DB.prepare(
         // followed : programme suivi ; read_only : programme d'un autre auteur (suivi, ou suivi auparavant).
         "SELECT p.*,EXISTS(SELECT 1 FROM training_sessions s WHERE s.program_id=p.id) AS has_sessions,(SELECT COUNT(*) FROM program_follows x WHERE x.program_id=p.id) AS followers,CASE WHEN p.user_id<>? AND f.user_id IS NOT NULL THEN 1 ELSE 0 END AS followed,CASE WHEN p.user_id=? THEN 0 ELSE 1 END AS read_only,a.first_name AS author_first_name,a.last_name AS author_last_name,f.start_monday AS follow_start,f.end_monday AS follow_end FROM programs p JOIN users a ON a.id=p.user_id" +
           FOLLOW_JOIN +
           "WHERE " +
-          PROGRAM_ACCESS +
+          ACCESS +
           " ORDER BY p.is_default ASC,p.start_monday DESC"
       )
-        .bind(u.id, u.id, u.id, u.id, u.id, u.id)
+        .bind(u.id, u.id, u.id, ...accessIds)
         .all(),
       e.DB.prepare(
         "SELECT w.*,EXISTS(SELECT 1 FROM training_sessions s WHERE s.wod_id=w.id) AS has_sessions FROM program_wods w JOIN programs p ON p.id=w.program_id WHERE " +
-          PROGRAM_ACCESS +
+          ACCESS +
           " AND (w.name<>'__AUTRES__' OR p.user_id=?) ORDER BY w.program_id,w.sort_order,w.created_at"
       )
-        .bind(u.id, u.id, u.id, u.id)
+        .bind(...accessIds, u.id)
         .all(),
       e.DB.prepare(
         "SELECT pm.* FROM program_movements pm JOIN programs p ON p.id=pm.program_id WHERE " +
-          PROGRAM_ACCESS +
+          ACCESS +
           " ORDER BY pm.program_id,pm.sort_order,pm.created_at"
       )
-        .bind(u.id, u.id, u.id)
+        .bind(...accessIds)
         .all(),
       e.DB.prepare(
         "SELECT x.wod_id,x.week_start,x.content FROM weekly_wod_programming x JOIN program_wods w ON w.id=x.wod_id JOIN programs p ON p.id=w.program_id WHERE " +
-          PROGRAM_ACCESS +
+          ACCESS +
           " ORDER BY x.week_start"
       )
-        .bind(u.id, u.id, u.id)
+        .bind(...accessIds)
         .all(),
     ]);
     const wods = {},
