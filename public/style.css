@@ -4264,5 +4264,14 @@ button:active:not(:disabled) {
 #view-sessions .weekwod.section-empty,
 #view-programs .program-section .movement-row.section-empty,
 #view-box .admin-row.section-empty {
+  /* Texte centré, bulle deux fois plus haute qu'une ligne de rubrique (une ligne de texte de 20 px). */
+  justify-content: center;
+  text-align: center;
+  padding-top: calc(var(--list-row-height) - 10px);
+  padding-bottom: calc(var(--list-row-height) - 10px);
   color: var(--muted);
+}
+/* Le libellé unique d'une ligne d'administration est aussi un conteneur flex : on le centre lui aussi. */
+#view-box .admin-row.section-empty > span {
+  justify-content: center;
 }
