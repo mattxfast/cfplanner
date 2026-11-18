@@ -480,6 +480,23 @@
           <div class="error" id="programsearcherror"></div>
         </form>
       </dialog>
+      <dialog id="followdialog" class="modal">
+        <form id="followform">
+          <input type="hidden" name="program_id" />
+          <div class="sectionhead">
+            <h2 id="followtitle">Suivre le programme</h2>
+            <button type="button" class="iconbtn" data-close-dialog="followdialog">×</button>
+          </div>
+          <p class="hint" id="followinfo"></p>
+          <div class="two">
+            <label>Début<input name="start" type="date" required /></label
+            ><label>Fin<input name="end" type="date" required /></label>
+          </div>
+          <p class="hint">La semaine 1 du programme commence la semaine de ta date de début.</p>
+          <button class="primary" id="followsubmit">Suivre ce programme</button>
+          <div class="error" id="followerror"></div>
+        </form>
+      </dialog>
       <dialog id="woddialog" class="modal">
         <form id="wodform" method="dialog">
           <div class="sectionhead">

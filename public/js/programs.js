@@ -91,6 +91,20 @@ function renderPrograms() {
         : // Sans programme, aucune carte ne sert de bandeau : le titre de la page reste affiché.
           "<div class='page-banner'><h2>Mes programmes</h2></div><div class='card empty'>Aucun programme. Crée ton premier programme ou trouve un programme public à suivre.</div>");
   $("#programlist")
+    .querySelectorAll("[data-follow-dates]")
+    .forEach(b => {
+      const p = programs.find(x => x.id === b.dataset.followDates);
+      b.onclick = () =>
+        openFollowDialog(
+          {
+            ...p,
+            start_monday: p.author_start_monday || p.start_monday,
+            end_monday: p.author_end_monday || p.end_monday,
+          },
+          {start: p.start_monday, end: p.end_monday}
+        );
+    });
+  $("#programlist")
     .querySelectorAll("[data-unfollow-program]")
     .forEach(
       b =>
@@ -280,7 +294,7 @@ function followedProgramCard(p) {
   const author = [p.author_first_name, p.author_last_name].filter(Boolean).join(" "),
     week = mondayOf(today()),
     movements = movementsByProgram[p.id] || [];
-  return `<article class="program card program-followed"><div class="programhead"><div class="program-title"><div><h3>${esc(p.name)} <span class="tracked-tag">Suivi</span></h3><small>${author ? "par " + esc(author) + " · " : ""}${fmt(p.start_monday)} → ${fmt(p.end_monday)}</small></div></div></div><div class="programbody"><div class="program-section program-subsection"><div class="program-section-heading program-section-toolbar"><span>WOD</span></div><div class="program-subsection-body"><div class="wodlist">${
+  return `<article class="program card program-followed"><div class="programhead"><div class="program-title"><div><h3>${esc(p.name)} <span class="tracked-tag">Suivi</span></h3><small>${author ? "par " + esc(author) + " · " : ""}mes dates : ${fmt(p.start_monday)} → ${fmt(p.end_monday)}</small></div></div></div><div class="programbody"><div class="program-section program-subsection"><div class="program-section-heading program-section-toolbar"><span>WOD</span></div><div class="program-subsection-body"><div class="wodlist">${
     visibleWods(p.id)
       .map(w => {
         const content = weeklyWodContent(w.id, week) || w.planned_comment;
@@ -291,7 +305,7 @@ function followedProgramCard(p) {
     movements.length
       ? `<div class="movement-editor compact program-section program-subsection"><div class="program-section-heading program-section-toolbar"><span>Focus mouvement</span></div><div class="program-subsection-body"><div class="program-movement-list">${movements.map(m => `<div class="movement-row"><span>${esc(m.name)}</span></div>`).join("")}</div></div></div>`
       : ""
-  }<div class="program-follow-actions"><button type="button" class="smallbtn" data-unfollow-program="${p.id}">Arrêter de suivre</button></div></div></article>`;
+  }<div class="program-follow-actions"><button type="button" class="smallbtn" data-follow-dates="${p.id}">Modifier mes dates</button><button type="button" class="smallbtn" data-unfollow-program="${p.id}">Arrêter de suivre</button></div></div></article>`;
 }
 // Recherche de programmes publics et suivi (un seul programme à la fois).
 let programSearchTimer = null;
@@ -312,26 +326,64 @@ async function searchPrograms() {
       .querySelectorAll("[data-follow-program]")
       .forEach(
         b =>
-          (b.onclick = async () => {
+          (b.onclick = () => {
             if (current && !confirm("Tu suis déjà « " + current.name + " ». Le remplacer par ce programme ?")) return;
-            try {
-              await api("/program-follow", {
-                method: "PUT",
-                body: JSON.stringify({program_id: b.dataset.followProgram}),
-              });
-              $("#programsearchdialog").close();
-              await load();
-              switchView("programs");
-              toast("Programme suivi.");
-            } catch (e) {
-              $("#programsearcherror").textContent = e.message;
-            }
+            $("#programsearchdialog").close();
+            openFollowDialog(d.programs.find(p => p.id === b.dataset.followProgram));
           })
       );
   } catch (e) {
     $("#programsearcherror").textContent = e.message;
   }
 }
+// Suivre un programme à ses propres dates : par défaut à partir de cette semaine, pour la même durée que l'auteur.
+function openFollowDialog(program, current = null) {
+  const f = $("#followform").elements,
+    length = Math.round((new Date(program.end_monday) - new Date(program.start_monday)) / 86400000),
+    weeks = Math.ceil((length + 1) / 7),
+    author = [program.author_first_name, program.author_last_name].filter(Boolean).join(" ");
+  $("#followform").reset();
+  $("#followform").dataset.editing = current ? "1" : "";
+  f.program_id.value = program.id;
+  f.start.value = current?.start || mondayOf(today());
+  f.end.value = current?.end || addDays(f.start.value, length);
+  f.end.dataset.manual = current ? "1" : "";
+  f.start.onchange = () => {
+    if (!f.end.dataset.manual && f.start.value) f.end.value = addDays(f.start.value, length);
+  };
+  f.end.onchange = () => (f.end.dataset.manual = "1");
+  $("#followtitle").textContent = program.name;
+  $("#followinfo").textContent =
+    (author ? "Programme de " + author + " : " : "Durée : ") +
+    weeks +
+    " semaine" +
+    (weeks > 1 ? "s" : "") +
+    " (chez l’auteur du " +
+    fmt(program.start_monday) +
+    " au " +
+    fmt(program.end_monday) +
+    "). Choisis tes propres dates.";
+  $("#followsubmit").textContent = current ? "Enregistrer mes dates" : "Suivre ce programme";
+  $("#followerror").textContent = "";
+  $("#followdialog").showModal();
+}
+$("#followform").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements,
+    editing = !!e.target.dataset.editing;
+  try {
+    await api("/program-follow", {
+      method: "PUT",
+      body: JSON.stringify({program_id: f.program_id.value, start: f.start.value, end: f.end.value}),
+    });
+    $("#followdialog").close();
+    await load();
+    switchView("programs");
+    toast(editing ? "Dates du programme modifiées." : "Programme suivi.");
+  } catch (x) {
+    $("#followerror").textContent = x.message;
+  }
+};
 $("#findprogram").onclick = () => {
   $("#programsearchform").reset();
   $("#programsearchresults").innerHTML = "";

@@ -4085,6 +4085,7 @@ button:active:not(:disabled) {
 .program-follow-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: var(--content-item-gap);
 }
 .program-search-results {

@@ -319,6 +319,17 @@ async function ensureV2Schema(env) {
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS program_follows_program ON program_follows(program_id)").run();
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS programs_public ON programs(is_public,name)").run();
     });
+    await runMigration("v18-follow-dates", async () => {
+      // Dates propres à chaque utilisateur qui suit un programme (par défaut, celles de l'auteur).
+      const columns = new Set(
+        (await env.DB.prepare("PRAGMA table_info(program_follows)").all()).results.map(c => c.name)
+      );
+      for (const name of ["start_monday", "end_monday"])
+        if (!columns.has(name)) await env.DB.prepare("ALTER TABLE program_follows ADD COLUMN " + name + " TEXT").run();
+      await env.DB.prepare(
+        "UPDATE program_follows SET start_monday=(SELECT start_monday FROM programs p WHERE p.id=program_follows.program_id),end_monday=(SELECT end_monday FROM programs p WHERE p.id=program_follows.program_id) WHERE start_monday IS NULL OR end_monday IS NULL"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -399,6 +410,17 @@ const ownProgram = (e, userId, id) =>
   e.DB.prepare("SELECT 1 FROM programs WHERE id=? AND user_id=?")
     .bind(String(id || ""), userId)
     .first();
+// Dates d'un programme pour l'utilisateur : celles du programme s'il en est l'auteur, celles qu'il a choisies s'il le
+// suit ; pour un programme suivi auparavant (séances restées dans l'historique), aucune contrainte de dates.
+const FOLLOW_JOIN = " LEFT JOIN program_follows f ON f.program_id=p.id AND f.user_id=? ";
+function userProgramDates(program, userId) {
+  if (program.user_id === userId) return {start: program.start_monday, end: program.end_monday};
+  if (program.follow_start) return {start: program.follow_start, end: program.follow_end};
+  return {start: "0000-01-01", end: "9999-12-31"};
+}
+// Programmation hebdomadaire d'un programme suivi : la semaine N de l'auteur devient la semaine N de l'utilisateur.
+const weekShift = (authorStart, followStart) => daysBetween(mondayOfDate(authorStart), mondayOfDate(followStart));
+const mondayOfDate = d => addDays(d, -((new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7));
 // Un seul programme à la fois : un programme suivi ne chevauche aucun programme personnel en cours ou à venir.
 async function followOverlap(e, userId, start, end) {
   return await e.DB.prepare(
@@ -407,10 +429,10 @@ async function followOverlap(e, userId, start, end) {
     .bind(userId, localToday(), start, end)
     .first();
 }
-// Programme personnel : il ne doit pas chevaucher le programme suivi.
+// Programme personnel : il ne doit pas chevaucher le programme suivi (aux dates choisies par l'utilisateur).
 async function followedOverlap(e, userId, start, end) {
   return await e.DB.prepare(
-    "SELECT p.name FROM program_follows f JOIN programs p ON p.id=f.program_id WHERE f.user_id=? AND NOT(p.end_monday<? OR p.start_monday>?)"
+    "SELECT p.name FROM program_follows f JOIN programs p ON p.id=f.program_id WHERE f.user_id=? AND NOT(f.end_monday<? OR f.start_monday>?)"
   )
     .bind(userId, start, end)
     .first();
@@ -1453,18 +1475,17 @@ async function api(r, e, p) {
       wodId = String(b.wod_id || "");
     if (!validDate(week) || new Date(week + "T12:00:00Z").getUTCDay() !== 1)
       return json({error: "La semaine doit commencer un lundi."}, 400);
-    const program = await e.DB.prepare(
-      "SELECT p.start_monday,p.end_monday FROM program_wods w JOIN programs p ON p.id=w.program_id WHERE w.id=? AND w.name<>'__AUTRES__' AND " +
+    const row = await e.DB.prepare(
+      "SELECT p.user_id,p.start_monday,p.end_monday,f.start_monday AS follow_start,f.end_monday AS follow_end FROM program_wods w JOIN programs p ON p.id=w.program_id" +
+        FOLLOW_JOIN +
+        "WHERE w.id=? AND w.name<>'__AUTRES__' AND " +
         PROGRAM_ACCESS
     )
-      .bind(wodId, u.id, u.id, u.id)
+      .bind(u.id, wodId, u.id, u.id, u.id)
       .first();
-    if (!program) return json({error: "WOD introuvable."}, 404);
-    if (
-      !program ||
-      week > program.end_monday ||
-      new Date(week + "T12:00:00Z") < new Date(program.start_monday + "T12:00:00Z")
-    )
+    if (!row) return json({error: "WOD introuvable."}, 404);
+    const program = userProgramDates(row, u.id);
+    if (week > program.end || week < program.start)
       return json({error: "Ce WOD ne fait pas partie du programme de cette semaine."}, 400);
     await e.DB.prepare("INSERT OR IGNORE INTO weekly_plans(user_id,week_start,wod_id) VALUES(?,?,?)")
       .bind(u.id, week, wodId)
@@ -1483,9 +1504,11 @@ async function api(r, e, p) {
     const [p, w, mv, wp] = await Promise.all([
       e.DB.prepare(
         // followed : programme suivi ; read_only : programme d'un autre auteur (suivi, ou suivi auparavant).
-        "SELECT p.*,EXISTS(SELECT 1 FROM training_sessions s WHERE s.program_id=p.id) AS has_sessions,(SELECT COUNT(*) FROM program_follows f WHERE f.program_id=p.id) AS followers,CASE WHEN p.user_id<>? AND p.id IN (SELECT program_id FROM program_follows WHERE user_id=?) THEN 1 ELSE 0 END AS followed,CASE WHEN p.user_id=? THEN 0 ELSE 1 END AS read_only,a.first_name AS author_first_name,a.last_name AS author_last_name FROM programs p JOIN users a ON a.id=p.user_id WHERE " +
+        "SELECT p.*,EXISTS(SELECT 1 FROM training_sessions s WHERE s.program_id=p.id) AS has_sessions,(SELECT COUNT(*) FROM program_follows x WHERE x.program_id=p.id) AS followers,CASE WHEN p.user_id<>? AND f.user_id IS NOT NULL THEN 1 ELSE 0 END AS followed,CASE WHEN p.user_id=? THEN 0 ELSE 1 END AS read_only,a.first_name AS author_first_name,a.last_name AS author_last_name,f.start_monday AS follow_start,f.end_monday AS follow_end FROM programs p JOIN users a ON a.id=p.user_id" +
+          FOLLOW_JOIN +
+          "WHERE " +
           PROGRAM_ACCESS +
-          " ORDER BY is_default ASC,start_monday DESC"
+          " ORDER BY p.is_default ASC,p.start_monday DESC"
       )
         .bind(u.id, u.id, u.id, u.id, u.id, u.id)
         .all(),
@@ -1512,10 +1535,30 @@ async function api(r, e, p) {
         .all(),
     ]);
     const wods = {},
-      movements = {};
-    for (const row of w.results) (wods[row.program_id] ??= []).push(row);
+      movements = {},
+      shifts = new Map();
+    // Programme suivi : affiché aux dates de l'utilisateur, programmation hebdomadaire décalée d'autant.
+    for (const x of p.results)
+      if (x.followed && x.follow_start) {
+        shifts.set(x.id, weekShift(x.start_monday, x.follow_start));
+        Object.assign(x, {
+          author_start_monday: x.start_monday,
+          author_end_monday: x.end_monday,
+          start_monday: x.follow_start,
+          end_monday: x.follow_end,
+        });
+      }
+    const programOfWod = new Map();
+    for (const row of w.results) {
+      (wods[row.program_id] ??= []).push(row);
+      programOfWod.set(row.id, row.program_id);
+    }
     for (const row of mv.results) (movements[row.program_id] ??= []).push(row);
-    return json({programs: p.results, wods, movements, weeklyWodPrograms: wp.results});
+    const weekly = wp.results.map(x => {
+      const shift = shifts.get(programOfWod.get(x.wod_id));
+      return shift ? {...x, week_start: addDays(x.week_start, shift)} : x;
+    });
+    return json({programs: p.results, wods, movements, weeklyWodPrograms: weekly});
   }
   // Programmes publics des autres utilisateurs : recherche par nom du programme ou de l'auteur.
   if (r.method === "GET" && p === "/api/public-programs") {
@@ -1537,7 +1580,14 @@ async function api(r, e, p) {
         .bind(String(b.program_id || ""), u.id)
         .first();
     if (!program) return json({error: "Programme introuvable ou privé."}, 404);
-    const overlap = await followOverlap(e, u.id, program.start_monday, program.end_monday);
+    // Dates choisies par l'utilisateur (par défaut : début choisi, ou celui de l'auteur, et même durée).
+    const length = daysBetween(program.start_monday, program.end_monday),
+      start = b.start === undefined ? program.start_monday : b.start,
+      end = b.end === undefined ? (validDate(start) ? addDays(start, length) : "") : b.end;
+    if (!validDate(start) || !validDate(end) || start > end)
+      return json({error: "Vérifie les dates du programme."}, 400);
+    if (daysBetween(start, end) > 3 * 366) return json({error: "Un programme dure au plus trois ans."}, 400);
+    const overlap = await followOverlap(e, u.id, start, end);
     if (overlap)
       return json(
         {
@@ -1549,9 +1599,9 @@ async function api(r, e, p) {
         409
       );
     await e.DB.prepare(
-      "INSERT INTO program_follows(user_id,program_id) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET program_id=excluded.program_id,created_at=CURRENT_TIMESTAMP"
+      "INSERT INTO program_follows(user_id,program_id,start_monday,end_monday) VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET program_id=excluded.program_id,start_monday=excluded.start_monday,end_monday=excluded.end_monday,created_at=CURRENT_TIMESTAMP"
     )
-      .bind(u.id, program.id)
+      .bind(u.id, program.id, start, end)
       .run();
     return json({ok: true});
   }
@@ -1874,11 +1924,13 @@ async function api(r, e, p) {
   if (r.method === "GET" && p === "/api/export-data") {
     const [programs, wods, movements, sessions, checks, catalogChecks] = await Promise.all([
       e.DB.prepare(
-        "SELECT p.id,p.name,p.start_monday,p.end_monday FROM programs p WHERE " +
+        "SELECT p.id,p.name,COALESCE(f.start_monday,p.start_monday) AS start_monday,COALESCE(f.end_monday,p.end_monday) AS end_monday FROM programs p" +
+          FOLLOW_JOIN +
+          "WHERE " +
           PROGRAM_ACCESS +
-          " ORDER BY p.start_monday,p.name"
+          " ORDER BY 3,p.name"
       )
-        .bind(u.id, u.id, u.id)
+        .bind(u.id, u.id, u.id, u.id)
         .all(),
       e.DB.prepare(
         "SELECT w.id,w.program_id,w.name,w.sort_order FROM program_wods w JOIN programs p ON p.id=w.program_id WHERE " +
@@ -2009,13 +2061,17 @@ async function api(r, e, p) {
       return json({error: "Activité ou durée invalide."}, 400);
     if (!validDate(date)) return json({error: "Date invalide."}, 400);
     if (date > localToday()) return json({error: "Impossible d’enregistrer une séance à une date future."}, 400);
-    const program = await e.DB.prepare(
-      "SELECT p.id,p.start_monday,p.end_monday FROM programs p WHERE p.id=? AND " + PROGRAM_ACCESS
+    const row = await e.DB.prepare(
+      "SELECT p.id,p.user_id,p.start_monday,p.end_monday,f.start_monday AS follow_start,f.end_monday AS follow_end FROM programs p" +
+        FOLLOW_JOIN +
+        "WHERE p.id=? AND " +
+        PROGRAM_ACCESS
     )
-      .bind(pid, u.id, u.id, u.id)
+      .bind(u.id, pid, u.id, u.id, u.id)
       .first();
+    const program = row && {...row, ...userProgramDates(row, u.id)};
     if (!program) return json({error: "Programme introuvable."}, 404);
-    if (date < program.start_monday || date > program.end_monday)
+    if (date < program.start || date > program.end)
       return json({error: "La date de la séance doit être comprise dans la période du programme."}, 400);
     if (wid === "other") {
       let w = await e.DB.prepare("SELECT id FROM program_wods WHERE program_id=? AND user_id=? AND name='__AUTRES__'")
@@ -2095,13 +2151,17 @@ async function api(r, e, p) {
       return json({error: "Activité ou durée invalide."}, 400);
     if (b.session_date > localToday())
       return json({error: "Impossible d’enregistrer une séance à une date future."}, 400);
-    const program = await e.DB.prepare(
-      "SELECT p.id,p.start_monday,p.end_monday FROM programs p WHERE p.id=? AND " + PROGRAM_ACCESS
+    const row = await e.DB.prepare(
+      "SELECT p.id,p.user_id,p.start_monday,p.end_monday,f.start_monday AS follow_start,f.end_monday AS follow_end FROM programs p" +
+        FOLLOW_JOIN +
+        "WHERE p.id=? AND " +
+        PROGRAM_ACCESS
     )
-      .bind(b.program_id, u.id, u.id, u.id)
+      .bind(u.id, b.program_id, u.id, u.id, u.id)
       .first();
+    const program = row && {...row, ...userProgramDates(row, u.id)};
     if (!program) return json({error: "Programme introuvable."}, 404);
-    if (b.session_date < program.start_monday || b.session_date > program.end_monday)
+    if (b.session_date < program.start || b.session_date > program.end)
       return json({error: "La date de la séance doit être comprise dans la période du programme."}, 400);
     let wid = b.wod_id;
     if (wid === "other") {

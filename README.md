@@ -45,7 +45,7 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 ### Programmes publics
 - Un programme peut être public (case « Programme public » du formulaire de programme) ou privé (par défaut). Sa carte indique « public » et le nombre de personnes qui le suivent.
 - **Trouver un programme** (en bas de l'onglet Programmes) : recherche parmi les programmes publics des autres utilisateurs, par nom du programme ou de l'auteur (`GET /api/public-programs?q=…`, 50 résultats au plus).
-- **Suivre** un programme (`PUT /api/program-follow`) : on ne suit qu'un programme à la fois (suivre un autre programme remplace le précédent), et il ne doit chevaucher aucun de ses propres programmes en cours ou à venir (l'inverse est aussi refusé). Le programme suivi apparaît en lecture seule, toujours à jour (modifications de l'auteur en direct) ; pendant ses dates, c'est le programme de la semaine dans **Séances** (WOD, planification, séances). Une séance « Autres » est alors enregistrée « Hors programme ».
+- **Suivre** un programme (`PUT /api/program-follow` avec `program_id`, `start`, `end`) : on ne suit qu'un programme à la fois (suivre un autre programme remplace le précédent), et il ne doit chevaucher aucun de ses propres programmes en cours ou à venir (l'inverse est aussi refusé). Au moment de suivre, on choisit ses propres dates (par défaut : à partir de la semaine en cours, pour la même durée que chez l'auteur) ; elles se modifient ensuite avec « Modifier mes dates ». La programmation semaine par semaine de l'auteur est décalée : sa semaine 1 devient la semaine 1 de l'utilisateur. Le programme suivi apparaît en lecture seule, toujours à jour (modifications de l'auteur en direct) ; pendant les dates de l'utilisateur, c'est le programme de la semaine dans **Séances** (WOD, planification, séances). Une séance « Autres » est alors enregistrée « Hors programme ».
 - **Arrêter de suivre** (`DELETE /api/program-follow`) : les séances déjà enregistrées restent dans l'historique et l'export. Si l'auteur repasse son programme en privé, ceux qui le suivent déjà le gardent.
 - L'auteur ne peut plus supprimer un programme ou un WOD réalisé par un utilisateur qui le suit.
 
@@ -133,6 +133,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V15 ajoute la table `box_wods` (box, date, nom, contenu, type de score `time`, `reps`, `load` ou `none`), indexée par box et date.
 - V16 ajoute à `training_sessions` les colonnes `box_wod_id`, `score_value` et `score_category_id` (séance sur un WOD de box et son score), avec un index pour les classements.
 - V17 ajoute la colonne `programs.is_public` et la table `program_follows` (un programme suivi par utilisateur).
+- V18 ajoute à `program_follows` les dates choisies par l'utilisateur (`start_monday`, `end_monday`, reprises de celles de l'auteur pour les suivis existants).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 

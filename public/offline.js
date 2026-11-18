@@ -173,6 +173,11 @@ const FFOffline = (() => {
       }
     } else if (path === "/program-data" && op.path === "/program-follow" && op.method === "DELETE") {
       data.programs = (data.programs || []).map(p => ({...p, followed: 0}));
+    } else if (path === "/program-data" && op.path === "/program-follow" && op.method === "PUT") {
+      // Changement de dates du programme déjà suivi (un nouveau suivi s'affiche après synchronisation).
+      data.programs = (data.programs || []).map(p =>
+        p.id === body.program_id && p.followed ? {...p, start_monday: body.start, end_monday: body.end} : p
+      );
     } else if (path === "/boxes" && (m = op.path.match(/^\/boxes\/([\w-]+)\/requests$/))) {
       data.memberships = (data.memberships || []).filter(x => !(x.box_id === m[1] && x.role === body.role));
       if (op.method === "POST") data.memberships.push({box_id: m[1], role: body.role, status: "pending"});

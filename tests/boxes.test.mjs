@@ -298,3 +298,70 @@ test("programmes publics : recherche, suivi d'un seul programme à la fois, lect
   // un utilisateur sans lien avec le programme n'y a pas accès
   assert.equal((await carol.post("/sessions", {...base, wod_id: wod.data.id})).status, 404);
 });
+
+test("programme suivi : dates propres à l'utilisateur, programmation hebdomadaire décalée", async () => {
+  const dan = client(worker.base);
+  await dan.post("/register", {email: "dan@test.local", password: PASSWORD});
+  const activityId = (await dan.get("/activities")).data.activities[0].id,
+    authorStart = addDays(mondayOf(today()), 140),
+    authorEnd = addDays(authorStart, 27);
+  // l'auteur a programmé son WOD suivi en semaine 2
+  const prog = await alice.post("/programs", {name: "Gym futur", start: authorStart, end: authorEnd, is_public: true});
+  assert.equal(prog.status, 200, JSON.stringify(prog.data));
+  const wod = await alice.post(`/programs/${prog.data.id}/wods`, {
+    name: "Muscle-ups",
+    activity_id: activityId,
+    duration_minutes: 30,
+    is_tracked: true,
+  });
+  assert.equal(
+    (
+      await alice.put(`/wods/${wod.data.id}/weekly-programming`, {
+        week_start: addDays(authorStart, 7),
+        content: "S2 : 5x3",
+      })
+    ).status,
+    200
+  );
+  // Dan le suit à partir de la semaine dernière (dates invalides refusées)
+  const start = addDays(mondayOf(today()), -7);
+  assert.equal(
+    (await dan.put("/program-follow", {program_id: prog.data.id, start, end: addDays(start, -1)})).status,
+    400
+  );
+  assert.equal((await dan.put("/program-follow", {program_id: prog.data.id, start})).status, 200);
+  const data = (await dan.get("/program-data")).data,
+    followed = data.programs.find(x => x.id === prog.data.id);
+  assert.equal(followed.start_monday, start);
+  assert.equal(followed.end_monday, addDays(start, 27), "même durée que l'auteur par défaut");
+  assert.equal(followed.author_start_monday, authorStart);
+  // la semaine 2 de l'auteur devient la semaine 2 de Dan
+  assert.deepEqual(
+    data.weeklyWodPrograms.filter(x => x.wod_id === wod.data.id).map(x => [x.week_start, x.content]),
+    [[addDays(start, 7), "S2 : 5x3"]]
+  );
+  // séance aujourd'hui : dans les dates de Dan, hors de celles de l'auteur
+  const session = await dan.post("/sessions", {
+    program_id: prog.data.id,
+    wod_id: wod.data.id,
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 30,
+    movement_ids: [],
+    catalog_movement_ids: [],
+  });
+  assert.equal(session.status, 200, JSON.stringify(session.data));
+  // un programme personnel sur ces dates est refusé, après les dates c'est possible
+  assert.equal((await dan.post("/programs", {name: "Perso", start, end: addDays(start, 6)})).status, 409);
+  assert.equal(
+    (await dan.post("/programs", {name: "Après", start: addDays(start, 28), end: addDays(start, 40)})).status,
+    200
+  );
+  // changer ses dates (même programme)
+  const later = addDays(start, 7);
+  assert.equal(
+    (await dan.put("/program-follow", {program_id: prog.data.id, start: later, end: addDays(later, 13)})).status,
+    200
+  );
+  assert.equal((await dan.get("/program-data")).data.programs.find(x => x.id === prog.data.id).start_monday, later);
+});
