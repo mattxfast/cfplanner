@@ -1506,24 +1506,28 @@ button:disabled {
   }
 }
 
-/* Sélecteur de semaine : occupe toute la largeur avec un libellé plus lisible. */
-#weekboard .weekbar {
+/* Sélecteur de semaine (séances, WOD de l’espace gestionnaire) : toute la largeur, libellé plus lisible. */
+#weekboard .weekbar,
+#boxwodboard .weekbar {
   width: 100%;
   padding: 13px 16px;
 }
-#weekboard .weeknav {
+#weekboard .weeknav,
+#boxwodboard .weeknav {
   width: 100%;
   justify-content: space-between;
   gap: 12px;
 }
-#weekboard .weekdate-label {
+#weekboard .weekdate-label,
+#boxwodboard .weekdate-label {
   font-size: 15px;
   font-weight: 700;
   color: var(--banner-ink);
   gap: 10px;
   flex: 1;
 }
-#weekboard .weekdate-label input {
+#weekboard .weekdate-label input,
+#boxwodboard .weekdate-label input {
   width: auto;
   flex: 1;
   max-width: 230px;
@@ -1532,10 +1536,12 @@ button:disabled {
   font-weight: 600;
 }
 @media (max-width: 650px) {
-  #weekboard .weekdate-label {
+  #weekboard .weekdate-label,
+  #boxwodboard .weekdate-label {
     font-size: 14px;
   }
-  #weekboard .weekdate-label input {
+  #weekboard .weekdate-label input,
+  #boxwodboard .weekdate-label input {
     max-width: none;
     min-width: 0;
   }
@@ -4062,9 +4068,12 @@ button:active:not(:disabled) {
   margin: 0;
 }
 /* WOD de la box (onglet « Ma box ») : semaine affichée et contenu du WOD sous son titre. */
-.box-wod-nav {
-  justify-content: space-between;
-  margin: 0 0 4px;
+#boxwodboard .weekbar {
+  margin: 0 0 var(--section-content-gap);
+}
+#boxwodboard .admin-data-list {
+  display: grid;
+  gap: var(--content-item-gap);
 }
 #view-box .box-wod-row {
   align-items: flex-start;
