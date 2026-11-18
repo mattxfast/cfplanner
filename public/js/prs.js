@@ -133,24 +133,25 @@ function renderPrCategory(method, items) {
         "</div></button>"
     )
     .join("");
+  // Rubrique au style des bandeaux de titre (administration, Mon compte), repliable.
   return (
-    '<section class="pr-category-group ' +
+    '<section class="admin-group pr-category-group ' +
     (collapsed ? "collapsed" : "") +
     '" data-pr-category="' +
     key +
-    '"><button type="button" class="pr-category-title" data-toggle-pr-category="' +
+    '"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="' +
     key +
     '" aria-expanded="' +
     !collapsed +
-    '"><span class="pr-category-indicator">' +
+    '"><span class="admin-collapse-indicator">' +
     (collapsed ? "＋" : "−") +
-    "</span><strong>" +
+    "</span><span>" +
     prCategoryLabel(method) +
-    "</strong><small>" +
+    '</span><small class="pr-category-count">' +
     items.length +
-    '</small></button><div class="pr-category-body">' +
+    '</small></div><div class="admin-group-body"><div class="pr-category-body">' +
     content +
-    "</div></section>"
+    "</div></div></section>"
   );
 }
 function renderPrs() {
@@ -189,21 +190,26 @@ function renderPrs() {
           return subset.length ? renderPrCategory(method, subset) : "";
         })
         .join("")
-    : '<div class="card empty">Aucun PR enregistré. Utilise « Nouveau PR » pour saisir ton premier record.</div>';
+    : '<div class="card empty">Aucun PR enregistré. Utilise « Ajouter un PR » pour saisir ton premier record.</div>';
   const body = $("#prcards");
   body.hidden = false;
-  body.querySelectorAll("[data-toggle-pr-category]").forEach(
-    button =>
-      (button.onclick = () => {
-        const key = button.dataset.togglePrCategory,
-          isCollapsed = !window.cfPrCategorySections[key];
-        window.cfPrCategorySections[key] = isCollapsed;
-        const group = button.closest(".pr-category-group");
-        group.classList.toggle("collapsed", isCollapsed);
-        button.setAttribute("aria-expanded", String(!isCollapsed));
-        button.querySelector(".pr-category-indicator").textContent = isCollapsed ? "＋" : "−";
-      })
-  );
+  body.querySelectorAll("[data-toggle-pr-category]").forEach(button => {
+    const toggle = () => {
+      const key = button.dataset.togglePrCategory,
+        isCollapsed = !window.cfPrCategorySections[key];
+      window.cfPrCategorySections[key] = isCollapsed;
+      button.closest(".pr-category-group").classList.toggle("collapsed", isCollapsed);
+      button.setAttribute("aria-expanded", String(!isCollapsed));
+      button.querySelector(".admin-collapse-indicator").textContent = isCollapsed ? "＋" : "−";
+    };
+    button.onclick = toggle;
+    button.onkeydown = e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      }
+    };
+  });
   body
     .querySelectorAll("[data-pr-key]")
     .forEach(button => (button.onclick = () => openPrHistory(button.dataset.prKey)));

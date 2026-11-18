@@ -2324,6 +2324,7 @@ button:disabled {
 
 /* Administration : bandeaux orange, puis cartes individuelles sur fond gris. */
 #view-admin .admin-group,
+#view-prs .admin-group,
 #view-account .admin-group,
 #view-box .admin-group {
   padding: 0;
@@ -2334,6 +2335,7 @@ button:disabled {
   overflow: visible;
 }
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title {
   width: 100%;
@@ -2352,6 +2354,7 @@ button:disabled {
     sans-serif;
 }
 #view-admin .admin-group-title > span,
+#view-prs .admin-group-title > span,
 #view-account .admin-group-title > span,
 #view-box .admin-group-title > span {
   font-size: 16px;
@@ -2378,6 +2381,7 @@ button:disabled {
   background: rgba(255, 255, 255, 0.32);
 }
 #view-admin .admin-group-body,
+#view-prs .admin-group-body,
 #view-account .admin-group-body,
 #view-box .admin-group-body {
   padding: 18px 0 0;
@@ -2416,6 +2420,7 @@ button:disabled {
 }
 @media (max-width: 650px) {
   #view-admin .admin-group-body,
+  #view-prs .admin-group-body,
   #view-account .admin-group-body,
   #view-box .admin-group-body {
     padding-top: 15px;
@@ -2433,17 +2438,20 @@ button:disabled {
   background: var(--blue-hover);
 }
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title {
   cursor: pointer;
 }
 #view-admin .admin-group-title:focus-visible,
+#view-prs .admin-group-title:focus-visible,
 #view-account .admin-group-title:focus-visible,
 #view-box .admin-group-title:focus-visible {
   outline: 3px solid var(--focus-ring-strong);
   outline-offset: 3px;
 }
 #view-admin .admin-group-title .admin-add,
+#view-prs .admin-group-title .admin-add,
 #view-account .admin-group-title .admin-add,
 #view-box .admin-group-title .admin-add {
   cursor: pointer;
@@ -2469,6 +2477,7 @@ button:disabled {
 
 /* Administration : reprendre exactement le bandeau orange clair des WOD et programmes. */
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title {
   background: var(--banner-bg);
@@ -2477,6 +2486,7 @@ button:disabled {
   border-radius: 11px;
 }
 #view-admin .admin-group-title > span,
+#view-prs .admin-group-title > span,
 #view-account .admin-group-title > span,
 #view-box .admin-group-title > span {
   color: var(--banner-ink);
@@ -2529,17 +2539,20 @@ button:disabled {
   cursor: default;
 }
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title {
   gap: 12px;
 }
 #view-admin .admin-group-title > span:first-child,
+#view-prs .admin-group-title > span:first-child,
 #view-account .admin-group-title > span:first-child,
 #view-box .admin-group-title > span:first-child {
   flex: 1;
   text-align: left;
 }
 #view-admin .admin-group-title .admin-collapse-indicator,
+#view-prs .admin-group-title .admin-collapse-indicator,
 #view-account .admin-group-title .admin-collapse-indicator,
 #view-box .admin-group-title .admin-collapse-indicator {
   flex: 0 0 22px;
@@ -2558,12 +2571,14 @@ button:disabled {
 
 /* Repli compact à gauche des rubriques ; alignements verticaux de la page Séances. */
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title {
   justify-content: flex-start;
   gap: 8px;
 }
 #view-admin .admin-group-title .admin-collapse-indicator,
+#view-prs .admin-group-title .admin-collapse-indicator,
 #view-account .admin-group-title .admin-collapse-indicator,
 #view-box .admin-group-title .admin-collapse-indicator {
   order: 0;
@@ -2579,6 +2594,7 @@ button:disabled {
   line-height: 1;
 }
 #view-admin .admin-group-title > span:nth-child(2),
+#view-prs .admin-group-title > span:nth-child(2),
 #view-account .admin-group-title > span:nth-child(2),
 #view-box .admin-group-title > span:nth-child(2) {
   flex: 1;
@@ -2683,6 +2699,7 @@ button:disabled {
 
 /* Corrections d'alignement et accordéons des sous-rubriques. */
 #view-admin .admin-group-title .admin-collapse-indicator,
+#view-prs .admin-group-title .admin-collapse-indicator,
 #view-account .admin-group-title .admin-collapse-indicator,
 #view-box .admin-group-title .admin-collapse-indicator {
   background: var(--neutral-bg);
@@ -2982,7 +2999,12 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
-  margin: 8px 0 0;
+  margin: 0;
+}
+#view-prs .pr-category-count {
+  margin-left: auto;
+  font: 600 13px Manrope;
+  color: var(--banner-ink);
 }
 #view-prs .pr-category-group.collapsed .pr-category-body {
   display: none;
@@ -3201,6 +3223,7 @@ button:disabled {
 
 /* Harmonisation stricte des bandeaux et commandes entre Paramétrages, PR et WOD. */
 #view-admin .admin-group-title,
+#view-prs .admin-group-title,
 #view-account .admin-group-title,
 #view-box .admin-group-title,
 #view-prs .pr-section-title {
@@ -3213,6 +3236,7 @@ button:disabled {
   gap: 10px !important;
 }
 #view-admin .admin-group-title .admin-collapse-indicator,
+#view-prs .admin-group-title .admin-collapse-indicator,
 #view-account .admin-group-title .admin-collapse-indicator,
 #view-box .admin-group-title .admin-collapse-indicator {
   width: 20px;
@@ -3232,6 +3256,7 @@ button:disabled {
   font: 700 12px/1 Manrope;
 }
 #view-admin .admin-group-title > span:nth-child(2),
+#view-prs .admin-group-title > span:nth-child(2),
 #view-account .admin-group-title > span:nth-child(2),
 #view-box .admin-group-title > span:nth-child(2),
 #view-prs .pr-section-title h2 {
@@ -3241,6 +3266,7 @@ button:disabled {
   text-align: left;
 }
 #view-admin .admin-group-title .admin-add,
+#view-prs .admin-group-title .admin-add,
 #view-account .admin-group-title .admin-add,
 #view-box .admin-group-title .admin-add,
 #view-prs .pr-section-title .addpr {
@@ -3425,11 +3451,13 @@ button:disabled {
 
 /* Paramétrage et compte */
 #view-admin .admin-group,
+#view-prs .admin-group,
 #view-account .admin-group,
 #view-box .admin-group {
   margin: 0 0 var(--page-content-gap);
 }
 #view-admin .admin-group-body,
+#view-prs .admin-group-body,
 #view-account .admin-group-body,
 #view-box .admin-group-body {
   padding: var(--section-content-gap) 0 0;
