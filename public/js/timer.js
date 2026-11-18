@@ -46,7 +46,7 @@ const TIMER_MODES = {
     hint: "Un travail au début de chaque intervalle.",
     fields: [
       {key: "every", label: "Toutes les", values: TIMER_DURATIONS, value: 60, format: timerDuration},
-      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 10, format: String},
+      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 10, format: String, stepper: true},
     ],
   },
   tabata: {
@@ -61,7 +61,7 @@ const TIMER_MODES = {
         value: 10,
         format: v => (v ? timerDuration(v) : "aucun"),
       },
-      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 8, format: String},
+      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 8, format: String, stepper: true},
     ],
   },
 };
@@ -339,13 +339,31 @@ function timerRenderSettings() {
   $("#timerhint").textContent = def.hint;
   $("#timerfields").innerHTML = def.fields
     .map(
-      f => `<div class="timer-field"><span class="timer-field-label">${esc(f.label)}</span><div class="timer-stepper">
+      f =>
+        `<${f.stepper ? "div" : "label"} class="timer-field"><span class="timer-field-label">${esc(f.label)}</span>${
+          f.stepper
+            ? `<div class="timer-stepper">
       <button type="button" class="smallbtn" data-step="${f.key}" data-dir="-1" aria-label="Moins">−</button>
       <output>${esc(f.format(values[f.key]))}</output>
-      <button type="button" class="smallbtn" data-step="${f.key}" data-dir="1" aria-label="Plus">＋</button></div></div>`
+      <button type="button" class="smallbtn" data-step="${f.key}" data-dir="1" aria-label="Plus">＋</button></div>`
+            : `<select class="timer-select" data-field="${f.key}">${f.values
+                .map(v => `<option value="${v}" ${v === values[f.key] ? "selected" : ""}>${esc(f.format(v))}</option>`)
+                .join("")}</select>`
+        }</${f.stepper ? "div" : "label"}>`
     )
     .join("");
-  // Un appui change d’un cran ; un appui maintenu fait défiler les valeurs.
+  // Durées : liste déroulante.
+  $("#timerfields")
+    .querySelectorAll("[data-field]")
+    .forEach(
+      select =>
+        (select.onchange = () => {
+          values[select.dataset.field] = Number(select.value);
+          timerSaveSettings();
+          timerRender();
+        })
+    );
+  // Nombre de tours : un appui change d’un cran ; un appui maintenu fait défiler les valeurs.
   $("#timerfields")
     .querySelectorAll("[data-step]")
     .forEach(b => {

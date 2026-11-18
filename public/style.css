@@ -3959,6 +3959,15 @@ button:active:not(:disabled) {
   border: 1px solid var(--content-border);
   border-radius: 12px;
 }
+.timer-select {
+  width: auto;
+  min-width: 132px;
+  height: 40px;
+  margin-top: 0;
+  padding: 0 12px;
+  font: 700 17px Manrope;
+  text-align: center;
+}
 .timer-field-label {
   font: 700 14px Manrope;
   color: var(--ink-soft);
