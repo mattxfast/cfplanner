@@ -685,7 +685,8 @@ body.modal-open {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.navtab[hidden] {
+.navtab[hidden],
+.navtabs[hidden] {
   display: none;
 }
 .navtab.active {
@@ -2060,6 +2061,12 @@ button:disabled {
   color: var(--ink-soft);
   padding: 0;
   flex: 0 0 auto;
+}
+/* Icône de l’espace gestionnaire : mise en évidence quand on y est. */
+#userbar .settings-icon.active {
+  background: var(--banner-bg);
+  border-color: var(--banner-border);
+  color: var(--banner-ink);
 }
 #userbar .settings-icon svg {
   width: 17px;
@@ -4117,4 +4124,11 @@ button:active:not(:disabled) {
 #view-admin .admin-defaults .primary {
   width: 100%;
   margin-top: 6px;
+}
+/* Espace gestionnaire : infos de la box. */
+.box-info-form label {
+  margin: 0 0 10px;
+}
+.box-info-form .primary {
+  width: 100%;
 }

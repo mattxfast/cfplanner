@@ -59,12 +59,20 @@ async function loadPrs() {
   prRecords = (await api("/prs")).records;
   renderPrs();
 }
+const inManagerSpace = () => !$("#view-box").hidden;
 function switchView(v) {
-  document.querySelectorAll(".navtab").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  document.querySelectorAll(".navtab[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === v));
   ["sessions", "programs", "prs", "timer", "account", "admin", "box"].forEach(x => ($("#view-" + x).hidden = x !== v));
+  // Espace gestionnaire : menu du bas propre (WOD, membres, infos de la box) à la place de celui de l’utilisateur.
+  $("#managernav").hidden = v !== "box";
+  document.querySelector(".navtabs:not(#managernav)").hidden = v === "box";
+  try {
+    localStorage.setItem("fitfactory-space", v === "box" ? "manager" : "user");
+  } catch {}
+  if (user) renderUserbar();
   if (v === "box") loadManagedBox();
 }
-document.querySelectorAll(".navtab").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
+document.querySelectorAll(".navtab[data-view]").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
 function renderSessions() {
   $("#sessionlist").classList.toggle("session-list-collapsed", !!window.cfSessionHistoryCollapsed);
   const historyToggle = $("#toggle-session-history");

@@ -1,4 +1,4 @@
-// FitFactory — box : adhésions (Mon compte) et espace gestionnaire (onglet « Ma box »).
+// FitFactory — box : adhésions (Mon compte) et espace gestionnaire (icône maison en haut, pages WOD, membres et infos).
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 
 let boxes = [],
@@ -128,11 +128,19 @@ function requestBox(role) {
 $("#boxjoin").onclick = () => requestBox("member");
 $("#boxmanagerrequest").onclick = () => requestBox("manager");
 
-// ----- Onglet « Ma box » : réservé aux gestionnaires validés -----
+// ----- Espace gestionnaire (icône en haut) : pages WOD, membres et infos de la box, avec leur menu du bas -----
+let boxPage = "wods",
+  managerSpaceRestored = false;
 function renderBoxNav() {
   const ids = boxIds("manager");
-  document.querySelector('.navtab[data-view="box"]').hidden = !ids.length;
-  if (!ids.length && !$("#view-box").hidden) switchView("sessions");
+  if (!ids.length && inManagerSpace()) switchView("sessions");
+  // Au démarrage, un gestionnaire retrouve l’espace où il était (gestionnaire ou utilisateur) sur cet appareil.
+  if (ids.length && !managerSpaceRestored) {
+    managerSpaceRestored = true;
+    try {
+      if (localStorage.getItem("fitfactory-space") === "manager") setTimeout(() => switchView("box"));
+    } catch {}
+  }
   if (!ids.includes(managedBoxId)) {
     managedBoxId = ids[0] || "";
     managedBox = null;
@@ -140,8 +148,17 @@ function renderBoxNav() {
   $("#managedboxpicker").hidden = ids.length < 2;
   $("#managedboxselect").innerHTML = ids.map(id => `<option value="${id}">${esc(boxName(id))}</option>`).join("");
   $("#managedboxselect").value = managedBoxId;
-  if (!$("#view-box").hidden) loadManagedBox();
+  if (inManagerSpace()) loadManagedBox();
+  if (user) renderUserbar();
 }
+document.querySelectorAll("[data-box-page]").forEach(
+  b =>
+    (b.onclick = () => {
+      boxPage = b.dataset.boxPage;
+      renderManagedBox();
+      scrollTo(0, 0);
+    })
+);
 $("#managedboxselect").onchange = e => {
   managedBoxId = e.target.value;
   managedBox = null;
@@ -178,7 +195,7 @@ function boxWodsGroup(d) {
     nav = `<div class="weeknav box-wod-nav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="boxwodweek" type="date" value="${week}"></label><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
   return boxGroup(
     "wods",
-    "WOD",
+    "WOD de la semaine",
     `<button type="button" class="admin-add" id="addboxwod" aria-label="Ajouter un WOD">＋</button>`,
     nav +
       (d.wods
@@ -235,15 +252,18 @@ function changeManagedWodWeek(week) {
   loadManagedBox();
 }
 function renderManagedBox() {
+  document
+    .querySelectorAll("[data-box-page]")
+    .forEach(b => b.classList.toggle("active", b.dataset.boxPage === boxPage));
   const d = managedBox;
   if (!d) return;
-  $("#boxviewtitle").textContent = d.box.name;
+  $("#boxviewtitle").textContent =
+    {wods: "WOD", members: "Membres", info: "Infos de la box"}[boxPage] + " · " + d.box.name;
   const pending = d.members.filter(x => x.status === "pending"),
     members = d.members.filter(x => x.status === "approved"),
     cats = d.categories;
   const person = x => `${esc(personName(x))} <small class="muted">${esc(x.email)}</small>`;
-  $("#boxmanager").innerHTML =
-    boxWodsGroup(d) +
+  const membersPage = () =>
     boxGroup(
       "requests",
       `Demandes d’adhésion (${pending.length})`,
@@ -265,6 +285,13 @@ function renderManagedBox() {
             `<div class="admin-row"><span>${person(x)}${x.is_manager ? ` <span class="tracked-tag">Gestionnaire</span>` : ""}</span><span class="admin-row-actions"><button class="smallbtn delete" data-remove-member="${x.user_id}" aria-label="Retirer de la box" title="${x.is_manager ? "Un gestionnaire ne peut pas être retiré" : "Retirer de la box"}" ${x.is_manager ? "disabled" : ""}>${BOX_ICONS.del}</button></span></div>`
         )
         .join("") || `<p class="muted">Aucun membre.</p>`
+    );
+  const infoPage = () =>
+    boxGroup(
+      "info",
+      "Box",
+      "",
+      `<form id="boxinfoform" class="box-info-form"><label>Nom de la box<input name="name" maxlength="80" required value="${esc(d.box.name)}"></label><label>Ville<input name="city" maxlength="80" value="${esc(d.box.city || "")}"></label><button class="primary">Enregistrer</button></form>`
     ) +
     boxGroup(
       "categories",
@@ -277,6 +304,8 @@ function renderManagedBox() {
         )
         .join("") || `<p class="muted">Aucune catégorie.</p>`
     );
+  $("#boxmanager").innerHTML =
+    boxPage === "members" ? membersPage() : boxPage === "info" ? infoPage() : boxWodsGroup(d);
   bindManagedBox();
 }
 async function boxAction(path, method, body, message) {
@@ -329,10 +358,25 @@ function bindManagedBox() {
           boxAction("/manage/boxes/" + d.box.id + "/members/" + x.user_id, "DELETE", null, "Membre retiré.");
       })
   );
-  $("#addboxwod").onclick = () => openBoxWod();
-  $("#boxwodprev").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, -7));
-  $("#boxwodnext").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, 7));
-  $("#boxwodweek").onchange = e => e.target.value && changeManagedWodWeek(mondayOf(e.target.value));
+  if (boxPage === "wods") {
+    $("#addboxwod").onclick = () => openBoxWod();
+    $("#boxwodprev").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, -7));
+    $("#boxwodnext").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, 7));
+    $("#boxwodweek").onchange = e => e.target.value && changeManagedWodWeek(mondayOf(e.target.value));
+  }
+  const info = $("#boxinfoform");
+  if (info)
+    info.onsubmit = async e => {
+      e.preventDefault();
+      const f = e.target.elements;
+      await boxAction(
+        "/manage/boxes/" + d.box.id,
+        "PUT",
+        {name: f.name.value, city: f.city.value},
+        "Infos de la box enregistrées."
+      );
+      loadBoxes().catch(() => {});
+    };
   root
     .querySelectorAll("[data-edit-boxwod]")
     .forEach(b => (b.onclick = () => openBoxWod(d.wods.find(w => w.id === b.dataset.editBoxwod))));

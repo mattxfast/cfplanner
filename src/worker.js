@@ -1331,6 +1331,20 @@ async function api(r, e, p) {
       ]);
       return json({box, members: members.results, categories: categories.results});
     }
+    // Infos de la box (nom, ville), modifiables par ses gestionnaires.
+    if (r.method === "PUT" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)$/))) {
+      if (!(await managed(m[1]))) return deny();
+      const b = await r.json(),
+        name = boxText(b.name, 80),
+        city = boxText(b.city, 80);
+      if (!name) return json({error: "Nom de la box requis."}, 400);
+      try {
+        await e.DB.prepare("UPDATE boxes SET name=?,city=? WHERE id=?").bind(name, city, m[1]).run();
+      } catch {
+        return json({error: "Une box porte déjà ce nom."}, 409);
+      }
+      return json({ok: true});
+    }
     if ((m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/members\/([\w-]+)$/))) {
       if (!(await managed(m[1]))) return deny();
       if (r.method === "PUT") {

@@ -124,7 +124,9 @@ const FFOffline = (() => {
   // Espace gestionnaire d'une box : adhésions et catégories.
   function patchManagedBox(data, boxId, op, body) {
     let m;
-    if ((m = op.path.match(/^\/manage\/boxes\/([\w-]+)\/members\/([\w-]+)$/)) && m[1] === boxId) {
+    if (op.method === "PUT" && op.path === "/manage/boxes/" + boxId)
+      data.box = {...data.box, name: body.name, city: body.city};
+    else if ((m = op.path.match(/^\/manage\/boxes\/([\w-]+)\/members\/([\w-]+)$/)) && m[1] === boxId) {
       if (op.method === "PUT" && body.approve)
         data.members = (data.members || []).map(x => (x.user_id === m[2] ? {...x, status: "approved"} : x));
       else data.members = (data.members || []).filter(x => x.user_id !== m[2] || x.is_manager);

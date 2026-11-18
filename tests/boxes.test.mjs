@@ -394,3 +394,10 @@ test("préférences : thème et rappels propres au compte, valeurs par défaut f
   assert.equal((await other.put("/preferences", {theme: null})).status, 200);
   assert.equal((await erin.get("/preferences")).data.theme, null);
 });
+
+test("espace gestionnaire : infos de la box modifiables par ses seuls gestionnaires", async () => {
+  assert.equal((await bob.put(`/manage/boxes/${boxId}`, {name: "Pirate", city: ""})).status, 404);
+  assert.equal((await alice.put(`/manage/boxes/${boxId}`, {name: "", city: "Aix"})).status, 400);
+  assert.equal((await alice.put(`/manage/boxes/${boxId}`, {name: "CrossFit Test", city: "Aix"})).status, 200);
+  assert.equal((await alice.get(`/manage/boxes/${boxId}`)).data.box.city, "Aix");
+});
