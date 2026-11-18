@@ -224,3 +224,77 @@ test("séance sur un WOD de box : score, catégorie et classement entre membres"
   const left = (await bob.get(`/box-wods/${boxWodId}/leaderboard`)).data.categories.find(c => c.id === rx).rows;
   assert.ok(!left.some(x => x.first_name === "Carol"));
 });
+
+test("programmes publics : recherche, suivi d'un seul programme à la fois, lecture seule", async () => {
+  const activityId = (await bob.get("/activities")).data.activities[0].id,
+    start = mondayOf(today()),
+    end = addDays(start, 27);
+  // Alice publie un programme, en garde un autre privé
+  const pub = await alice.post("/programs", {name: "Bloc Engine public", start, end, is_public: true});
+  assert.equal(pub.status, 200, JSON.stringify(pub.data));
+  await alice.post("/programs", {name: "Bloc secret", start: addDays(start, 70), end: addDays(start, 90)});
+  const wod = await alice.post(`/programs/${pub.data.id}/wods`, {
+    name: "Intervalles",
+    activity_id: activityId,
+    duration_minutes: 45,
+  });
+  assert.equal(wod.status, 200);
+  // recherche : par nom ou par auteur, jamais les programmes privés ni les siens
+  assert.equal((await bob.get("/public-programs?q=engine")).data.programs.length, 1);
+  assert.equal((await bob.get("/public-programs?q=Alice")).data.programs.length, 1);
+  assert.equal((await bob.get("/public-programs?q=secret")).data.programs.length, 0);
+  assert.equal((await alice.get("/public-programs?q=engine")).data.programs.length, 0);
+  assert.equal((await bob.get("/public-programs?q=%25")).data.programs.length, 0, "le joker % est échappé");
+  const secret = (await alice.get("/programs")).data.programs.find(x => x.name === "Bloc secret");
+  assert.equal((await bob.put("/program-follow", {program_id: secret.id})).status, 404);
+  // un seul programme à la fois : refus si Bob a déjà un programme sur ces dates
+  const own = await bob.post("/programs", {name: "Perso", start, end: addDays(start, 6)});
+  assert.equal(own.status, 200);
+  assert.equal((await bob.put("/program-follow", {program_id: pub.data.id})).status, 409);
+  assert.equal((await bob.del(`/programs/${own.data.id}`)).status, 200);
+  assert.equal((await bob.put("/program-follow", {program_id: pub.data.id})).status, 200);
+  // ni l'inverse : pas de programme personnel sur les dates du programme suivi
+  assert.equal((await bob.post("/programs", {name: "Perso 2", start, end: addDays(start, 6)})).status, 409);
+  // le programme suivi apparaît en lecture seule, avec son auteur
+  const data = (await bob.get("/program-data")).data,
+    followed = data.programs.find(x => x.id === pub.data.id);
+  assert.equal(followed.followed, 1);
+  assert.equal(followed.read_only, 1);
+  assert.equal(followed.author_first_name, "Alice");
+  assert.equal(data.wods[pub.data.id].length, 1);
+  // Bob ne peut pas modifier le programme suivi
+  assert.equal(
+    (await bob.post(`/programs/${pub.data.id}/wods`, {name: "intrus", activity_id: activityId, duration_minutes: 30}))
+      .status,
+    404
+  );
+  assert.equal((await bob.put(`/programs/${pub.data.id}`, {name: "pirate", start, end})).status, 404);
+  // séance sur un WOD du programme suivi ; « Autres » part dans « Hors programme »
+  const base = {
+    program_id: pub.data.id,
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 45,
+    movement_ids: [],
+    catalog_movement_ids: [],
+  };
+  const logged = await bob.post("/sessions", {...base, wod_id: wod.data.id});
+  assert.equal(logged.status, 200, JSON.stringify(logged.data));
+  const other = await bob.post("/sessions", {...base, wod_id: "other"});
+  assert.equal(other.status, 200, JSON.stringify(other.data));
+  const week = (await bob.get(`/week-data?from=${start}&to=${addDays(start, 6)}`)).data.sessions;
+  assert.equal(week.find(x => x.id === logged.data.id).program_name, "Bloc Engine public");
+  assert.equal(week.find(x => x.id === other.data.id).program_name, "Hors programme");
+  // l'auteur ne peut plus supprimer le WOD ni le programme réalisés par un suiveur
+  assert.equal((await alice.del(`/wods/${wod.data.id}`)).status, 409);
+  assert.equal((await alice.del(`/programs/${pub.data.id}`)).status, 409);
+  // arrêter de suivre : la séance reste dans l'historique
+  assert.equal((await bob.del("/program-follow")).status, 200);
+  const after = (await bob.get("/program-data")).data.programs.find(x => x.id === pub.data.id);
+  assert.equal(after.followed, 0);
+  assert.ok(
+    (await bob.get(`/week-data?from=${start}&to=${addDays(start, 6)}`)).data.sessions.some(x => x.id === logged.data.id)
+  );
+  // un utilisateur sans lien avec le programme n'y a pas accès
+  assert.equal((await carol.post("/sessions", {...base, wod_id: wod.data.id})).status, 404);
+});

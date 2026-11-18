@@ -196,7 +196,10 @@
         </section>
         <section id="view-programs" hidden>
           <div id="programlist"></div>
-          <div class="bottom-action"><button id="newprogram" class="primary">＋ Nouveau programme</button></div>
+          <div class="bottom-action">
+            <button id="findprogram" class="primary">Trouver un programme</button
+            ><button id="newprogram" class="primary">＋ Nouveau programme</button>
+          </div>
         </section>
         <section id="view-prs" hidden>
           <div class="toolbar section-toolbar pr-section-title">
@@ -452,8 +455,29 @@
             <label>Début<input name="start" type="date" required /></label
             ><label>Fin<input name="end" type="date" required /></label>
           </div>
+          <label class="checkbox-label" id="programpublicfield"
+            ><input type="checkbox" name="is_public" /> Programme public (les autres utilisateurs peuvent le trouver et
+            le suivre)</label
+          >
           <button class="primary" id="programsubmit">Créer le programme</button>
           <div class="error" id="programerror"></div>
+        </form>
+      </dialog>
+      <dialog id="programsearchdialog" class="modal">
+        <form id="programsearchform">
+          <div class="sectionhead">
+            <h2>Trouver un programme</h2>
+            <button type="button" class="iconbtn" data-close-dialog="programsearchdialog">×</button>
+          </div>
+          <p class="hint">
+            Programmes publics des autres utilisateurs. Tu ne suis qu’un programme à la fois, sans chevauchement avec
+            tes propres programmes en cours ou à venir.
+          </p>
+          <label
+            >Rechercher<input name="q" type="search" maxlength="60" placeholder="Nom du programme ou de l’auteur"
+          /></label>
+          <div id="programsearchresults" class="program-search-results"></div>
+          <div class="error" id="programsearcherror"></div>
         </form>
       </dialog>
       <dialog id="woddialog" class="modal">

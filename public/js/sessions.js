@@ -117,6 +117,7 @@ function programForDate(date) {
     programs.find(
       x =>
         !x.is_default &&
+        (!x.read_only || x.followed) &&
         !(x.start_monday === "1970-01-01" && x.end_monday === "2100-12-31") &&
         x.start_monday <= date &&
         x.end_monday >= date

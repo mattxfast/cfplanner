@@ -42,6 +42,13 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Un WOD de box déjà réalisé, une catégorie déjà utilisée dans un score et une box dont les WOD ont des séances ne peuvent plus être supprimés.
 - Un administrateur peut retirer le rôle de gestionnaire ; supprimer une box supprime ses adhésions, ses catégories et ses WOD.
 
+### Programmes publics
+- Un programme peut être public (case « Programme public » du formulaire de programme) ou privé (par défaut). Sa carte indique « public » et le nombre de personnes qui le suivent.
+- **Trouver un programme** (en bas de l'onglet Programmes) : recherche parmi les programmes publics des autres utilisateurs, par nom du programme ou de l'auteur (`GET /api/public-programs?q=…`, 50 résultats au plus).
+- **Suivre** un programme (`PUT /api/program-follow`) : on ne suit qu'un programme à la fois (suivre un autre programme remplace le précédent), et il ne doit chevaucher aucun de ses propres programmes en cours ou à venir (l'inverse est aussi refusé). Le programme suivi apparaît en lecture seule, toujours à jour (modifications de l'auteur en direct) ; pendant ses dates, c'est le programme de la semaine dans **Séances** (WOD, planification, séances). Une séance « Autres » est alors enregistrée « Hors programme ».
+- **Arrêter de suivre** (`DELETE /api/program-follow`) : les séances déjà enregistrées restent dans l'historique et l'export. Si l'auteur repasse son programme en privé, ceux qui le suivent déjà le gardent.
+- L'auteur ne peut plus supprimer un programme ou un WOD réalisé par un utilisateur qui le suit.
+
 ### Records personnels (PR)
 Les mouvements du catalogue sont répartis en quatre familles :
 
@@ -80,6 +87,7 @@ Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouve
   - les créations de séance et de PR envoient un `client_id` (UUID généré sur le téléphone) : `POST /api/sessions` et `POST /api/prs` l'utilisent comme identifiant et ne créent jamais de doublon en cas de rejeu ;
   - une modification refusée par le serveur lors du rejeu (par exemple une donnée devenue invalide) est retirée de la file avec un message ;
   - les demandes d'adhésion ou de gestion d'une box et les actions du gestionnaire (validation, retrait, catégories, WOD de la box) fonctionnent aussi hors ligne (la création d'une catégorie ou d'un WOD de box porte un `client_id`) ;
+  - suivre ou arrêter de suivre un programme est aussi mis en file d'attente ; la recherche de programmes publics affiche les derniers résultats consultés pour la même recherche ;
   - connexion, création de compte, déconnexion et administration nécessitent le réseau ; la déconnexion avertit s'il reste des modifications non synchronisées et efface les données locales.
 - Icônes dans `public/icons/` (SVG source + PNG 180, 192, 512 et 512 « maskable »).
 - Écran de démarrage : fond jaune, barre de musculation et « FitFactory ». Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
@@ -124,6 +132,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V14 ajoute les tables `boxes` (nom unique sans tenir compte de la casse, ville), `box_members` (box, utilisateur, rôle `member` ou `manager`, statut `pending` ou `approved`) et `box_categories` (catégories de score d'une box, ordonnées).
 - V15 ajoute la table `box_wods` (box, date, nom, contenu, type de score `time`, `reps`, `load` ou `none`), indexée par box et date.
 - V16 ajoute à `training_sessions` les colonnes `box_wod_id`, `score_value` et `score_category_id` (séance sur un WOD de box et son score), avec un index pour les classements.
+- V17 ajoute la colonne `programs.is_public` et la table `program_follows` (un programme suivi par utilisateur).
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
@@ -159,7 +168,7 @@ Lancer les tests d'intégration (Node.js 20+ ; démarrent le Worker en local sur
 node --test tests/*.test.mjs
 ```
 
-Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions, WOD de box, scores et classements (`tests/boxes.test.mjs`).
+Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions, WOD de box, scores, classements et programmes publics suivis (`tests/boxes.test.mjs`).
 
 Déployer le Worker et les assets :
 
