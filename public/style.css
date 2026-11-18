@@ -602,6 +602,19 @@ body.modal-open {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+/* iPhone : un champ date a une largeur minimale propre qui fait déborder sa colonne ; on la neutralise. */
+.two > label {
+  min-width: 0;
+}
+.two input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 46px;
+  text-align: left;
+}
 #toast {
   position: fixed;
   z-index: 30;
