@@ -1875,6 +1875,13 @@ button:disabled {
 .profile-card label:first-child {
   margin-top: 0;
 }
+.profile-card > p:first-child {
+  margin: 0;
+  font-size: 13px;
+}
+.profile-card .primary {
+  width: 100%;
+}
 .profile-card .primary {
   margin-top: 8px;
 }
@@ -4200,19 +4207,4 @@ button:active:not(:disabled) {
 .program-search-result small {
   display: block;
   color: var(--muted);
-}
-/* Administration : réglages par défaut (thème, rappels). */
-#view-admin .admin-defaults label {
-  margin: 8px 0;
-}
-#view-admin .admin-defaults .primary {
-  width: 100%;
-  margin-top: 6px;
-}
-/* Espace gestionnaire : infos de la box. */
-.box-info-form label {
-  margin: 0 0 10px;
-}
-.box-info-form .primary {
-  width: 100%;
 }

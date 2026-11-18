@@ -280,7 +280,7 @@ function renderManagedBox() {
       "info",
       "Box",
       "",
-      `<form id="boxinfoform" class="box-info-form"><label>Nom de la box<input name="name" maxlength="80" required value="${esc(d.box.name)}"></label><label>Ville<input name="city" maxlength="80" value="${esc(d.box.city || "")}"></label><button class="primary">Enregistrer</button></form>`
+      `<form id="boxinfoform" class="profile-card"><label>Nom de la box<input name="name" maxlength="80" required value="${esc(d.box.name)}"></label><label>Ville<input name="city" maxlength="80" value="${esc(d.box.city || "")}"></label><button class="primary">Enregistrer</button></form>`
     ) +
     boxGroup(
       "categories",
