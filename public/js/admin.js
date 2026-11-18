@@ -1,6 +1,24 @@
 // FitFactory — administration : utilisateurs, catalogue de mouvements, activités.
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 
+// Espace d’administration : une page à la fois (utilisateurs ; box, gestionnaires et mouvements ; autres paramétrages).
+let adminPage = "users";
+function showAdminPage() {
+  document
+    .querySelectorAll("#view-admin [data-admin-page]")
+    .forEach(g => (g.hidden = g.dataset.adminPage !== adminPage));
+  document
+    .querySelectorAll("#adminnav [data-admin-page]")
+    .forEach(b => b.classList.toggle("active", b.dataset.adminPage === adminPage));
+}
+document.querySelectorAll("#adminnav [data-admin-page]").forEach(
+  b =>
+    (b.onclick = () => {
+      adminPage = b.dataset.adminPage;
+      showAdminPage();
+      scrollTo(0, 0);
+    })
+);
 async function loadAdmin() {
   if (!isAdmin) return;
   const [a, u, m, b, st] = await Promise.all([
