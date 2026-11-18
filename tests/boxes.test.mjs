@@ -371,7 +371,9 @@ test("préférences : thème et rappels propres au compte, valeurs par défaut f
   await erin.post("/register", {email: "erin@test.local", password: PASSWORD});
   let prefs = (await erin.get("/preferences")).data;
   assert.equal(prefs.theme, null);
-  assert.equal(prefs.default_theme, "auto");
+  assert.equal(prefs.default_theme, "dark");
+  assert.equal(prefs.choices.themes.includes("auto"), false, "plus de thème « Automatique »");
+  assert.equal((await erin.put("/preferences", {theme: "auto"})).status, 400);
   assert.deepEqual(prefs.reminders, {enabled: 1, days: 3, hour: 18});
   // seul un admin fixe les valeurs par défaut
   const defaults = {theme: "dark", reminder_days: 5, reminder_hour: 7, reminders_enabled: false};

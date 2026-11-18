@@ -340,6 +340,12 @@ async function ensureV2Schema(env) {
       if (!reminders.has("enabled"))
         await env.DB.prepare("ALTER TABLE reminder_settings ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1").run();
     });
+    await runMigration("v20-remove-auto-theme", async () => {
+      // Le thème « Automatique (selon le téléphone) » est supprimé : un compte réglé ainsi suit le thème par défaut,
+      // et un thème par défaut « auto » devient « Sombre ».
+      await env.DB.prepare("UPDATE users SET theme=NULL WHERE theme='auto'").run();
+      await env.DB.prepare("UPDATE app_settings SET value='dark' WHERE key='default_theme' AND value='auto'").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -351,7 +357,7 @@ const REMINDER_DAYS = [2, 3, 4, 5, 7],
   REMINDER_HOURS = [7, 12, 18, 20];
 // Réglages par défaut définis par un administrateur (table app_settings) : thème et rappels des comptes qui n'ont
 // rien choisi. Le thème et les rappels sont propres à chaque compte, quel que soit l'appareil.
-const THEMES = ["auto", "light", "dark", "massilia", "massilia2"];
+const THEMES = ["light", "dark", "massilia", "massilia2"];
 async function appDefaults(e) {
   const rows = (
       await e.DB.prepare(
@@ -360,7 +366,7 @@ async function appDefaults(e) {
     ).results,
     v = Object.fromEntries(rows.map(x => [x.key, x.value]));
   return {
-    theme: THEMES.includes(v.default_theme) ? v.default_theme : "auto",
+    theme: THEMES.includes(v.default_theme) ? v.default_theme : "dark",
     reminder_days: REMINDER_DAYS.includes(Number(v.default_reminder_days)) ? Number(v.default_reminder_days) : 3,
     reminder_hour: REMINDER_HOURS.includes(Number(v.default_reminder_hour)) ? Number(v.default_reminder_hour) : 18,
     reminders_enabled: v.default_reminders_enabled === "0" ? 0 : 1,

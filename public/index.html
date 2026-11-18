@@ -78,9 +78,9 @@
     <script>
       (function () {
         try {
-          var t = localStorage.getItem("fitfactory-theme") || localStorage.getItem("cfplanner-theme") || "auto",
-            d = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.dataset.theme = t === "massilia" || t === "massilia2" ? t : d ? "dark" : "light";
+          var t = localStorage.getItem("fitfactory-theme") || localStorage.getItem("cfplanner-theme");
+          document.documentElement.dataset.theme =
+            ["light", "dark", "massilia", "massilia2"].indexOf(t) >= 0 ? t : "dark";
         } catch (e) {}
       })();
     </script>
@@ -459,7 +459,6 @@
                 <p class="muted">Thème de l’application pour ton compte, sur tous tes appareils.</p>
                 <label class="theme-select"
                   >Thème<select id="themeselect">
-                    <option value="auto">Automatique (selon le téléphone)</option>
                     <option value="light">Clair</option>
                     <option value="dark">Sombre</option>
                     <option value="massilia">Massilia CrossFit</option>

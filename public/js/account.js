@@ -18,7 +18,7 @@ $("#profileform").onsubmit = async e => {
   }
 };
 
-// Thème effectif gardé sur l’appareil (copie du thème du compte) ; « auto » suit le réglage du téléphone.
+// Thème effectif gardé sur l’appareil (copie du thème du compte) ; « Sombre » si rien n’est encore connu.
 function themePreference() {
   try {
     const old = localStorage.getItem("cfplanner-theme");
@@ -26,28 +26,22 @@ function themePreference() {
       if (localStorage.getItem("fitfactory-theme") === null) localStorage.setItem("fitfactory-theme", old);
       localStorage.removeItem("cfplanner-theme");
     }
-    return localStorage.getItem("fitfactory-theme") || "auto";
+    const theme = localStorage.getItem("fitfactory-theme");
+    return THEME_BAR_COLORS[theme] ? theme : "dark";
   } catch {
-    return "auto";
+    return "dark";
   }
 }
-// Thèmes : « auto » suit le téléphone (clair/sombre) ; les autres sont appliqués tels quels (data-theme sur <html>).
+// Thèmes appliqués tels quels (data-theme sur <html>).
 const THEME_BAR_COLORS = {light: "#f5f5f0", dark: "#121212", massilia: "#f4f4f4", massilia2: "#0d0d0d"};
 function applyTheme() {
-  const pref = themePreference(),
-    theme =
-      THEME_BAR_COLORS[pref] && pref !== "auto"
-        ? pref
-        : matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
+  const theme = themePreference();
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLORS[theme]);
 }
 // Thème du compte (et non de l’appareil) : enregistré sur le serveur ; « Par défaut » suit le thème choisi par
 // l’administrateur. Le thème effectif est recopié sur l’appareil pour s’afficher dès l’ouverture (avant connexion).
 const THEME_NAMES = {
-  auto: "Automatique (selon le téléphone)",
   light: "Clair",
   dark: "Sombre",
   massilia: "Massilia CrossFit",
@@ -72,7 +66,7 @@ function setPreferences(d) {
 }
 $("#themeselect").onchange = async e => {
   const theme = e.target.value === "default" ? null : e.target.value;
-  cacheTheme(theme || preferences?.default_theme || "auto");
+  cacheTheme(theme || preferences?.default_theme || "dark");
   try {
     await api("/preferences", {method: "PUT", body: JSON.stringify({theme})});
     if (preferences) preferences.theme = theme;
@@ -81,5 +75,4 @@ $("#themeselect").onchange = async e => {
     toast(x.message);
   }
 };
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 applyTheme();
