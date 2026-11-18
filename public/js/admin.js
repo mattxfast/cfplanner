@@ -172,7 +172,8 @@ document.querySelectorAll("[data-admin-add]").forEach(
 document
   .querySelectorAll("[data-close-dialog]")
   .forEach(b => (b.onclick = () => $("#" + b.dataset.closeDialog).close()));
-document.querySelectorAll("#view-admin .admin-group-title").forEach(h => {
+// Rubriques repliables de l’administration et de « Mon compte ».
+document.querySelectorAll("#view-admin .admin-group-title, #view-account .admin-group-title").forEach(h => {
   const toggle = () => {
     const group = h.closest(".admin-group");
     group.classList.toggle("collapsed");

@@ -428,72 +428,101 @@
           </form>
         </dialog>
         <section id="view-account" hidden>
-          <div class="page-banner"><h2>Mon compte</h2></div>
-          <div class="account-heading"><h3>Profil</h3></div>
-          <form id="profileform" class="profile-card">
-            <label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required /></label
-            ><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required /></label
-            ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label
-            ><button class="primary">Enregistrer mes informations</button>
-            <div id="profileerror" class="error"></div>
-          </form>
-          <div class="account-heading"><h3>Mes box</h3></div>
-          <section class="profile-export-card" id="boxcard">
-            <p class="muted">
-              Rejoins ta box pour enregistrer ses WOD et voir les classements. Chaque demande est validée par un
-              gestionnaire de la box (ou par un administrateur pour devenir gestionnaire).
-            </p>
-            <div id="myboxlist" class="box-membership-list"></div>
-            <label>Box<select id="boxjoinselect"></select></label>
-            <div class="two">
-              <button type="button" class="primary" id="boxjoin">Demander l’adhésion</button
-              ><button type="button" class="primary" id="boxmanagerrequest">Devenir gestionnaire</button>
+          <section class="admin-group" data-account-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Profil</span>
             </div>
-            <div id="boxjoinerror" class="error" role="status"></div>
-          </section>
-          <div class="account-heading"><h3>Apparence</h3></div>
-          <section class="profile-export-card">
-            <p class="muted">Thème de l’application pour ton compte, sur tous tes appareils.</p>
-            <label class="theme-select"
-              >Thème<select id="themeselect">
-                <option value="auto">Automatique (selon le téléphone)</option>
-                <option value="light">Clair</option>
-                <option value="dark">Sombre</option>
-                <option value="massilia">Massilia CrossFit</option>
-                <option value="massilia2">Massilia CrossFit 2</option>
-              </select></label
-            >
-          </section>
-          <div class="account-heading"><h3>Rappels</h3></div>
-          <section class="profile-export-card" id="remindercard">
-            <p class="muted">
-              Une notification si tu n’as pas enregistré de séance depuis quelques jours. Réglage de ton compte, envoyé
-              sur chaque appareil où les notifications sont autorisées.
-            </p>
-            <label class="reminder-switch"><input type="checkbox" id="reminderenabled" />Activer les rappels</label>
-            <p id="reminderhint" class="reminder-hint" hidden></p>
-            <button type="button" class="smallbtn" id="reminderallow" hidden>
-              Recevoir les rappels sur cet appareil
-            </button>
-            <div id="reminderoptions" class="reminder-options" hidden>
-              <p class="reminder-legend">Me rappeler après</p>
-              <div
-                class="choice-chips"
-                id="reminderdays"
-                role="radiogroup"
-                aria-label="Nombre de jours sans séance"
-              ></div>
-              <p class="reminder-legend">Vers</p>
-              <div class="choice-chips" id="reminderhours" role="radiogroup" aria-label="Heure du rappel"></div>
-              <button type="button" class="smallbtn" id="remindertest">Envoyer une notification de test</button>
+            <div class="admin-group-body">
+              <form id="profileform" class="profile-card">
+                <label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required /></label
+                ><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required /></label
+                ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label
+                ><button class="primary">Enregistrer mes informations</button>
+                <div id="profileerror" class="error"></div>
+              </form>
             </div>
-            <div id="reminderstatus" class="error" role="status"></div>
           </section>
-          <div class="account-heading"><h3>Export Excel</h3></div>
-          <section class="profile-export-card">
-            <p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p>
-            <button type="button" class="primary" id="exportexcel">Exporter les données</button>
-            <div id="exportexcelstatus" class="error" role="status"></div>
+          <section class="admin-group" data-account-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Mes box</span>
+            </div>
+            <div class="admin-group-body">
+              <section class="profile-export-card" id="boxcard">
+                <p class="muted">
+                  Rejoins ta box pour enregistrer ses WOD et voir les classements. Chaque demande est validée par un
+                  gestionnaire de la box (ou par un administrateur pour devenir gestionnaire).
+                </p>
+                <div id="myboxlist" class="box-membership-list"></div>
+                <label>Box<select id="boxjoinselect"></select></label>
+                <div class="two">
+                  <button type="button" class="primary" id="boxjoin">Demander l’adhésion</button
+                  ><button type="button" class="primary" id="boxmanagerrequest">Devenir gestionnaire</button>
+                </div>
+                <div id="boxjoinerror" class="error" role="status"></div>
+              </section>
+            </div>
+          </section>
+          <section class="admin-group" data-account-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Apparence</span>
+            </div>
+            <div class="admin-group-body">
+              <section class="profile-export-card">
+                <p class="muted">Thème de l’application pour ton compte, sur tous tes appareils.</p>
+                <label class="theme-select"
+                  >Thème<select id="themeselect">
+                    <option value="auto">Automatique (selon le téléphone)</option>
+                    <option value="light">Clair</option>
+                    <option value="dark">Sombre</option>
+                    <option value="massilia">Massilia CrossFit</option>
+                    <option value="massilia2">Massilia CrossFit 2</option>
+                  </select></label
+                >
+              </section>
+            </div>
+          </section>
+          <section class="admin-group" data-account-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Rappels</span>
+            </div>
+            <div class="admin-group-body">
+              <section class="profile-export-card" id="remindercard">
+                <p class="muted">
+                  Une notification si tu n’as pas enregistré de séance depuis quelques jours. Réglage de ton compte,
+                  envoyé sur chaque appareil où les notifications sont autorisées.
+                </p>
+                <label class="reminder-switch"><input type="checkbox" id="reminderenabled" />Activer les rappels</label>
+                <p id="reminderhint" class="reminder-hint" hidden></p>
+                <button type="button" class="smallbtn" id="reminderallow" hidden>
+                  Recevoir les rappels sur cet appareil
+                </button>
+                <div id="reminderoptions" class="reminder-options" hidden>
+                  <p class="reminder-legend">Me rappeler après</p>
+                  <div
+                    class="choice-chips"
+                    id="reminderdays"
+                    role="radiogroup"
+                    aria-label="Nombre de jours sans séance"
+                  ></div>
+                  <p class="reminder-legend">Vers</p>
+                  <div class="choice-chips" id="reminderhours" role="radiogroup" aria-label="Heure du rappel"></div>
+                  <button type="button" class="smallbtn" id="remindertest">Envoyer une notification de test</button>
+                </div>
+                <div id="reminderstatus" class="error" role="status"></div>
+              </section>
+            </div>
+          </section>
+          <section class="admin-group" data-account-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Export Excel</span>
+            </div>
+            <div class="admin-group-body">
+              <section class="profile-export-card">
+                <p class="muted">Télécharger le bilan hebdomadaire des entraînements et des mouvements travaillés.</p>
+                <button type="button" class="primary" id="exportexcel">Exporter les données</button>
+                <div id="exportexcelstatus" class="error" role="status"></div>
+              </section>
+            </div>
           </section>
         </section>
       </section>
