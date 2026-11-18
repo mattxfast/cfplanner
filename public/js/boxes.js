@@ -181,6 +181,8 @@ async function loadManagedBox() {
     toast(e.message);
   }
 }
+// Rubrique vide de l’espace gestionnaire : message au style d’une ligne de rubrique.
+const boxEmpty = text => `<div class="admin-row section-empty"><span>${esc(text)}</span></div>`;
 // Rubrique repliable au style des rubriques d’administration.
 function boxGroup(key, title, actions, body) {
   const folded = boxFolded.has(key);
@@ -197,7 +199,7 @@ function boxWodsGroup(d) {
         w =>
           `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(boxWodLabel(w))}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
       )
-      .join("") || `<div class="card empty">Aucun WOD cette semaine.</div>`
+      .join("") || boxEmpty("Pas de WOD cette semaine")
   }</div></div>`;
 }
 function openBoxWod(w = null) {
@@ -288,7 +290,7 @@ function renderManagedBox() {
           x =>
             `<div class="admin-row"><span>${person(x)}</span><span class="admin-row-actions"><button class="smallbtn" data-member-decision="1" data-user="${x.user_id}" aria-label="Valider" title="Valider l’adhésion">${BOX_ICONS.ok}</button><button class="smallbtn delete" data-member-decision="0" data-user="${x.user_id}" aria-label="Refuser" title="Refuser la demande">${BOX_ICONS.del}</button></span></div>`
         )
-        .join("") || `<p class="muted">Aucune demande en attente.</p>`
+        .join("") || boxEmpty("Pas de demande en attente")
     ) +
     boxGroup(
       "members",
@@ -299,7 +301,7 @@ function renderManagedBox() {
           x =>
             `<div class="admin-row"><span>${person(x)}${x.is_manager ? ` <span class="tracked-tag">Gestionnaire</span>` : ""}</span><span class="admin-row-actions"><button class="smallbtn delete" data-remove-member="${x.user_id}" aria-label="Retirer de la box" title="${x.is_manager ? "Un gestionnaire ne peut pas être retiré" : "Retirer de la box"}" ${x.is_manager ? "disabled" : ""}>${BOX_ICONS.del}</button></span></div>`
         )
-        .join("") || `<p class="muted">Aucun membre.</p>`
+        .join("") || boxEmpty("Pas de membre")
     );
   const infoPage = () =>
     boxGroup(
@@ -344,7 +346,7 @@ function boxListGroup(kind, items) {
         (c, i) =>
           `<div class="admin-row"><span>${esc(c.name)}${kind === "wod-types" && i === 0 ? ` <span class="tracked-tag">Par défaut</span>` : ""}</span><span class="admin-row-actions">${reorder ? `<button class="smallbtn admin-reorder" data-list-move="${kind}" data-id="${c.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i === 0 ? "disabled" : ""}>${BOX_ICONS.up}</button><button class="smallbtn admin-reorder" data-list-move="${kind}" data-id="${c.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i === items.length - 1 ? "disabled" : ""}>${BOX_ICONS.down}</button>` : ""}<button class="smallbtn" data-list-edit="${kind}" data-id="${c.id}" aria-label="Renommer" title="Renommer">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-list-del="${kind}" data-id="${c.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
       )
-      .join("") || `<p class="muted">Liste vide.</p>`
+      .join("") || boxEmpty("Pas d’élément dans cette liste")
   );
 }
 function bindBoxLists(root, d) {

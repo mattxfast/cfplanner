@@ -4262,6 +4262,7 @@ button:active:not(:disabled) {
 /* Séances : rubrique vide, message au style d'un contenu de rubrique (ligne de liste unifiée, texte discret). */
 #view-sessions [data-session-fold] .weekwod.section-empty,
 #view-sessions .weekwod.section-empty,
-#view-programs .program-section .movement-row.section-empty {
+#view-programs .program-section .movement-row.section-empty,
+#view-box .admin-row.section-empty {
   color: var(--muted);
 }
