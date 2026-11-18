@@ -4,32 +4,64 @@
 // (Screen Wake Lock) et des bips signalent le décompte 3-2-1 et chaque changement de phase.
 
 const TIMER_PREP = 10; // secondes de décompte avant le départ
+// Valeurs proposées par les boutons −/＋ (en secondes pour les durées).
+const timerRange = (from, to, step) =>
+  Array.from({length: Math.floor((to - from) / step) + 1}, (_, i) => from + i * step);
+// AMRAP et EMOM : 15 s, 20 s, 30 s, 45 s, puis toutes les 15 s jusqu’à 3 min, 3 min 30, 4 min, puis chaque minute.
+const TIMER_DURATIONS = [15, 20, 30, 45, ...timerRange(60, 180, 15), 210, 240, ...timerRange(300, 3600, 60)];
+// Tabata : chaque seconde jusqu’à 30 s, 5 s jusqu’à 1 min, 10 s jusqu’à 3 min, 15 s jusqu’à 8 min, 30 s jusqu’à
+// 10 min, puis chaque minute jusqu’à 15 min.
+const TIMER_INTERVALS = [
+  ...timerRange(1, 30, 1),
+  ...timerRange(35, 60, 5),
+  ...timerRange(70, 180, 10),
+  ...timerRange(195, 480, 15),
+  ...timerRange(510, 600, 30),
+  ...timerRange(660, 900, 60),
+];
+// 75 → « 1 min 15 », 60 → « 1 min », 20 → « 20 s ».
+const timerDuration = sec =>
+  sec < 60 ? sec + " s" : Math.floor(sec / 60) + " min" + (sec % 60 ? " " + String(sec % 60).padStart(2, "0") : "");
 const TIMER_MODES = {
   fortime: {
     label: "For Time",
     hint: "Chrono croissant, avec un temps limite facultatif.",
-    fields: [{key: "cap", label: "Temps limite", unit: "min", min: 0, max: 90, step: 1, value: 0, zero: "aucun"}],
+    fields: [
+      {
+        key: "cap",
+        label: "Temps limite",
+        values: timerRange(0, 90, 1),
+        value: 0,
+        format: v => (v ? v + " min" : "aucun"),
+      },
+    ],
   },
   amrap: {
     label: "AMRAP",
     hint: "Un maximum de tours pendant la durée choisie.",
-    fields: [{key: "minutes", label: "Durée", unit: "min", min: 1, max: 90, step: 1, value: 12}],
+    fields: [{key: "duration", label: "Durée", values: TIMER_DURATIONS, value: 720, format: timerDuration}],
   },
   emom: {
     label: "EMOM",
     hint: "Un travail au début de chaque intervalle.",
     fields: [
-      {key: "every", label: "Toutes les", unit: "s", min: 10, max: 600, step: 10, value: 60},
-      {key: "rounds", label: "Tours", unit: "", min: 1, max: 99, step: 1, value: 10},
+      {key: "every", label: "Toutes les", values: TIMER_DURATIONS, value: 60, format: timerDuration},
+      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 10, format: String},
     ],
   },
   tabata: {
     label: "Tabata",
     hint: "Alternance travail / repos (20 s / 10 s × 8 par défaut).",
     fields: [
-      {key: "work", label: "Travail", unit: "s", min: 5, max: 600, step: 5, value: 20},
-      {key: "rest", label: "Repos", unit: "s", min: 0, max: 600, step: 5, value: 10},
-      {key: "rounds", label: "Tours", unit: "", min: 1, max: 99, step: 1, value: 8},
+      {key: "work", label: "Travail", values: TIMER_INTERVALS, value: 20, format: timerDuration},
+      {
+        key: "rest",
+        label: "Repos",
+        values: [0, ...TIMER_INTERVALS],
+        value: 10,
+        format: v => (v ? timerDuration(v) : "aucun"),
+      },
+      {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 8, format: String},
     ],
   },
 };
@@ -48,6 +80,7 @@ const timer = {
   frame: 0,
   wakeLock: null,
   audio: null,
+  repeat: 0,
 };
 
 function timerLoadSettings() {
@@ -55,12 +88,15 @@ function timerLoadSettings() {
     const saved = JSON.parse(localStorage.getItem("fitfactory-timer") || "{}");
     if (TIMER_MODES[saved.mode]) timer.mode = saved.mode;
     timer.settings = saved.settings || {};
+    // Anciens réglages : durée de l’AMRAP enregistrée en minutes.
+    const amrap = timer.settings.amrap;
+    if (amrap && amrap.duration === undefined && amrap.minutes) amrap.duration = amrap.minutes * 60;
   } catch {}
   for (const [mode, def] of Object.entries(TIMER_MODES)) {
     timer.settings[mode] = timer.settings[mode] || {};
     for (const f of def.fields) {
       const v = Number(timer.settings[mode][f.key]);
-      timer.settings[mode][f.key] = Number.isFinite(v) && v >= f.min && v <= f.max ? v : f.value;
+      timer.settings[mode][f.key] = f.values.includes(v) ? v : f.value;
     }
   }
 }
@@ -78,11 +114,11 @@ function timerBuildPlan() {
     plan.push({
       kind: "work",
       label: "For Time",
-      big: s.cap ? s.cap + " min" : "Sans limite",
+      big: s.cap ? s.cap + " min" : "",
       duration: s.cap ? s.cap * 60 : Infinity,
       countUp: true,
     });
-  if (timer.mode === "amrap") plan.push({kind: "work", label: "AMRAP", duration: s.minutes * 60});
+  if (timer.mode === "amrap") plan.push({kind: "work", label: "AMRAP", duration: s.duration});
   if (timer.mode === "emom")
     for (let i = 1; i <= s.rounds; i++)
       plan.push({kind: "work", label: "EMOM", big: `Tour ${i} / ${s.rounds}`, duration: s.every});
@@ -117,7 +153,8 @@ function timerSegmentAt(t) {
   return null;
 }
 
-// Sons : bips courts (3-2-1), long (« Go », changement de phase, fin) et double bip aigu (mi-temps).
+// Sons (onde carrée, aigus et forts) : bips courts (3-2-1), long (« Go », changement de phase, fin) et double bip
+// très aigu (mi-temps).
 // Le contexte audio est créé au premier toucher. Sur iPhone, la session audio « playback » fait sonner les bips
 // même quand le bouton silencieux est activé (iOS 17 et plus).
 function timerTone(freq, at, length) {
@@ -125,9 +162,10 @@ function timerTone(freq, at, length) {
     osc = ctx.createOscillator(),
     gain = ctx.createGain(),
     t0 = ctx.currentTime + at;
+  osc.type = "square"; // timbre plus perçant qu’une sinusoïde, s’entend mieux pendant l’effort
   osc.frequency.value = freq;
   gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(0.6, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.9, t0 + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + length);
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
@@ -139,9 +177,9 @@ function timerBeep(kind = "short") {
     timer.audio = timer.audio || new (window.AudioContext || window.webkitAudioContext)();
     if (timer.audio.state !== "running") timer.audio.resume();
     if (kind === "mid") {
-      timerTone(1175, 0, 0.15);
-      timerTone(1175, 0.22, 0.15);
-    } else timerTone(kind === "long" ? 880 : 660, 0, kind === "long" ? 0.6 : 0.18);
+      timerTone(2349, 0, 0.18);
+      timerTone(2349, 0.26, 0.18);
+    } else timerTone(kind === "long" ? 1760 : 1319, 0, kind === "long" ? 0.7 : 0.22);
     if (navigator.vibrate) navigator.vibrate(kind === "long" ? 300 : kind === "mid" ? [80, 60, 80] : 80);
   } catch {}
 }
@@ -181,7 +219,7 @@ function timerRender() {
       total = plan.slice(1).reduce((n, s) => n + s.duration, 0);
     phase.textContent = TIMER_MODES[timer.mode].label;
     clock.textContent = timer.mode === "fortime" ? "00:00" : timerFormat(plan[1].duration);
-    sub.textContent = Number.isFinite(total) ? "Durée totale : " + timerFormat(total) : "Sans temps limite";
+    sub.textContent = Number.isFinite(total) ? "Durée totale : " + timerFormat(total) : "";
     bar.style.width = "0%";
   } else if (timer.state === "done") {
     phase.textContent = "Terminé !";
@@ -303,23 +341,41 @@ function timerRenderSettings() {
     .map(
       f => `<div class="timer-field"><span class="timer-field-label">${esc(f.label)}</span><div class="timer-stepper">
       <button type="button" class="smallbtn" data-step="${f.key}" data-dir="-1" aria-label="Moins">−</button>
-      <output>${values[f.key] === 0 && f.zero ? esc(f.zero) : values[f.key] + (f.unit ? " " + f.unit : "")}</output>
+      <output>${esc(f.format(values[f.key]))}</output>
       <button type="button" class="smallbtn" data-step="${f.key}" data-dir="1" aria-label="Plus">＋</button></div></div>`
     )
     .join("");
+  // Un appui change d’un cran ; un appui maintenu fait défiler les valeurs.
   $("#timerfields")
     .querySelectorAll("[data-step]")
-    .forEach(
-      b =>
-        (b.onclick = () => {
-          const f = def.fields.find(x => x.key === b.dataset.step);
-          values[f.key] = Math.min(f.max, Math.max(f.min, values[f.key] + Number(b.dataset.dir) * f.step));
+    .forEach(b => {
+      const f = def.fields.find(x => x.key === b.dataset.step),
+        step = () => {
+          const i = f.values.indexOf(values[f.key]) + Number(b.dataset.dir);
+          if (i < 0 || i >= f.values.length) return timerStopRepeat();
+          values[f.key] = f.values[i];
+          b.parentElement.querySelector("output").textContent = f.format(values[f.key]);
           timerSaveSettings();
-          timerRenderSettings();
-        })
-    );
+          timerRender();
+        };
+      b.onpointerdown = event => {
+        event.preventDefault();
+        timerStopRepeat();
+        step();
+        timer.repeat = setTimeout(function again() {
+          step();
+          if (timer.repeat) timer.repeat = setTimeout(again, 90);
+        }, 450);
+      };
+      b.onclick = event => event.detail === 0 && step(); // clavier (le toucher est géré par pointerdown)
+    });
   timerRender();
 }
+function timerStopRepeat() {
+  clearTimeout(timer.repeat);
+  timer.repeat = 0;
+}
+["pointerup", "pointercancel", "blur"].forEach(type => window.addEventListener(type, timerStopRepeat));
 
 timerLoadSettings();
 $("#timerstart").onclick = () => (timer.state === "done" ? (timerStop("idle"), timerStart()) : timerStart());
