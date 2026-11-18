@@ -291,10 +291,15 @@ function renderPrograms() {
 }
 // Programme public d'un autre utilisateur, suivi en lecture seule (mis à jour en direct par son auteur).
 function followedProgramCard(p) {
+  // Lecture seule, mais le programme et ses rubriques se plient et se déplient comme ceux de l’utilisateur.
   const author = [p.author_first_name, p.author_last_name].filter(Boolean).join(" "),
     week = mondayOf(today()),
-    movements = movementsByProgram[p.id] || [];
-  return `<article class="program card program-followed"><div class="programhead"><div class="program-title"><div><h3>${esc(p.name)} <span class="tracked-tag">Suivi</span></h3><small>${author ? "par " + esc(author) + " · " : ""}mes dates : ${fmt(p.start_monday)} → ${fmt(p.end_monday)}</small></div></div></div><div class="programbody"><div class="program-section program-subsection"><div class="program-section-heading program-section-toolbar"><span>WOD</span></div><div class="program-subsection-body"><div class="wodlist">${
+    movements = movementsByProgram[p.id] || [],
+    collapsed = window.cfCollapsedPrograms || (window.cfCollapsedPrograms = new Set()),
+    folded = window.cfProgramSections || (window.cfProgramSections = new Set()),
+    fold = (key, label) =>
+      `<button class="smallbtn section-collapse program-section-toggle" data-toggle-program-section="${p.id}:${key}" aria-label="${label}" aria-expanded="${!folded.has(p.id + ":" + key)}">${folded.has(p.id + ":" + key) ? "＋" : "−"}</button>`;
+  return `<article class="program card program-followed ${collapsed.has(p.id) ? "collapsed" : ""}"><div class="programhead"><div class="program-title"><button class="smallbtn collapse-program" data-toggle-program="${p.id}" aria-expanded="${!collapsed.has(p.id)}">${collapsed.has(p.id) ? "＋" : "−"}</button><div><h3>${esc(p.name)} <span class="tracked-tag">Suivi</span></h3><small>${author ? "par " + esc(author) + " · " : ""}mes dates : ${fmt(p.start_monday)} → ${fmt(p.end_monday)}</small></div></div></div><div class="programbody"><div class="program-section program-subsection ${folded.has(p.id + ":wods") ? "collapsed" : ""}"><div class="program-section-heading program-section-toolbar">${fold("wods", "Replier les WOD")}<span>WOD</span></div><div class="program-subsection-body"><div class="wodlist">${
     visibleWods(p.id)
       .map(w => {
         const content = weeklyWodContent(w.id, week) || w.planned_comment;
@@ -303,7 +308,7 @@ function followedProgramCard(p) {
       .join("") || "<p class='muted'>Aucun WOD dans ce programme.</p>"
   }</div></div></div>${
     movements.length
-      ? `<div class="movement-editor compact program-section program-subsection"><div class="program-section-heading program-section-toolbar"><span>Focus mouvement</span></div><div class="program-subsection-body"><div class="program-movement-list">${movements.map(m => `<div class="movement-row"><span>${esc(m.name)}</span></div>`).join("")}</div></div></div>`
+      ? `<div class="movement-editor compact program-section program-subsection ${folded.has(p.id + ":movements") ? "collapsed" : ""}"><div class="program-section-heading program-section-toolbar">${fold("movements", "Replier les mouvements")}<span>Focus mouvement</span></div><div class="program-subsection-body"><div class="program-movement-list">${movements.map(m => `<div class="movement-row"><span>${esc(m.name)}</span></div>`).join("")}</div></div></div>`
       : ""
   }<div class="program-follow-actions"><button type="button" class="smallbtn" data-follow-dates="${p.id}">Modifier mes dates</button><button type="button" class="smallbtn" data-unfollow-program="${p.id}">Arrêter de suivre</button></div></div></article>`;
 }
