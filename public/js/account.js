@@ -18,7 +18,7 @@ $("#profileform").onsubmit = async e => {
   }
 };
 
-// Thème clair / sombre : préférence mémorisée sur l’appareil, « auto » suit le réglage du téléphone.
+// Thème effectif gardé sur l’appareil (copie du thème du compte) ; « auto » suit le réglage du téléphone.
 function themePreference() {
   try {
     const old = localStorage.getItem("cfplanner-theme");
@@ -44,12 +44,42 @@ function applyTheme() {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLORS[theme]);
 }
-$("#themeselect").value = THEME_BAR_COLORS[themePreference()] ? themePreference() : "auto";
-$("#themeselect").onchange = e => {
+// Thème du compte (et non de l’appareil) : enregistré sur le serveur ; « Par défaut » suit le thème choisi par
+// l’administrateur. Le thème effectif est recopié sur l’appareil pour s’afficher dès l’ouverture (avant connexion).
+const THEME_NAMES = {
+  auto: "Automatique (selon le téléphone)",
+  light: "Clair",
+  dark: "Sombre",
+  massilia: "Massilia CrossFit",
+  massilia2: "Massilia CrossFit 2",
+};
+let preferences = null;
+function cacheTheme(theme) {
   try {
-    localStorage.setItem("fitfactory-theme", e.target.value);
+    localStorage.setItem("fitfactory-theme", theme);
   } catch {}
   applyTheme();
+}
+function setPreferences(d) {
+  preferences = d;
+  const select = $("#themeselect");
+  select.innerHTML =
+    `<option value="default">Par défaut (${esc(THEME_NAMES[d.default_theme] || d.default_theme)})</option>` +
+    d.choices.themes.map(t => `<option value="${t}">${esc(THEME_NAMES[t] || t)}</option>`).join("");
+  select.value = d.theme || "default";
+  cacheTheme(d.theme || d.default_theme);
+  renderReminders();
+}
+$("#themeselect").onchange = async e => {
+  const theme = e.target.value === "default" ? null : e.target.value;
+  cacheTheme(theme || preferences?.default_theme || "auto");
+  try {
+    await api("/preferences", {method: "PUT", body: JSON.stringify({theme})});
+    if (preferences) preferences.theme = theme;
+    toast("Thème enregistré pour ton compte.");
+  } catch (x) {
+    toast(x.message);
+  }
 };
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 applyTheme();

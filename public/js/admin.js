@@ -3,16 +3,48 @@
 
 async function loadAdmin() {
   if (!isAdmin) return;
-  const [a, u, m, b] = await Promise.all([
+  const [a, u, m, b, st] = await Promise.all([
     api("/admin/activities"),
     api("/admin/users"),
     api("/admin/movements"),
     api("/admin/boxes"),
+    api("/admin/settings"),
   ]);
   activities = a.activities;
+  renderAdminDefaults(st);
   renderAdmin(u.users, m.movements);
   renderAdminBoxes(b.boxes, b.managers);
 }
+// Réglages par défaut des comptes : thème et rappels (chaque utilisateur peut ensuite faire son propre choix).
+function renderAdminDefaults(st) {
+  const f = $("#defaultsform").elements;
+  f.theme.innerHTML = st.choices.themes.map(t => `<option value="${t}">${esc(THEME_NAMES[t] || t)}</option>`).join("");
+  f.theme.value = st.theme;
+  f.reminder_days.innerHTML = st.choices.days.map(d => `<option value="${d}">${d} jours sans séance</option>`).join("");
+  f.reminder_days.value = st.reminder_days;
+  f.reminder_hour.innerHTML = st.choices.hours.map(h => `<option value="${h}">${h} h</option>`).join("");
+  f.reminder_hour.value = st.reminder_hour;
+  f.reminders_enabled.checked = !!st.reminders_enabled;
+}
+$("#defaultsform").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    await api("/admin/settings", {
+      method: "PUT",
+      body: JSON.stringify({
+        theme: f.theme.value,
+        reminder_days: Number(f.reminder_days.value),
+        reminder_hour: Number(f.reminder_hour.value),
+        reminders_enabled: f.reminders_enabled.checked,
+      }),
+    });
+    setPreferences(await api("/preferences"));
+    toast("Réglages par défaut enregistrés.");
+  } catch (x) {
+    toast(x.message);
+  }
+};
 // Box : création, modification, suppression ; gestionnaires (demandes à valider, retrait).
 function renderAdminBoxes(list, managers) {
   const person = x =>

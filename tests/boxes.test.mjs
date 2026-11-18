@@ -365,3 +365,32 @@ test("programme suivi : dates propres à l'utilisateur, programmation hebdomadai
   );
   assert.equal((await dan.get("/program-data")).data.programs.find(x => x.id === prog.data.id).start_monday, later);
 });
+
+test("préférences : thème et rappels propres au compte, valeurs par défaut fixées par un admin", async () => {
+  const erin = client(worker.base);
+  await erin.post("/register", {email: "erin@test.local", password: PASSWORD});
+  let prefs = (await erin.get("/preferences")).data;
+  assert.equal(prefs.theme, null);
+  assert.equal(prefs.default_theme, "auto");
+  assert.deepEqual(prefs.reminders, {enabled: 1, days: 3, hour: 18});
+  // seul un admin fixe les valeurs par défaut
+  const defaults = {theme: "dark", reminder_days: 5, reminder_hour: 7, reminders_enabled: false};
+  assert.equal((await erin.put("/admin/settings", defaults)).status, 403);
+  assert.equal((await admin.put("/admin/settings", {...defaults, theme: "rose"})).status, 400);
+  assert.equal((await admin.put("/admin/settings", defaults)).status, 200);
+  prefs = (await erin.get("/preferences")).data;
+  assert.equal(prefs.default_theme, "dark");
+  assert.deepEqual(prefs.reminders, {enabled: 0, days: 5, hour: 7});
+  // le choix du compte l'emporte, sur tous ses appareils (nouvelle connexion)
+  assert.equal((await erin.put("/preferences", {theme: "massilia", reminders: {enabled: 1, days: 2}})).status, 200);
+  assert.equal((await erin.put("/preferences", {theme: "rose"})).status, 400);
+  assert.equal((await erin.put("/preferences", {reminders: {hour: 3}})).status, 400);
+  const other = client(worker.base);
+  await other.post("/login", {email: "erin@test.local", password: PASSWORD});
+  prefs = (await other.get("/preferences")).data;
+  assert.equal(prefs.theme, "massilia");
+  assert.deepEqual(prefs.reminders, {enabled: 1, days: 2, hour: 7});
+  // revenir au thème par défaut
+  assert.equal((await other.put("/preferences", {theme: null})).status, 200);
+  assert.equal((await erin.get("/preferences")).data.theme, null);
+});

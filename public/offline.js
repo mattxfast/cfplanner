@@ -171,6 +171,9 @@ const FFOffline = (() => {
         data.flags = (data.flags || []).filter(x => x.week_start !== body.week_start);
         data.flags.push({week_start: body.week_start, competition: body.competition ? 1 : 0});
       }
+    } else if (path === "/preferences" && op.path === "/preferences" && op.method === "PUT") {
+      if (body.theme !== undefined) data.theme = body.theme;
+      if (body.reminders) data.reminders = {...data.reminders, ...body.reminders};
     } else if (path === "/program-data" && op.path === "/program-follow" && op.method === "DELETE") {
       data.programs = (data.programs || []).map(p => ({...p, followed: 0}));
     } else if (path === "/program-data" && op.path === "/program-follow" && op.method === "PUT") {

@@ -142,7 +142,6 @@ function showApp() {
   $("#dashboard").hidden = false;
   renderUserbar();
   load();
-  loadReminders().catch(() => {});
 }
 document.querySelectorAll(".tab").forEach(
   b =>

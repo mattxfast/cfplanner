@@ -1,7 +1,8 @@
-// FitFactory — rappels par notification (abonnement et réglages).
+// FitFactory — rappels par notification (réglages du compte, abonnement de l’appareil).
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 
-// Rappels (notifications push) : abonnement par téléphone, réglages (jours sans séance, heure) communs au compte.
+// Les réglages (activés, jours sans séance, heure) appartiennent au compte : ils sont les mêmes sur tous les appareils
+// et modifiables hors ligne. Chaque appareil où les notifications sont autorisées est abonné pour recevoir les rappels.
 const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 const urlKey = k => {
@@ -9,7 +10,6 @@ const urlKey = k => {
     b = atob(s + "===".slice((s.length + 3) % 4));
   return Uint8Array.from(b, c => c.charCodeAt(0));
 };
-let reminderConfig = null;
 function reminderChips(id, values, current, label) {
   $(id).innerHTML = values
     .map(
@@ -19,99 +19,111 @@ function reminderChips(id, values, current, label) {
     .join("");
   $(id)
     .querySelectorAll("input")
-    .forEach(i => (i.onchange = saveReminderSettings));
-}
-async function loadReminders() {
-  const hint = $("#reminderhint"),
-    toggle = $("#reminderenabled"),
-    status = $("#reminderstatus");
-  status.textContent = "";
-  if (!pushSupported()) {
-    hint.hidden = false;
-    hint.textContent = isIos()
-      ? "Sur iPhone, ajoute d’abord FitFactory à l’écran d’accueil (iOS 16.4 minimum), puis ouvre l’app depuis son icône pour activer les rappels."
-      : "Ce navigateur ne permet pas les notifications.";
-    toggle.disabled = true;
-    $("#reminderoptions").hidden = true;
-    return;
-  }
-  try {
-    reminderConfig = await sendApi("/push/config", "GET");
-  } catch (e) {
-    hint.hidden = false;
-    hint.textContent = e.offline ? "Réglages des rappels disponibles avec du réseau." : e.message;
-    toggle.disabled = true;
-    return;
-  }
-  hint.hidden = Notification.permission !== "denied";
-  hint.textContent =
-    "Les notifications sont bloquées pour FitFactory : autorise-les dans les réglages du téléphone (Notifications → FitFactory).";
-  const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
-  toggle.disabled = false;
-  toggle.checked = !!sub && Notification.permission === "granted";
-  $("#reminderoptions").hidden = !toggle.checked;
-  reminderChips("#reminderdays", reminderConfig.choices.days, reminderConfig.days, v => v + " jours");
-  reminderChips("#reminderhours", reminderConfig.choices.hours, reminderConfig.hour, v => v + " h");
+    .forEach(
+      i =>
+        (i.onchange = () =>
+          saveReminders({days: reminderChoice("#reminderdays"), hour: reminderChoice("#reminderhours")}))
+    );
 }
 const reminderChoice = id => Number($(id).querySelector("input:checked")?.value);
-async function saveReminderSettings() {
+async function saveReminders(values) {
+  $("#reminderstatus").textContent = "";
   try {
-    await sendApi("/push/settings", "PUT", {
-      days: reminderChoice("#reminderdays"),
-      hour: reminderChoice("#reminderhours"),
-    });
-    $("#reminderstatus").textContent = "";
-    toast("Rappel enregistré.");
+    await api("/preferences", {method: "PUT", body: JSON.stringify({reminders: values})});
+    Object.assign(preferences.reminders, values);
+    toast("Rappels enregistrés pour ton compte.");
+    return true;
   } catch (e) {
     $("#reminderstatus").textContent = e.message;
+    return false;
   }
 }
-$("#reminderenabled").onchange = async e => {
-  const toggle = e.target,
-    status = $("#reminderstatus");
-  status.textContent = "";
-  toggle.disabled = true;
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (toggle.checked) {
-      if ((await Notification.requestPermission()) !== "granted") {
-        toggle.checked = false;
-        status.textContent = "Notifications refusées : autorise-les dans les réglages du téléphone.";
-        return;
-      }
-      if (!sub)
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlKey(reminderConfig.publicKey),
-        });
-      await sendApi("/push/subscribe", "POST", sub.toJSON());
-      await sendApi("/push/settings", "PUT", {
-        days: reminderChoice("#reminderdays"),
-        hour: reminderChoice("#reminderhours"),
-      });
-      toast("Rappels activés sur ce téléphone.");
-    } else if (sub) {
-      await sendApi("/push/unsubscribe", "POST", {endpoint: sub.endpoint});
-      await sub.unsubscribe();
-      toast("Rappels désactivés sur ce téléphone.");
-    }
-  } catch (err) {
-    toggle.checked = !toggle.checked;
-    status.textContent = err.offline
-      ? "Il faut du réseau pour modifier les rappels."
-      : "Impossible de modifier les rappels : " + err.message;
-  } finally {
-    toggle.disabled = false;
-    $("#reminderoptions").hidden = !toggle.checked;
+// État de cet appareil : notifications non prises en charge, bloquées, à autoriser, ou abonnement actif.
+async function deviceSubscription() {
+  if (!pushSupported()) return null;
+  return (await navigator.serviceWorker.ready).pushManager.getSubscription();
+}
+async function subscribeDevice(askPermission) {
+  if (!pushSupported()) return false;
+  if (Notification.permission !== "granted") {
+    if (!askPermission || (await Notification.requestPermission()) !== "granted") return false;
   }
+  const reg = await navigator.serviceWorker.ready,
+    config = await sendApi("/push/config", "GET");
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub)
+    sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: urlKey(config.publicKey)});
+  await sendApi("/push/subscribe", "POST", sub.toJSON());
+  return true;
+}
+async function renderReminderDevice() {
+  const hint = $("#reminderhint"),
+    allow = $("#reminderallow"),
+    enabled = !!preferences?.reminders.enabled;
+  allow.hidden = true;
+  hint.hidden = !enabled;
+  if (!enabled) return;
+  if (!pushSupported()) {
+    hint.textContent = isIos()
+      ? "Sur iPhone, ajoute d’abord FitFactory à l’écran d’accueil (iOS 16.4 minimum), puis ouvre l’app depuis son icône pour recevoir les rappels sur cet appareil."
+      : "Ce navigateur ne permet pas les notifications : les rappels arriveront sur tes autres appareils.";
+    return;
+  }
+  if (Notification.permission === "denied") {
+    hint.textContent =
+      "Les notifications sont bloquées sur cet appareil : autorise-les dans ses réglages (Notifications → FitFactory).";
+    return;
+  }
+  if (Notification.permission !== "granted") {
+    hint.textContent = "Cet appareil ne reçoit pas encore les rappels.";
+    allow.hidden = false;
+    return;
+  }
+  // Autorisation déjà donnée : l’appareil est abonné automatiquement (rappels activés depuis un autre appareil).
+  try {
+    if (!(await deviceSubscription())) await subscribeDevice(false);
+    hint.textContent = "Cet appareil reçoit les rappels.";
+  } catch {
+    hint.textContent = "Cet appareil sera abonné aux rappels au retour du réseau.";
+  }
+}
+function renderReminders() {
+  if (!preferences) return;
+  const r = preferences.reminders;
+  $("#reminderenabled").checked = !!r.enabled;
+  $("#reminderoptions").hidden = !r.enabled;
+  reminderChips("#reminderdays", preferences.choices.days, r.days, v => v + " jours");
+  reminderChips("#reminderhours", preferences.choices.hours, r.hour, v => v + " h");
+  renderReminderDevice();
+}
+$("#reminderenabled").onchange = async e => {
+  const enabled = e.target.checked;
+  if (!(await saveReminders({enabled: enabled ? 1 : 0}))) {
+    e.target.checked = !enabled;
+    return;
+  }
+  $("#reminderoptions").hidden = !enabled;
+  if (enabled)
+    try {
+      await subscribeDevice(true);
+    } catch {}
+  renderReminderDevice();
+};
+$("#reminderallow").onclick = async () => {
+  try {
+    if (!(await subscribeDevice(true)))
+      $("#reminderstatus").textContent = "Notifications refusées : autorise-les dans les réglages de l’appareil.";
+  } catch (e) {
+    $("#reminderstatus").textContent = e.offline ? "Il faut du réseau pour abonner cet appareil." : e.message;
+  }
+  renderReminderDevice();
 };
 $("#remindertest").onclick = async () => {
   try {
     const r = await sendApi("/push/test", "POST", {});
     $("#reminderstatus").textContent = r.sent
       ? "Notification envoyée."
-      : "Aucun téléphone n’a pu être joint : désactive puis réactive les rappels.";
+      : "Aucun appareil n’a pu être joint : autorise les notifications sur cet appareil.";
   } catch (e) {
     $("#reminderstatus").textContent = e.message;
   }

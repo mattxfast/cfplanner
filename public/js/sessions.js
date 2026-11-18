@@ -5,13 +5,14 @@ async function load() {
   try {
     const from = selectedWeekStart || mondayOf(today()),
       to = addDays(from, 6);
-    const [a, mc, p, w, pr, bx] = await Promise.all([
+    const [a, mc, p, w, pr, bx, prefs] = await Promise.all([
       api("/activities"),
       api("/movement-catalog"),
       api("/program-data"),
       api("/week-data?from=" + from + "&to=" + to),
       api("/prs"),
       api("/boxes"),
+      api("/preferences"),
     ]);
     activities = a.activities;
     movementCatalog = mc.movements;
@@ -27,6 +28,7 @@ async function load() {
     weekCompetition = !!w.flags.find(x => x.week_start === from)?.competition;
     prRecords = pr.records;
     setBoxes(bx);
+    setPreferences(prefs);
     renderUserbar();
     $("#profileform").elements.first_name.value = user.first_name || "";
     $("#profileform").elements.last_name.value = user.last_name || "";

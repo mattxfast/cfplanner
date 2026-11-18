@@ -330,6 +330,16 @@ async function ensureV2Schema(env) {
         "UPDATE program_follows SET start_monday=(SELECT start_monday FROM programs p WHERE p.id=program_follows.program_id),end_monday=(SELECT end_monday FROM programs p WHERE p.id=program_follows.program_id) WHERE start_monday IS NULL OR end_monday IS NULL"
       ).run();
     });
+    await runMigration("v19-user-preferences", async () => {
+      // Thème propre au compte (NULL : thème par défaut défini par l'administrateur) ; rappels activés pour le compte.
+      const users = new Set((await env.DB.prepare("PRAGMA table_info(users)").all()).results.map(c => c.name));
+      if (!users.has("theme")) await env.DB.prepare("ALTER TABLE users ADD COLUMN theme TEXT").run();
+      const reminders = new Set(
+        (await env.DB.prepare("PRAGMA table_info(reminder_settings)").all()).results.map(c => c.name)
+      );
+      if (!reminders.has("enabled"))
+        await env.DB.prepare("ALTER TABLE reminder_settings ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -339,6 +349,47 @@ async function ensureV2Schema(env) {
 // Rappels : notification si aucune séance depuis N jours, envoyée à l'heure choisie (heure de Paris).
 const REMINDER_DAYS = [2, 3, 4, 5, 7],
   REMINDER_HOURS = [7, 12, 18, 20];
+// Réglages par défaut définis par un administrateur (table app_settings) : thème et rappels des comptes qui n'ont
+// rien choisi. Le thème et les rappels sont propres à chaque compte, quel que soit l'appareil.
+const THEMES = ["auto", "light", "dark", "massilia", "massilia2"];
+async function appDefaults(e) {
+  const rows = (
+      await e.DB.prepare(
+        "SELECT key,value FROM app_settings WHERE key IN ('default_theme','default_reminder_days','default_reminder_hour','default_reminders_enabled')"
+      ).all()
+    ).results,
+    v = Object.fromEntries(rows.map(x => [x.key, x.value]));
+  return {
+    theme: THEMES.includes(v.default_theme) ? v.default_theme : "auto",
+    reminder_days: REMINDER_DAYS.includes(Number(v.default_reminder_days)) ? Number(v.default_reminder_days) : 3,
+    reminder_hour: REMINDER_HOURS.includes(Number(v.default_reminder_hour)) ? Number(v.default_reminder_hour) : 18,
+    reminders_enabled: v.default_reminders_enabled === "0" ? 0 : 1,
+  };
+}
+// Réglages des rappels du compte (valeurs absentes : réglage actuel ou valeur par défaut).
+async function saveReminderSettings(e, userId, b) {
+  const current = await userReminders(e, userId),
+    days = b.days === undefined ? current.days : Number(b.days),
+    hour = b.hour === undefined ? current.hour : Number(b.hour),
+    enabled = b.enabled === undefined ? current.enabled : b.enabled ? 1 : 0;
+  if (!REMINDER_DAYS.includes(days) || !REMINDER_HOURS.includes(hour)) return "Réglage de rappel invalide.";
+  await e.DB.prepare(
+    "INSERT INTO reminder_settings(user_id,days,hour,enabled) VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET days=excluded.days,hour=excluded.hour,enabled=excluded.enabled"
+  )
+    .bind(userId, days, hour, enabled)
+    .run();
+  return null;
+}
+async function userReminders(e, userId) {
+  const d = await appDefaults(e),
+    st = await e.DB.prepare("SELECT days,hour,enabled FROM reminder_settings WHERE user_id=?").bind(userId).first();
+  return {
+    days: st?.days ?? d.reminder_days,
+    hour: st?.hour ?? d.reminder_hour,
+    enabled: st ? st.enabled : d.reminders_enabled,
+    defaults: d,
+  };
+}
 const parisHour = () =>
   Number(
     new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23"})
@@ -371,7 +422,7 @@ async function sendReminders(e) {
     hour = parisHour();
   const rows = (
     await e.DB.prepare(
-      "SELECT rs.user_id,rs.days,(SELECT MAX(session_date) FROM training_sessions s WHERE s.user_id=rs.user_id) AS last_date FROM reminder_settings rs WHERE rs.hour=? AND (rs.last_sent_on IS NULL OR rs.last_sent_on<>?) AND EXISTS(SELECT 1 FROM push_subscriptions p WHERE p.user_id=rs.user_id)"
+      "SELECT rs.user_id,rs.days,(SELECT MAX(session_date) FROM training_sessions s WHERE s.user_id=rs.user_id) AS last_date FROM reminder_settings rs WHERE rs.enabled=1 AND rs.hour=? AND (rs.last_sent_on IS NULL OR rs.last_sent_on<>?) AND EXISTS(SELECT 1 FROM push_subscriptions p WHERE p.user_id=rs.user_id)"
     )
       .bind(hour, today)
       .all()
@@ -739,18 +790,20 @@ async function api(r, e, p) {
   if (p.startsWith("/api/push/")) {
     if (r.method === "GET" && p === "/api/push/config") {
       const keys = await vapidKeys(e.DB),
-        st = await e.DB.prepare("SELECT days,hour FROM reminder_settings WHERE user_id=?").bind(u.id).first(),
+        st = await userReminders(e, u.id),
         n = await e.DB.prepare("SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id=?").bind(u.id).first();
       return json({
         publicKey: keys.publicKey,
-        days: st?.days ?? 3,
-        hour: st?.hour ?? 18,
+        days: st.days,
+        hour: st.hour,
+        enabled: st.enabled,
         devices: n.n,
         choices: {days: REMINDER_DAYS, hours: REMINDER_HOURS},
       });
     }
     if (r.method === "POST" && p === "/api/push/subscribe") {
-      const b = await r.json(),
+      const defaults = await userReminders(e, u.id),
+        b = await r.json(),
         endpoint = String(b.endpoint || ""),
         p256dh = String(b.keys?.p256dh || ""),
         auth = String(b.keys?.auth || "");
@@ -760,7 +813,12 @@ async function api(r, e, p) {
         e.DB.prepare(
           "INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth) VALUES(?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth"
         ).bind(endpoint, u.id, p256dh, auth),
-        e.DB.prepare("INSERT OR IGNORE INTO reminder_settings(user_id) VALUES(?)").bind(u.id),
+        e.DB.prepare("INSERT OR IGNORE INTO reminder_settings(user_id,days,hour,enabled) SELECT ?,?,?,?").bind(
+          u.id,
+          defaults.days,
+          defaults.hour,
+          defaults.enabled
+        ),
       ]);
       return json({ok: true});
     }
@@ -772,17 +830,8 @@ async function api(r, e, p) {
       return json({ok: true});
     }
     if (r.method === "PUT" && p === "/api/push/settings") {
-      const b = await r.json(),
-        days = Number(b.days),
-        hour = Number(b.hour);
-      if (!REMINDER_DAYS.includes(days) || !REMINDER_HOURS.includes(hour))
-        return json({error: "Réglage de rappel invalide."}, 400);
-      await e.DB.prepare(
-        "INSERT INTO reminder_settings(user_id,days,hour) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET days=excluded.days,hour=excluded.hour"
-      )
-        .bind(u.id, days, hour)
-        .run();
-      return json({ok: true});
+      const error = await saveReminderSettings(e, u.id, await r.json());
+      return error ? json({error}, 400) : json({ok: true});
     }
     if (r.method === "POST" && p === "/api/push/test") {
       const x = await pushToUser(e, u.id, {
@@ -1065,6 +1114,31 @@ async function api(r, e, p) {
           .run();
       return json({ok: true});
     }
+    if (r.method === "GET" && p === "/api/admin/settings")
+      return json({...(await appDefaults(e)), choices: {themes: THEMES, days: REMINDER_DAYS, hours: REMINDER_HOURS}});
+    if (r.method === "PUT" && p === "/api/admin/settings") {
+      const b = await r.json(),
+        values = {
+          default_theme: String(b.theme),
+          default_reminder_days: String(Number(b.reminder_days)),
+          default_reminder_hour: String(Number(b.reminder_hour)),
+          default_reminders_enabled: b.reminders_enabled ? "1" : "0",
+        };
+      if (
+        !THEMES.includes(values.default_theme) ||
+        !REMINDER_DAYS.includes(Number(b.reminder_days)) ||
+        !REMINDER_HOURS.includes(Number(b.reminder_hour))
+      )
+        return json({error: "Réglages invalides."}, 400);
+      await e.DB.batch(
+        Object.entries(values).map(([key, value]) =>
+          e.DB.prepare(
+            "INSERT INTO app_settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+          ).bind(key, value)
+        )
+      );
+      return json({ok: true});
+    }
     if (r.method === "GET" && p === "/api/admin/boxes") {
       const [boxes, people] = await Promise.all([
         e.DB.prepare(
@@ -1141,6 +1215,29 @@ async function api(r, e, p) {
       return json({ok: true});
     }
     return json({error: "Route admin inconnue."}, 404);
+  }
+  // Préférences du compte : thème (null = thème par défaut de l'administrateur) et rappels.
+  if (r.method === "GET" && p === "/api/preferences") {
+    const st = await userReminders(e, u.id),
+      row = await e.DB.prepare("SELECT theme FROM users WHERE id=?").bind(u.id).first();
+    return json({
+      theme: THEMES.includes(row?.theme) ? row.theme : null,
+      default_theme: st.defaults.theme,
+      reminders: {enabled: st.enabled, days: st.days, hour: st.hour},
+      choices: {themes: THEMES, days: REMINDER_DAYS, hours: REMINDER_HOURS},
+    });
+  }
+  if (r.method === "PUT" && p === "/api/preferences") {
+    const b = await r.json();
+    if (b.theme !== undefined) {
+      if (b.theme !== null && !THEMES.includes(b.theme)) return json({error: "Thème invalide."}, 400);
+      await e.DB.prepare("UPDATE users SET theme=? WHERE id=?").bind(b.theme, u.id).run();
+    }
+    if (b.reminders) {
+      const error = await saveReminderSettings(e, u.id, b.reminders);
+      if (error) return json({error}, 400);
+    }
+    return json({ok: true});
   }
   if (r.method === "GET" && p === "/api/boxes") {
     const [boxes, mine, categories] = await Promise.all([

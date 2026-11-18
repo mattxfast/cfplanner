@@ -248,6 +248,25 @@
         <section id="view-admin" hidden>
           <section class="admin-group" data-admin-group>
             <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
+              <span class="admin-collapse-indicator">−</span><span>Réglages par défaut</span>
+            </div>
+            <div class="admin-group-body">
+              <form id="defaultsform" class="admin-data-list admin-defaults">
+                <p class="muted">Appliqués aux comptes qui n’ont pas fait leur propre choix.</p>
+                <label>Thème<select name="theme"></select></label
+                ><label class="checkbox-label"
+                  ><input type="checkbox" name="reminders_enabled" /> Rappels activés</label
+                >
+                <div class="two">
+                  <label>Rappel après<select name="reminder_days"></select></label
+                  ><label>Vers<select name="reminder_hour"></select></label>
+                </div>
+                <button class="primary">Enregistrer les réglages par défaut</button>
+              </form>
+            </div>
+          </section>
+          <section class="admin-group" data-admin-group>
+            <div class="admin-group-title" role="button" tabindex="0" aria-expanded="true">
               <span class="admin-collapse-indicator">−</span><span>Box</span
               ><button type="button" class="admin-add" id="addbox" aria-label="Ajouter une box">＋</button>
             </div>
@@ -398,7 +417,7 @@
           </section>
           <div class="account-heading"><h3>Apparence</h3></div>
           <section class="profile-export-card">
-            <p class="muted">Thème de l’application sur cet appareil.</p>
+            <p class="muted">Thème de l’application pour ton compte, sur tous tes appareils.</p>
             <label class="theme-select"
               >Thème<select id="themeselect">
                 <option value="auto">Automatique (selon le téléphone)</option>
@@ -412,12 +431,14 @@
           <div class="account-heading"><h3>Rappels</h3></div>
           <section class="profile-export-card" id="remindercard">
             <p class="muted">
-              Une notification sur ce téléphone si tu n’as pas enregistré de séance depuis quelques jours.
+              Une notification si tu n’as pas enregistré de séance depuis quelques jours. Réglage de ton compte, envoyé
+              sur chaque appareil où les notifications sont autorisées.
             </p>
+            <label class="reminder-switch"><input type="checkbox" id="reminderenabled" />Activer les rappels</label>
             <p id="reminderhint" class="reminder-hint" hidden></p>
-            <label class="reminder-switch"
-              ><input type="checkbox" id="reminderenabled" />Activer les rappels sur ce téléphone</label
-            >
+            <button type="button" class="smallbtn" id="reminderallow" hidden>
+              Recevoir les rappels sur cet appareil
+            </button>
             <div id="reminderoptions" class="reminder-options" hidden>
               <p class="reminder-legend">Me rappeler après</p>
               <div

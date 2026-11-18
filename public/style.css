@@ -4110,3 +4110,11 @@ button:active:not(:disabled) {
   display: block;
   color: var(--muted);
 }
+/* Administration : réglages par défaut (thème, rappels). */
+#view-admin .admin-defaults label {
+  margin: 8px 0;
+}
+#view-admin .admin-defaults .primary {
+  width: 100%;
+  margin-top: 6px;
+}
