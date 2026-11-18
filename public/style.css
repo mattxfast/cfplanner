@@ -679,9 +679,9 @@ body.modal-open {
   align-items: center;
   justify-content: center;
   background: none;
-  padding: 11px 16px 13px;
+  padding: 7px 16px 13px;
   color: var(--nav-ink);
-  border-top: 4px solid transparent;
+  border-top: 8px solid transparent;
 }
 .navtab svg {
   width: 26px;
@@ -783,7 +783,7 @@ select {
     gap: 0;
   }
   .navtab {
-    padding: 10px 6px 12px;
+    padding: 6px 6px 12px;
   }
   .wodrow {
     flex-direction: column;
