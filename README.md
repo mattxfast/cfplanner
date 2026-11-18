@@ -22,7 +22,7 @@ FitFactory (anciennement CFPlanner) est une application web responsive de planif
 Une planification n'est pas une séance réalisée : elle sert de repère dans la semaine. La séance n'est comptabilisée qu'après son enregistrement.
 
 ### Programmes et WOD
-- Création de programmes avec dates de début et de fin.
+- Création de programmes avec dates de début et de fin. Sans aucun programme, la page garde son titre « Mes programmes » (sinon, chaque carte de programme sert de bandeau).
 - Ajout de WOD réutilisables dans chaque programme.
 - Description du contenu prévu, activité associée et durée par défaut.
 - Réorganisation des WOD via le bouton ⇅ du titre de rubrique (mode « Réorganiser » qui affiche les flèches ↑ ↓).

@@ -88,7 +88,8 @@ function renderPrograms() {
           .join("")
       : followed.length
         ? ""
-        : "<div class='card empty'>Aucun programme. Crée ton premier programme ou trouve un programme public à suivre.</div>");
+        : // Sans programme, aucune carte ne sert de bandeau : le titre de la page reste affiché.
+          "<div class='page-banner'><h2>Mes programmes</h2></div><div class='card empty'>Aucun programme. Crée ton premier programme ou trouve un programme public à suivre.</div>");
   $("#programlist")
     .querySelectorAll("[data-unfollow-program]")
     .forEach(
