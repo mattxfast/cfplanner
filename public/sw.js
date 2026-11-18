@@ -1,7 +1,7 @@
 // FitFactory — service worker : rend l'application installable et utilisable hors connexion.
 // Stratégie « réseau d'abord » : la dernière version publiée est toujours servie quand le réseau répond ;
 // le cache ne sert que de secours hors connexion. Les appels /api/ ne sont jamais mis en cache.
-const CACHE = "fitfactory-v9";
+const CACHE = "fitfactory-v10";
 const SHELL = [
   "/",
   "/index.html",
@@ -77,7 +77,7 @@ self.addEventListener("push", event => {
     data = event.data ? event.data.json() : {};
   } catch {}
   event.waitUntil(
-    self.registration.showNotification(data.title || "FitFactory", {
+    self.registration.showNotification(data.title || "MyFitFactory", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

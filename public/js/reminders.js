@@ -65,13 +65,13 @@ async function renderReminderDevice() {
   if (!enabled) return;
   if (!pushSupported()) {
     hint.textContent = isIos()
-      ? "Sur iPhone, ajoute d’abord FitFactory à l’écran d’accueil (iOS 16.4 minimum), puis ouvre l’app depuis son icône pour recevoir les rappels sur cet appareil."
+      ? "Sur iPhone, ajoute d’abord MyFitFactory à l’écran d’accueil (iOS 16.4 minimum), puis ouvre l’app depuis son icône pour recevoir les rappels sur cet appareil."
       : "Ce navigateur ne permet pas les notifications : les rappels arriveront sur tes autres appareils.";
     return;
   }
   if (Notification.permission === "denied") {
     hint.textContent =
-      "Les notifications sont bloquées sur cet appareil : autorise-les dans ses réglages (Notifications → FitFactory).";
+      "Les notifications sont bloquées sur cet appareil : autorise-les dans ses réglages (Notifications → MyFitFactory).";
     return;
   }
   if (Notification.permission !== "granted") {

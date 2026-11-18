@@ -151,7 +151,7 @@ async function exportWeeklyExcel() {
     };
     XLSX.utils.book_append_sheet(workbook, sheet, "Bilan");
     const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, "FitFactory_bilan_programmes_" + stamp + ".xlsx");
+    XLSX.writeFile(workbook, "MyFitFactory_bilan_programmes_" + stamp + ".xlsx");
     status.textContent =
       "Export Excel généré : " + new Set(weeks.map(w => w.year + "-" + w.week)).size + " semaine(s).";
   } catch (error) {

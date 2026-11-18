@@ -299,6 +299,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 36px;
 }
