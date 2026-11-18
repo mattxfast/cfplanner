@@ -3965,10 +3965,6 @@ button:active:not(:disabled) {
 #view-timer.timer-active .timer-setup {
   display: none;
 }
-.timer-hint {
-  margin: 0;
-  font-size: 13px;
-}
 .timer-fields {
   display: grid;
   gap: 10px;
@@ -3978,6 +3974,7 @@ button:active:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin: 0; /* même écart entre les blocs (libellés et compteurs) dans tous les chronos */
   padding: 10px 12px;
   background: var(--content-bg);
   border: 1px solid var(--content-border);

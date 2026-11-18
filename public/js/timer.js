@@ -25,7 +25,6 @@ const timerDuration = sec =>
 const TIMER_MODES = {
   fortime: {
     label: "For Time",
-    hint: "Chrono croissant, avec un temps limite facultatif.",
     fields: [
       {
         key: "cap",
@@ -38,12 +37,10 @@ const TIMER_MODES = {
   },
   amrap: {
     label: "AMRAP",
-    hint: "Un maximum de tours pendant la durée choisie.",
     fields: [{key: "duration", label: "Durée", values: TIMER_DURATIONS, value: 720, format: timerDuration}],
   },
   emom: {
     label: "EMOM",
-    hint: "Un travail au début de chaque intervalle.",
     fields: [
       {key: "every", label: "Toutes les", values: TIMER_DURATIONS, value: 60, format: timerDuration},
       {key: "rounds", label: "Tours", values: timerRange(1, 99, 1), value: 10, format: String, stepper: true},
@@ -51,7 +48,6 @@ const TIMER_MODES = {
   },
   tabata: {
     label: "Tabata",
-    hint: "Alternance travail / repos (20 s / 10 s × 8 par défaut).",
     fields: [
       {key: "work", label: "Travail", values: TIMER_INTERVALS, value: 20, format: timerDuration},
       {
@@ -219,7 +215,11 @@ function timerRender() {
       total = plan.slice(1).reduce((n, s) => n + s.duration, 0);
     phase.textContent = TIMER_MODES[timer.mode].label;
     clock.textContent = timer.mode === "fortime" ? "00:00" : timerFormat(plan[1].duration);
-    sub.textContent = Number.isFinite(total) ? "Durée totale : " + timerFormat(total) : "";
+    // For Time et AMRAP : le chrono affiche déjà le temps ; durée totale seulement pour EMOM et Tabata.
+    sub.textContent =
+      Number.isFinite(total) && timer.mode !== "amrap" && timer.mode !== "fortime"
+        ? "Durée totale : " + timerFormat(total)
+        : "";
     bar.style.width = "0%";
   } else if (timer.state === "done") {
     phase.textContent = "Terminé !";
@@ -236,9 +236,11 @@ function timerRender() {
     sub.textContent =
       seg.kind === "prep"
         ? "Départ dans " + Math.ceil(left) + " s"
-        : Number.isFinite(total)
-          ? "Total " + timerFormat(workTime) + " / " + timerFormat(total)
-          : "Total " + timerFormat(workTime);
+        : timer.mode === "amrap" || timer.mode === "fortime"
+          ? ""
+          : Number.isFinite(total)
+            ? "Total " + timerFormat(workTime) + " / " + timerFormat(total)
+            : "Total " + timerFormat(workTime);
     bar.style.width = (Number.isFinite(seg.duration) ? Math.min(100, (into / seg.duration) * 100) : 0) + "%";
   }
   $("#timerstart").textContent =
@@ -336,7 +338,6 @@ function timerRenderSettings() {
     );
   const def = TIMER_MODES[timer.mode],
     values = timer.settings[timer.mode];
-  $("#timerhint").textContent = def.hint;
   $("#timerfields").innerHTML = def.fields
     .map(
       f =>
