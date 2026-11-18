@@ -25,7 +25,7 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 ### Programmes et WOD
 - Création de programmes avec dates de début et de fin. Sans aucun programme, la page garde son titre « Mes programmes » (sinon, chaque carte de programme sert de bandeau).
 - Ajout de WOD réutilisables dans chaque programme.
-- Description du contenu prévu, activité associée et durée par défaut.
+- Description du contenu prévu. L'activité associée et la durée par défaut sont masquées pour l'instant dans le formulaire de WOD : un nouveau WOD reçoit l'activité par défaut et sa durée, un WOD existant garde les siennes.
 - Réorganisation des WOD via le bouton ⇅ du titre de rubrique (mode « Réorganiser » qui affiche les flèches ↑ ↓).
 - Un WOD ou un programme qui a déjà une séance réalisée ne peut plus être supprimé.
 - Liste de mouvements à travailler pour chaque programme.

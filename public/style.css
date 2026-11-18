@@ -417,8 +417,10 @@ label {
   font-weight: 600;
   margin: 14px 0;
 }
-/* Un champ masqué par l’attribut hidden (ex. « Nombre de RM » d’un PR en répétitions) ne s’affiche pas. */
-label[hidden] {
+/* Un champ masqué par l’attribut hidden (ex. « Nombre de RM » d’un PR en répétitions, activité et durée d’un WOD)
+   ne s’affiche pas. */
+label[hidden],
+.two[hidden] {
   display: none;
 }
 input,
