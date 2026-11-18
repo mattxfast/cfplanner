@@ -147,10 +147,12 @@ function renderPrCategory(method, items) {
     (collapsed ? "＋" : "−") +
     "</span><span>" +
     prCategoryLabel(method) +
-    '</span><small class="pr-category-count">' +
-    items.length +
-    '</small></div><div class="admin-group-body"><div class="pr-category-body">' +
-    content +
+    '</span><button type="button" class="admin-add" data-add-pr="' +
+    method +
+    '" aria-label="Ajouter un PR ' +
+    prCategoryLabel(method) +
+    '" title="Ajouter un PR">＋</button></div><div class="admin-group-body"><div class="pr-category-body">' +
+    (content || '<p class="muted">Aucun PR.</p>') +
     "</div></div></section>"
   );
 }
@@ -183,14 +185,21 @@ function renderPrs() {
         (isLoadBased(a.measurement_method) ? Number(a.rep_count) : 0) -
           (isLoadBased(b.measurement_method) ? Number(b.rep_count) : 0)
     );
-  $("#prcards").innerHTML = items.length
-    ? prCategoryOrder
-        .map(method => {
-          const subset = items.filter(x => x.measurement_method === method);
-          return subset.length ? renderPrCategory(method, subset) : "";
-        })
+  // Une rubrique par famille ayant des mouvements au catalogue (même sans PR), avec son bouton ＋.
+  const families = prCategoryOrder.filter(
+    method =>
+      movementCatalog.some(m => m.measurement_method === method) || items.some(x => x.measurement_method === method)
+  );
+  $("#prcards").innerHTML = families.length
+    ? families
+        .map(method =>
+          renderPrCategory(
+            method,
+            items.filter(x => x.measurement_method === method)
+          )
+        )
         .join("")
-    : '<div class="card empty">Aucun PR enregistré. Utilise « Ajouter un PR » pour saisir ton premier record.</div>';
+    : '<div class="card empty">Aucun mouvement dans le catalogue : l’administrateur doit d’abord en ajouter.</div>';
   const body = $("#prcards");
   body.hidden = false;
   body.querySelectorAll("[data-toggle-pr-category]").forEach(button => {
@@ -202,14 +211,17 @@ function renderPrs() {
       button.setAttribute("aria-expanded", String(!isCollapsed));
       button.querySelector(".admin-collapse-indicator").textContent = isCollapsed ? "＋" : "−";
     };
-    button.onclick = toggle;
+    button.onclick = e => {
+      if (!e.target.closest(".admin-add")) toggle();
+    };
     button.onkeydown = e => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.target === button && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
         toggle();
       }
     };
   });
+  body.querySelectorAll("[data-add-pr]").forEach(b => (b.onclick = () => openPrForm(null, b.dataset.addPr)));
   body
     .querySelectorAll("[data-pr-key]")
     .forEach(button => (button.onclick = () => openPrHistory(button.dataset.prKey)));
@@ -290,11 +302,13 @@ function syncPrForm() {
   f.elements.rep_count.disabled = !load;
 }
 // Ouvre le formulaire de PR : vide pour une création, pré-rempli pour la modification d'un PR existant.
-function openPrForm(record = null) {
+// method : famille choisie avec le ＋ d’une rubrique (seuls ses mouvements sont proposés).
+function openPrForm(record = null, method = "") {
   const f = $("#prform");
   f.reset();
   f.elements.record_date.value = today();
   f.elements.movement_id.innerHTML = movementCatalog
+    .filter(m => !method || m.measurement_method === method)
     .map(m => '<option value="' + m.id + '">' + esc(m.name) + "</option>")
     .join("");
   f.elements.pr_id.value = record?.id || "";
@@ -314,7 +328,6 @@ function openPrForm(record = null) {
   }
   $("#prdialog").showModal();
 }
-$("#newpr").onclick = () => openPrForm();
 $("#closepr").onclick = () => $("#prdialog").close();
 $("#prform").elements.movement_id.onchange = syncPrForm;
 $("#prform").onsubmit = async e => {

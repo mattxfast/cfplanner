@@ -2367,6 +2367,7 @@ button:disabled {
   line-height: 1.3;
 }
 #view-admin .admin-add,
+#view-prs .admin-add,
 #view-box .admin-add {
   width: 34px;
   height: 34px;
@@ -2383,6 +2384,7 @@ button:disabled {
   justify-content: center;
 }
 #view-admin .admin-add:hover,
+#view-prs .admin-add:hover,
 #view-box .admin-add:hover {
   background: rgba(255, 255, 255, 0.32);
 }
@@ -2435,11 +2437,13 @@ button:disabled {
 
 /* Administration : bouton d'ajout bleu et formulaires dans des fenêtres modales. */
 #view-admin .admin-add,
+#view-prs .admin-add,
 #view-box .admin-add {
   background: var(--blue);
   color: var(--on-accent);
 }
 #view-admin .admin-add:hover,
+#view-prs .admin-add:hover,
 #view-box .admin-add:hover {
   background: var(--blue-hover);
 }
@@ -2607,6 +2611,7 @@ button:disabled {
   text-align: left;
 }
 #view-admin .admin-add,
+#view-prs .admin-add,
 #view-box .admin-add {
   margin-left: auto;
 }
@@ -3007,10 +3012,8 @@ button:disabled {
   gap: 7px;
   margin: 0;
 }
-#view-prs .pr-category-count {
+#view-prs .pr-category-group .admin-add {
   margin-left: auto;
-  font: 600 13px Manrope;
-  color: var(--banner-ink);
 }
 #view-prs .pr-category-group.collapsed .pr-category-body {
   display: none;

@@ -60,7 +60,7 @@ Les mouvements du catalogue sont répartis en quatre familles :
 | Gym | Nombre de répétitions | 25 répétitions |
 | Engine | Distance en mètres | 2 000 m |
 
-La page n'a pas de titre : chaque famille (LIFT, FORCE, GYM, ENGINE) a un bandeau de titre repliable avec son nombre de PR, et le bouton « ＋ Ajouter un PR » se trouve sous les rubriques. Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les enregistrements peuvent être supprimés depuis leur historique.
+La page n'a pas de titre : chaque famille (LIFT, FORCE, GYM, ENGINE) qui a des mouvements au catalogue a un bandeau de titre repliable, même sans PR ; le ＋ en fin de bandeau ouvre « Nouveau PR » avec les seuls mouvements de cette famille. Les cartes PR sont classées selon l'ordre du catalogue. L'historique d'un mouvement affiche les enregistrements et la courbe d'évolution. Les enregistrements peuvent être supprimés depuis leur historique.
 
 ### Compte et administration
 - Page « Mon compte » (icône profil en haut, mise en évidence tant qu'on est sur la page) : rubriques Profil, Mes box, Apparence, Rappels et Export Excel, chacune avec un bandeau de titre et repliable (−/＋).
