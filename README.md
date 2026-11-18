@@ -8,7 +8,7 @@ MyFitFactory (anciennement FitFactory, et avant CFPlanner) est une application w
 - À l'ouverture et après chaque connexion, tout le monde (utilisateur, gestionnaire ou administrateur) arrive sur la page **Séances**.
 - En-tête compact (logo, nom de l'utilisateur, accès au compte et déconnexion).
 - Barre d'onglets fixée en bas de l'écran, toujours visible pendant le défilement, avec des icônes : kettlebell (Séances), planning (Programmes & WOD) éclair (PR) et chronomètre (Chrono).
-- Chrono (`public/js/timer.js`) : For Time (avec temps limite facultatif), AMRAP, EMOM et Tabata / intervalles ; réglages par boutons −/＋ mémorisés sur l'appareil, décompte de 10 s, bips 3-2-1 et au changement de phase (vibration sur Android), compteur « +1 tour » pour AMRAP et For Time, pause/reprise, écran maintenu allumé pendant le chrono (Screen Wake Lock, iOS 18.4+ pour l'app installée). Affichage jaune pendant le travail, vert pendant le repos.
+- Chrono (`public/js/timer.js`) : For Time (avec temps limite facultatif), AMRAP, EMOM et Tabata / intervalles ; réglages par boutons −/＋ mémorisés sur l'appareil, décompte de 10 s, bips 3-2-1 et au changement de phase (vibration sur Android), compteur « +1 tour » pour l'AMRAP, numéro du tour en grand pour l'EMOM, pause/reprise, écran maintenu allumé pendant le chrono (Screen Wake Lock, iOS 18.4+ pour l'app installée). Affichage jaune pendant le travail, vert pendant le repos.
 
 ### Séances
 - Vue hebdomadaire avec navigation entre les semaines.

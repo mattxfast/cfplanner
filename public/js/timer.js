@@ -77,7 +77,8 @@ function timerBuildPlan() {
     plan.push({kind: "work", label: "For Time", duration: s.cap ? s.cap * 60 : Infinity, countUp: true});
   if (timer.mode === "amrap") plan.push({kind: "work", label: "AMRAP", duration: s.minutes * 60});
   if (timer.mode === "emom")
-    for (let i = 1; i <= s.rounds; i++) plan.push({kind: "work", label: `Tour ${i} / ${s.rounds}`, duration: s.every});
+    for (let i = 1; i <= s.rounds; i++)
+      plan.push({kind: "work", label: "EMOM", duration: s.every, round: i, rounds: s.rounds});
   if (timer.mode === "tabata")
     for (let i = 1; i <= s.rounds; i++) {
       plan.push({kind: "work", label: `Travail · tour ${i} / ${s.rounds}`, duration: s.work});
@@ -146,12 +147,16 @@ function timerRender() {
     t = timerElapsed(),
     current = timer.state === "idle" ? null : timerSegmentAt(t),
     phase = $("#timerphase"),
+    bigRound = $("#timerrounds"),
     clock = $("#timerclock"),
     sub = $("#timersub"),
     bar = $("#timerprogress span");
   view.classList.toggle("timer-active", timer.state !== "idle");
   view.dataset.phase = timer.state === "done" ? "done" : current?.seg.kind || "idle";
   const workTime = Math.max(0, t - TIMER_PREP);
+  // EMOM : numéro du tour affiché en grand au-dessus du temps.
+  bigRound.hidden = !current?.seg.round;
+  if (current?.seg.round) bigRound.textContent = `Tour ${current.seg.round} / ${current.seg.rounds}`;
   if (timer.state === "idle") {
     const plan = timerBuildPlan(),
       total = plan.slice(1).reduce((n, s) => n + s.duration, 0);
@@ -164,10 +169,7 @@ function timerRender() {
     clock.textContent = timerFormat(
       timer.mode === "fortime" ? workTime : timer.plan.slice(1).reduce((n, s) => n + s.duration, 0)
     );
-    sub.textContent =
-      timer.mode === "amrap" || timer.mode === "fortime"
-        ? `${timer.rounds} tour${timer.rounds > 1 ? "s" : ""}`
-        : "Bravo !";
+    sub.textContent = timer.mode === "amrap" ? `${timer.rounds} tour${timer.rounds > 1 ? "s" : ""}` : "Bravo !";
     bar.style.width = "100%";
   } else if (current) {
     const {seg, into, left} = current;
@@ -191,7 +193,7 @@ function timerRender() {
           ? "Recommencer"
           : "Démarrer";
   $("#timerfinish").hidden = !(timer.mode === "fortime" && timer.state !== "idle" && timer.state !== "done");
-  $("#timerround").hidden = !["fortime", "amrap"].includes(timer.mode) || timer.state === "idle";
+  $("#timerround").hidden = timer.mode !== "amrap" || timer.state === "idle";
   $("#timerroundcount").textContent = timer.rounds;
 }
 
