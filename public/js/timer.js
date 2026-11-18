@@ -172,6 +172,7 @@ function timerBeep(kind = "short") {
     if (navigator.audioSession) navigator.audioSession.type = "playback";
     timer.audio = timer.audio || new (window.AudioContext || window.webkitAudioContext)();
     if (timer.audio.state !== "running") timer.audio.resume();
+    if (kind === "none") return; // préparation de l’audio seulement
     if (kind === "mid") {
       timerTone(2349, 0, 0.18);
       timerTone(2349, 0.26, 0.18);
@@ -180,6 +181,26 @@ function timerBeep(kind = "short") {
   } catch {}
 }
 
+// iPhone : sans son pendant plusieurs minutes, iOS met en veille l’audio de la page et les bips de fin (3-2-1, fin
+// de chaque intervalle et du chrono) ne sortent plus. Un signal inaudible garde l’audio actif du départ à l’arrêt.
+function timerAudioKeepAlive(on) {
+  try {
+    if (on && !timer.keepAlive) {
+      timerBeep("none");
+      const ctx = timer.audio,
+        osc = ctx.createOscillator(),
+        gain = ctx.createGain();
+      gain.gain.value = 0.00001;
+      osc.frequency.value = 40;
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      timer.keepAlive = osc;
+    } else if (!on && timer.keepAlive) {
+      timer.keepAlive.stop();
+      timer.keepAlive = null;
+    }
+  } catch {}
+}
 async function timerKeepAwake(on) {
   try {
     if (on && "wakeLock" in navigator && !timer.wakeLock) {
@@ -192,7 +213,10 @@ async function timerKeepAwake(on) {
   } catch {}
 }
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && timer.state === "running") timerKeepAwake(true);
+  if (document.visibilityState === "visible" && timer.state === "running") {
+    timerKeepAwake(true);
+    if (timer.audio && timer.audio.state !== "running") timer.audio.resume().catch(() => {});
+  }
 });
 
 function timerRender() {
@@ -306,6 +330,7 @@ function timerStart() {
     timer.lastBeep = "";
     timer.midBeep = false;
     timerBeep("short");
+    timerAudioKeepAlive(true);
     timerKeepAwake(true);
     timerTick();
   }
@@ -316,6 +341,8 @@ function timerStop(state = "idle") {
   if (state === "done") timer.pausedAt = performance.now();
   timer.state = state;
   timerKeepAwake(false);
+  // Arrêt du signal inaudible après le dernier bip (il garde l’audio actif pendant ce bip).
+  setTimeout(() => timer.state !== "running" && timerAudioKeepAlive(false), 1500);
   timerRender();
 }
 
