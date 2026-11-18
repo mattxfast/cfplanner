@@ -100,7 +100,7 @@ function renderSessions() {
             })()}${s.score_value !== null && s.score_value !== undefined && s.score_type ? `<p><b>Score :</b> ${esc(formatScore(s.score_type, s.score_value))}${s.score_category_name ? " · " + esc(s.score_category_name) : ""}</p>` : ""}${s.actual_comment ? `<p><b>Réalisé :</b> ${esc(s.actual_comment)}</p>` : ""}</div></article>`
         )
         .join("")
-    : sectionEmpty("Aucune séance enregistrée cette semaine");
+    : sectionEmpty("Pas de séance enregistrée cette semaine");
   $("#sessionlist")
     .querySelectorAll("[data-leaderboard]")
     .forEach(b => (b.onclick = () => openLeaderboard(b.dataset.leaderboard)));
@@ -175,7 +175,7 @@ function weekMovementsSection(week, programMovements, folded) {
   }
   const movementCounts = [...items.values()],
     baseItems = movementCounts.filter(x => x.base);
-  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? baseItems.filter(x => x.count > 0).length + "/" + baseItems.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : sectionEmpty("Aucun mouvement travaillé cette semaine")}</div></div></section>`;
+  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? baseItems.filter(x => x.count > 0).length + "/" + baseItems.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : sectionEmpty("Pas de mouvement travaillé cette semaine")}</div></div></section>`;
 }
 // Rubrique « WOD de la programmation » : toujours affichée (« Pas de programmation en cours » sans programme).
 function weekProgramSection(p, week, folded, from) {
