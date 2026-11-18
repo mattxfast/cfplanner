@@ -95,7 +95,7 @@ La page n'a pas de titre : chaque famille (LIFT, FORCE, GYM, ENGINE) qui a des m
   - suivre ou arrêter de suivre un programme est aussi mis en file d'attente ; la recherche de programmes publics affiche les derniers résultats consultés pour la même recherche ;
   - connexion, création de compte, déconnexion et administration nécessitent le réseau ; la déconnexion avertit s'il reste des modifications non synchronisées et efface les données locales.
 - Icônes dans `public/icons/` (SVG source + PNG 180, 192, 512 et 512 « maskable »).
-- Écran de démarrage : fond jaune, barre de musculation et « FitFactory ». Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
+- Écran de démarrage : fond noir, grande barre de musculation et « myFitFactory » en jaune. Sur iPhone, images fixes par taille d'écran dans `public/splash/` (une par modèle, déclarées dans `index.html`) ; sur Android, généré à partir de l'icône et de la couleur de fond du manifest.
 
 ## Utilisation
 
