@@ -4074,6 +4074,17 @@ button:active:not(:disabled) {
 #boxwodboard .weekbar {
   margin: 0 0 var(--section-content-gap);
 }
+/* Bandeau de semaine des WOD de la box : le ＋ « Nouveau WOD » tient sur la même ligne. */
+#boxwodboard .weeknav {
+  gap: 8px;
+}
+#boxwodboard .weekdate-label,
+#boxwodboard .weekdate-label input {
+  min-width: 0;
+}
+#boxwodboard .weeknav .admin-add {
+  flex: 0 0 auto;
+}
 #boxwodboard .admin-data-list {
   display: grid;
   gap: var(--content-item-gap);

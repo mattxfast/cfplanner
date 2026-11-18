@@ -183,9 +183,9 @@ function boxGroup(key, title, actions, body) {
 }
 // WOD de la box : navigation par semaine (WOD passés et à venir), ajout, modification, suppression.
 function boxWodsGroup(d) {
-  // Comme la page Séances : la semaine en bandeau principal, les WOD dessous, « Nouveau WOD » en bas.
+  // Comme la page Séances : la semaine en bandeau principal (avec le ＋ « Nouveau WOD »), les WOD dessous.
   const week = managedWodWeek,
-    nav = `<div class="weekbar card"><div class="weeknav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="boxwodweek" type="date" value="${week}"></label><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button></div></div>`;
+    nav = `<div class="weekbar card"><div class="weeknav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="boxwodweek" type="date" value="${week}"></label><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button><button type="button" class="admin-add" id="addboxwod" aria-label="Nouveau WOD" title="Nouveau WOD">＋</button></div></div>`;
   return `<div id="boxwodboard">${nav}<div class="admin-data-list">${
     d.wods
       .map(
@@ -193,7 +193,7 @@ function boxWodsGroup(d) {
           `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(w.name)}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
       )
       .join("") || `<div class="card empty">Aucun WOD cette semaine.</div>`
-  }</div><div class="bottom-action"><button type="button" class="primary" id="addboxwod">＋ Nouveau WOD</button></div></div>`;
+  }</div></div>`;
 }
 function openBoxWod(w = null) {
   const f = $("#boxwodform"),
