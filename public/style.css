@@ -652,9 +652,12 @@ body.modal-open {
   .entryactions {
     justify-content: flex-end;
   }
-  /* Une seule colonne : les marges des champs suffisent à les espacer (pas d'écart de grille en plus). */
+  /* Une seule colonne : les marges des champs suffisent à les espacer (pas d'écart de grille en plus) ;
+     des boutons empilés gardent l'écart de la grille. */
   .two {
     grid-template-columns: 1fr;
+  }
+  .two:has(> label) {
     row-gap: 0;
   }
   .two > label + label {
