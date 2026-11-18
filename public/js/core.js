@@ -143,6 +143,8 @@ function renderUserbar() {
 function showApp() {
   $("#auth").hidden = true;
   $("#dashboard").hidden = false;
+  // Première page pour tous (utilisateur, gestionnaire ou administrateur) : les séances.
+  switchView("sessions");
   renderUserbar();
   load();
 }

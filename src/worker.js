@@ -539,9 +539,9 @@ async function sessionBoxWod(e, userId, b, sessionId = null) {
         .bind(sessionId, userId, id)
         .first()),
     wod = await e.DB.prepare(
-      "SELECT w.id,w.box_id,w.score_type FROM box_wods w WHERE w.id=? AND (? OR EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved'))"
+      "SELECT w.id,w.box_id,w.score_type FROM box_wods w WHERE w.id=? AND (? OR (w.wod_date<=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')))"
     )
-      .bind(id, kept ? 1 : 0, userId)
+      .bind(id, kept ? 1 : 0, localToday(), userId)
       .first();
   if (!wod) return {error: "WOD de box introuvable.", status: 404};
   const raw = b.score_value;
@@ -575,13 +575,14 @@ function boxWodInput(b) {
     content: String(b.content || "").slice(0, 3000),
   };
 }
-// WOD des box dont l'utilisateur est membre validé, entre deux dates.
+// WOD des box dont l'utilisateur est membre validé, entre deux dates : jamais ceux de demain et après (seuls les
+// gestionnaires voient les WOD à venir, dans leur espace).
 async function memberBoxWods(e, userId, from, to) {
   return (
     await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
     )
-      .bind(userId, from, to)
+      .bind(userId, from, to, localToday())
       .all()
   ).results;
 }
@@ -1280,9 +1281,9 @@ async function api(r, e, p) {
   // Classement d'un WOD de box : meilleur score de chaque membre actuel de la box, par catégorie.
   if (r.method === "GET" && (m = p.match(/^\/api\/box-wods\/([\w-]+)\/leaderboard$/))) {
     const wod = await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id WHERE w.id=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')"
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id WHERE w.id=? AND w.wod_date<=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')"
     )
-      .bind(m[1], u.id)
+      .bind(m[1], localToday(), u.id)
       .first();
     if (!wod) return json({error: "WOD de box introuvable."}, 404);
     const [categories, rows] = await Promise.all([

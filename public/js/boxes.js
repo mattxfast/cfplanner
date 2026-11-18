@@ -129,18 +129,10 @@ $("#boxjoin").onclick = () => requestBox("member");
 $("#boxmanagerrequest").onclick = () => requestBox("manager");
 
 // ----- Espace gestionnaire (icône en haut) : pages WOD, membres et infos de la box, avec leur menu du bas -----
-let boxPage = "wods",
-  managerSpaceRestored = false;
+let boxPage = "wods";
 function renderBoxNav() {
   const ids = boxIds("manager");
   if (!ids.length && inManagerSpace()) switchView("sessions");
-  // Au démarrage, un gestionnaire retrouve l’espace où il était (gestionnaire ou utilisateur) sur cet appareil.
-  if (ids.length && !managerSpaceRestored) {
-    managerSpaceRestored = true;
-    try {
-      if (localStorage.getItem("fitfactory-space") === "manager") setTimeout(() => switchView("box"));
-    } catch {}
-  }
   if (!ids.includes(managedBoxId)) {
     managedBoxId = ids[0] || "";
     managedBox = null;

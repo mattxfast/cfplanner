@@ -66,9 +66,6 @@ function switchView(v) {
   // Espace gestionnaire : menu du bas propre (WOD, membres, infos de la box) à la place de celui de l’utilisateur.
   $("#managernav").hidden = v !== "box";
   document.querySelector(".navtabs:not(#managernav)").hidden = v === "box";
-  try {
-    localStorage.setItem("fitfactory-space", v === "box" ? "manager" : "user");
-  } catch {}
   if (user) renderUserbar();
   if (v === "box") loadManagedBox();
 }

@@ -401,3 +401,27 @@ test("espace gestionnaire : infos de la box modifiables par ses seuls gestionnai
   assert.equal((await alice.put(`/manage/boxes/${boxId}`, {name: "CrossFit Test", city: "Aix"})).status, 200);
   assert.equal((await alice.get(`/manage/boxes/${boxId}`)).data.box.city, "Aix");
 });
+
+test("WOD de box à venir : visibles du seul gestionnaire, ni listés ni enregistrables par les membres", async () => {
+  const tomorrow = addDays(today(), 1),
+    created = await alice.post(`/manage/boxes/${boxId}/wods`, {wod_date: tomorrow, name: "Demain", score_type: "reps"});
+  assert.equal(created.status, 200);
+  const range = `from=${mondayOf(tomorrow)}&to=${addDays(mondayOf(tomorrow), 6)}`;
+  assert.ok((await alice.get(`/manage/boxes/${boxId}/wods?${range}`)).data.wods.some(w => w.id === created.data.id));
+  assert.ok(!(await bob.get(`/box-wods?${range}`)).data.wods.some(w => w.id === created.data.id));
+  assert.ok(!(await bob.get(`/week-data?${range}`)).data.boxWods.some(w => w.id === created.data.id));
+  assert.equal((await bob.get(`/box-wods/${created.data.id}/leaderboard`)).status, 404);
+  const activityId = (await bob.get("/activities")).data.activities[0].id;
+  const logged = await bob.post("/sessions", {
+    program_id: "none",
+    wod_id: "other",
+    session_date: today(),
+    activity_id: activityId,
+    duration_minutes: 60,
+    movement_ids: [],
+    catalog_movement_ids: [],
+    box_wod_id: created.data.id,
+  });
+  assert.equal(logged.status, 404);
+  assert.equal((await alice.del(`/manage/wods/${created.data.id}`)).status, 200);
+});
