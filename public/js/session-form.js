@@ -66,7 +66,11 @@ function syncSessionWod(session = null) {
   const f = $("#sessionform"),
     boxWod = selectedBoxWod(),
     box = $("#sessionmovementchecks");
-  renderSessionMovementChecks(boxWod ? "none" : f.elements.program_id.value, f.elements.session_id.value);
+  // WOD de box ou « Autres » : tous les mouvements du catalogue ; sinon ceux du programme (ou le catalogue s’il n’en a pas).
+  renderSessionMovementChecks(
+    boxWod || f.elements.wod_id.value === "other" ? "none" : f.elements.program_id.value,
+    f.elements.session_id.value
+  );
   // Nouvelle séance sur un WOD de box : ses mouvements (cochés par le gestionnaire) sont cochés par défaut,
   // une seule fois par WOD choisi ; l’utilisateur peut ensuite les modifier.
   if (boxWod && !f.elements.session_id.value && box.dataset.presetWod !== boxWod.id) {
@@ -175,7 +179,15 @@ function renderSessionMovementChecks(pid, sessionId = "") {
     isChecked = m =>
       ticked.has(field + ":" + m.id) ||
       (fromCatalog
-        ? catalogChecks.some(c => c.session_id === sessionId && c.catalog_movement_id === m.id)
+        ? catalogChecks.some(c => c.session_id === sessionId && c.catalog_movement_id === m.id) ||
+          // Séance « Autres » enregistrée avec des mouvements du programme : retrouvés dans la liste complète.
+          movementChecks.some(
+            c =>
+              c.session_id === sessionId &&
+              Object.values(movementsByProgram)
+                .flat()
+                .some(pm => pm.id === c.movement_id && pm.catalog_movement_id === m.id)
+          )
         : movementChecks.some(c => c.session_id === sessionId && c.movement_id === m.id));
   $("#sessionmovementsection").hidden = !items.length;
   box.innerHTML = items

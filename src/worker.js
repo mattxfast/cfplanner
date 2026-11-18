@@ -796,7 +796,15 @@ async function loginWaitMinutes(e, keys) {
   }
   return wait;
 }
-async function movementCheckStatements(env, userId, sessionId, programId, ids = [], catalogIds = []) {
+async function movementCheckStatements(
+  env,
+  userId,
+  sessionId,
+  programId,
+  ids = [],
+  catalogIds = [],
+  anyMovement = false
+) {
   const uniqueIds = [...new Set(ids.map(String).filter(Boolean))];
   const validIds = [];
   for (let offset = 0; offset < uniqueIds.length; offset += 100) {
@@ -809,11 +817,12 @@ async function movementCheckStatements(env, userId, sessionId, programId, ids = 
       .all();
     validIds.push(...rows.results.map(row => row.id));
   }
-  // Sans mouvement à travailler dans le programme, la séance peut cocher n'importe quel mouvement du catalogue.
+  // Sans mouvement à travailler dans le programme, ou pour un WOD « Autres » (anyMovement), la séance peut cocher
+  // n'importe quel mouvement du catalogue.
   const validCatalogIds = [];
-  const hasProgramMovements = await env.DB.prepare("SELECT 1 FROM program_movements WHERE program_id=? LIMIT 1")
-    .bind(programId)
-    .first();
+  const hasProgramMovements =
+    !anyMovement &&
+    (await env.DB.prepare("SELECT 1 FROM program_movements WHERE program_id=? LIMIT 1").bind(programId).first());
   if (!hasProgramMovements) {
     const uniqueCatalogIds = [...new Set(catalogIds.map(String).filter(Boolean))].slice(0, 200);
     for (let offset = 0; offset < uniqueCatalogIds.length; offset += 100) {
@@ -2401,6 +2410,7 @@ async function api(r, e, p) {
     const date = b.session_date,
       pid = b.program_id === "none" ? await fallbackProgramId(e, u.id) : b.program_id;
     let wid = b.wod_id;
+    const isOther = wid === "other"; // WOD « Autres » : tous les mouvements du catalogue
     const act = await e.DB.prepare(
         "SELECT id FROM activities WHERE id=? AND user_id=(SELECT id FROM users WHERE email=?) AND is_active=1"
       )
@@ -2451,7 +2461,8 @@ async function api(r, e, p) {
         id,
         pid,
         Array.isArray(b.movement_ids) ? b.movement_ids : [],
-        Array.isArray(b.catalog_movement_ids) ? b.catalog_movement_ids : []
+        Array.isArray(b.catalog_movement_ids) ? b.catalog_movement_ids : [],
+        isOther
       );
     await e.DB.batch([
       e.DB.prepare(
@@ -2514,6 +2525,7 @@ async function api(r, e, p) {
     if (b.session_date < program.start || b.session_date > program.end)
       return json({error: "La date de la séance doit être comprise dans la période du programme."}, 400);
     let wid = b.wod_id;
+    const isOther = wid === "other"; // WOD « Autres » : tous les mouvements du catalogue
     if (wid === "other") {
       let w = await e.DB.prepare("SELECT id FROM program_wods WHERE program_id=? AND user_id=? AND name='__AUTRES__'")
         .bind(b.program_id, u.id)
@@ -2541,7 +2553,8 @@ async function api(r, e, p) {
       m[1],
       b.program_id,
       Array.isArray(b.movement_ids) ? b.movement_ids : [],
-      Array.isArray(b.catalog_movement_ids) ? b.catalog_movement_ids : []
+      Array.isArray(b.catalog_movement_ids) ? b.catalog_movement_ids : [],
+      isOther
     );
     await e.DB.batch([
       e.DB.prepare(

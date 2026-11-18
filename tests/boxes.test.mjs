@@ -519,3 +519,26 @@ test("mouvements d'un WOD de box : cochés par le gestionnaire, transmis aux mem
   assert.deepEqual(after.movement_ids, [pullup]);
   assert.equal((await alice.del(`/manage/wods/${created.data.id}`)).status, 200);
 });
+
+test("séance « Autres » dans un programme avec mouvements : tous les mouvements du catalogue acceptés", async () => {
+  const gina = client(worker.base);
+  await gina.post("/register", {email: "gina@test.local", password: PASSWORD});
+  const activityId = (await gina.get("/activities")).data.activities[0].id,
+    catalog = (await gina.get("/movement-catalog")).data.movements,
+    start = mondayOf(today()),
+    prog = await gina.post("/programs", {name: "Avec mouvements", start, end: addDays(start, 27)});
+  await gina.post(`/programs/${prog.data.id}/movements`, {catalog_movement_id: catalog[0].id});
+  const other = catalog[1].id,
+    created = await gina.post("/sessions", {
+      program_id: prog.data.id,
+      wod_id: "other",
+      session_date: today(),
+      activity_id: activityId,
+      duration_minutes: 60,
+      movement_ids: [],
+      catalog_movement_ids: [other],
+    });
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+  const week = (await gina.get(`/week-data?from=${start}&to=${addDays(start, 6)}`)).data;
+  assert.ok(week.catalogChecks.some(c => c.session_id === created.data.id && c.catalog_movement_id === other));
+});
