@@ -73,7 +73,7 @@ La page n'a pas de titre : chaque famille (LIFT, FORCE, GYM, ENGINE) qui a des m
 - Modification du prénom et du nom.
 - Administration réservée aux administrateurs : le compte défini par `ADMIN_EMAIL` (administrateur principal, qui ne peut être ni rétrogradé ni désactivé) et les comptes qu'un administrateur a nommés (bouton bouclier dans la liste des utilisateurs). Un administrateur ne peut pas retirer ses propres droits.
 - Tâches à valider : tant qu'une demande attend (adhésion à une box gérée pour l'icône maison du gestionnaire, demande de gestionnaire pour la roue crantée de l'administrateur), l'icône est rouge ; elle prend la couleur du thème dans son espace et redevient rouge en sortant tant qu'il reste une demande (`GET /api/boxes` renvoie `pending.members` et `pending.managers`).
-- La roue crantée en haut ouvre l'**espace d'administration**, avec son propre menu du bas : **Utilisateurs** ; **Box** (box, gestionnaires de box, liste des mouvements) ; **Autres paramétrages** (réglages par défaut, activités). La même icône, surlignée, ramène à l'espace utilisateur.
+- La roue crantée en haut ouvre l'**espace d'administration**, avec son propre menu du bas : **Utilisateurs** ; **Box** (box, gestionnaires de box) ; **Autres paramétrages** (réglages par défaut, liste des mouvements, activités). La même icône, surlignée, ramène à l'espace utilisateur.
 - Gestion des utilisateurs (activation / désactivation, droits d'administration).
 - Gestion de la « Liste des mouvements » (catalogue commun), de leur catégorie et de leur ordre ; les flèches de tri s'affichent via le bouton ⇅ du titre.
 - Gestion des activités proposées lors de la création d'un WOD ou d'une séance.
