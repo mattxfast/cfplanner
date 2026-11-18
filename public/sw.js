@@ -77,7 +77,7 @@ self.addEventListener("push", event => {
     data = event.data ? event.data.json() : {};
   } catch {}
   event.waitUntil(
-    self.registration.showNotification(data.title || "MyFitFactory", {
+    self.registration.showNotification(data.title || "myFitFactory", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",

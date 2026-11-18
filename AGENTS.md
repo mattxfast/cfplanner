@@ -1,11 +1,11 @@
-# AGENTS.md — MyFitFactory
+# AGENTS.md — myFitFactory
 
 Instructions communes à tous les agents IA qui travaillent sur ce dépôt (Claude Code, Codex ou autre).
 Plusieurs agents interviennent **à tour de rôle** : ce fichier est la référence partagée. Lis-le en entier avant toute modification.
 
 ## Le projet
 
-MyFitFactory (anciennement FitFactory puis CFPlanner ; dépôt GitHub `mattxfast/myfitfactory`, Worker Cloudflare et base D1 : `myfitfactory`, adresse `myfitfactory.mattxfast.workers.dev` ; cookie de session et préférence de thème : `fitfactory_session` et `fitfactory-theme` ; les anciens noms `cfplanner_session` et `cfplanner-theme` restent acceptés pour la transition) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
+myFitFactory (anciennement FitFactory puis CFPlanner ; dépôt GitHub `mattxfast/myfitfactory`, Worker Cloudflare et base D1 : `myfitfactory`, adresse `myfitfactory.mattxfast.workers.dev` ; cookie de session et préférence de thème : `fitfactory_session` et `fitfactory-theme` ; les anciens noms `cfplanner_session` et `cfplanner-theme` restent acceptés pour la transition) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
 
 ## Architecture
 

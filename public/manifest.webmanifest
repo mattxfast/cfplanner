@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "MyFitFactory",
-  "short_name": "MyFitFactory",
+  "name": "myFitFactory",
+  "short_name": "myFitFactory",
   "description": "Programmes, séances, mouvements et records personnels.",
   "lang": "fr",
   "start_url": "/",

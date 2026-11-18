@@ -1,6 +1,6 @@
-# MyFitFactory
+# myFitFactory
 
-MyFitFactory (anciennement FitFactory, et avant CFPlanner) est une application web responsive de planification et de suivi de l'entraînement CrossFit. Elle sépare la programmation prévue, les séances réellement effectuées et les records personnels (PR).
+myFitFactory (anciennement FitFactory, et avant CFPlanner) est une application web responsive de planification et de suivi de l'entraînement CrossFit. Elle sépare la programmation prévue, les séances réellement effectuées et les records personnels (PR).
 
 ## Fonctionnalités
 

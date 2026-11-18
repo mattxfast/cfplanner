@@ -427,9 +427,9 @@ async function pushToUser(e, userId, message) {
       if (status === 404 || status === 410)
         await e.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint=?").bind(sub.endpoint).run();
       else if (status >= 200 && status < 300) sent++;
-      else console.error("MyFitFactory push", {status});
+      else console.error("myFitFactory push", {status});
     } catch (err) {
-      console.error("MyFitFactory push", {message: err?.message});
+      console.error("myFitFactory push", {message: err?.message});
     }
   }
   return {sent, devices: subs.length};
@@ -495,15 +495,15 @@ async function sendReminders(e) {
             sub,
             keys,
             subject,
-            {title: "MyFitFactory", body, tag: "reminder", url: "/"},
+            {title: "myFitFactory", body, tag: "reminder", url: "/"},
             fetch,
             batch
           );
           if (status === 404 || status === 410) gone.push(sub.endpoint);
           else if (status >= 200 && status < 300) sent++;
-          else console.error("MyFitFactory push", {status});
+          else console.error("myFitFactory push", {status});
         } catch (err) {
-          console.error("MyFitFactory push", {message: err?.message});
+          console.error("myFitFactory push", {message: err?.message});
         }
       })
     );
@@ -589,16 +589,16 @@ async function createResetLink(e, userId, origin) {
 }
 async function sendResetEmail(e, to, link) {
   if (!e.RESEND_API_KEY || !e.MAIL_FROM) {
-    console.log("MyFitFactory réinitialisation (aucun service d’e-mail configuré)", {email: to, lien: link});
+    console.log("myFitFactory réinitialisation (aucun service d’e-mail configuré)", {email: to, lien: link});
     return false;
   }
-  const text = `Bonjour,\n\nPour choisir un nouveau mot de passe MyFitFactory, ouvre ce lien (valable ${RESET_MINUTES} minutes, utilisable une seule fois) :\n${link}\n\nSi tu n’es pas à l’origine de cette demande, ignore simplement ce message.`;
+  const text = `Bonjour,\n\nPour choisir un nouveau mot de passe myFitFactory, ouvre ce lien (valable ${RESET_MINUTES} minutes, utilisable une seule fois) :\n${link}\n\nSi tu n’es pas à l’origine de cette demande, ignore simplement ce message.`;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {Authorization: "Bearer " + e.RESEND_API_KEY, "content-type": "application/json"},
-    body: JSON.stringify({from: e.MAIL_FROM, to, subject: "Réinitialiser ton mot de passe MyFitFactory", text}),
+    body: JSON.stringify({from: e.MAIL_FROM, to, subject: "Réinitialiser ton mot de passe myFitFactory", text}),
   });
-  if (!res.ok) console.error("MyFitFactory e-mail", {status: res.status});
+  if (!res.ok) console.error("myFitFactory e-mail", {status: res.status});
   return res.ok;
 }
 // Identifiant généré par le téléphone (mode hors ligne) : rend la création rejouable sans doublon.
@@ -925,7 +925,7 @@ async function api(r, e, p) {
     }
     if (r.method === "POST" && p === "/api/push/test") {
       const x = await pushToUser(e, u.id, {
-        title: "MyFitFactory",
+        title: "myFitFactory",
         body: "Les rappels fonctionnent sur cet appareil.",
         tag: "test",
         url: "/",
@@ -2482,7 +2482,7 @@ export default {
       }
       return res;
     } catch (err) {
-      console.error("MyFitFactory", {name: err?.name, message: err?.message, stack: err?.stack, cause: err?.cause});
+      console.error("myFitFactory", {name: err?.name, message: err?.message, stack: err?.stack, cause: err?.cause});
       return json({error: "Erreur serveur. Réessaie."}, 500);
     }
   },
