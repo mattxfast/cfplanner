@@ -249,8 +249,8 @@ function renderManagedBox() {
     .forEach(b => b.classList.toggle("active", b.dataset.boxPage === boxPage));
   const d = managedBox;
   if (!d) return;
-  $("#boxviewtitle").textContent =
-    {wods: "WOD", members: "Membres", info: "Infos de la box"}[boxPage] + " · " + d.box.name;
+  // Bandeau : seulement le nom de la box (la page en cours est indiquée par le menu du bas).
+  $("#boxviewtitle").textContent = d.box.name;
   const pending = d.members.filter(x => x.status === "pending"),
     members = d.members.filter(x => x.status === "approved"),
     cats = d.categories;
