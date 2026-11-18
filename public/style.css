@@ -417,6 +417,10 @@ label {
   font-weight: 600;
   margin: 14px 0;
 }
+/* Un champ masqué par l’attribut hidden (ex. « Nombre de RM » d’un PR en répétitions) ne s’affiche pas. */
+label[hidden] {
+  display: none;
+}
 input,
 textarea {
   width: 100%;
@@ -4017,9 +4021,6 @@ button:active:not(:disabled) {
 /* Box : sélecteur de la box gérée (onglet « Ma box ») et liste des adhésions (Mon compte). */
 .box-picker {
   margin: 0 0 var(--section-content-gap);
-}
-.box-picker[hidden] {
-  display: none;
 }
 .box-membership-list .admin-row {
   padding: 6px 0;
