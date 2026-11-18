@@ -4,6 +4,22 @@
 FFOffline.init({
   send: sendApi,
   describeSession: b => {
+    // WOD de box : nom, contenu, box, type de score et catégorie, pour l’affichage hors ligne.
+    const boxWod = b.box_wod_id ? boxWodsById.get(b.box_wod_id) : null;
+    if (boxWod)
+      return {
+        program_name: "Hors programme",
+        wod_name: boxWod.name,
+        planned_comment: boxWod.content || "",
+        box_id: boxWod.box_id,
+        box_name: boxWod.box_name,
+        box_wod_date: boxWod.wod_date,
+        score_type: boxWod.score_type,
+        score_category_name: boxCategories.find(c => c.id === b.score_category_id)?.name || null,
+        ...(activities.find(x => x.id === b.activity_id)
+          ? {activity_name: activities.find(x => x.id === b.activity_id).name}
+          : {}),
+      };
     const p = programs.find(x => x.id === b.program_id),
       w =
         b.wod_id === "other"
@@ -22,6 +38,7 @@ FFOffline.init({
   },
   // WOD de box créé ou modifié hors ligne : nom par défaut et nom de la box.
   describeBoxWod: b => ({name: b.name || defaultWodName(b.wod_date), box_name: boxName(b.box_id)}),
+  describeMe: () => ({first_name: user?.first_name || "", last_name: user?.last_name || ""}),
   onChange: renderSyncStatus,
   onSynced: async () => {
     if (user) {

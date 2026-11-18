@@ -12,16 +12,60 @@ function fillActivitySelect(select, selected = "") {
   if (selected) select.value = selected;
   else if (defaultActivity()) select.value = defaultActivity().id;
 }
+// WOD de box proposés dans le formulaire : ceux de la semaine de la date de séance, pour les box dont on est membre.
+let formBoxWods = [],
+  formBoxWeek = "";
+function loadFormBoxWods(date, onLoaded) {
+  const week = mondayOf(date || today());
+  formBoxWeek = week;
+  formBoxWods = [];
+  if (!memberBoxIds().length) return;
+  if (week === selectedWeekStart) {
+    formBoxWods = rememberBoxWods(boxWods);
+    return;
+  }
+  api("/box-wods?from=" + week + "&to=" + addDays(week, 6))
+    .then(d => {
+      if (formBoxWeek !== week) return;
+      formBoxWods = rememberBoxWods(d.wods);
+      onLoaded();
+    })
+    .catch(() => {});
+}
+// WOD de box choisi dans la liste (valeur « box:<id> »), sinon null.
+function selectedBoxWod() {
+  const v = $("#sessionform").elements.wod_id.value || "";
+  return v.startsWith("box:") ? boxWodsById.get(v.slice(4)) || null : null;
+}
 function fillWodOptions(pid, selected = "") {
   const f = $("#sessionform").elements.wod_id,
-    ws = pid === "none" ? [] : wodsByProgram[pid] || [];
+    ws = pid === "none" ? [] : visibleWods(pid),
+    list = formBoxWods.filter(w => w.wod_date <= today());
+  if (selected.startsWith("box:") && !list.some(w => "box:" + w.id === selected) && boxWodsById.has(selected.slice(4)))
+    list.push(boxWodsById.get(selected.slice(4)));
+  const severalBoxes = new Set(list.map(w => w.box_id)).size > 1,
+    programOptions = ws.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join(""),
+    boxOptions = list
+      .map(
+        w =>
+          `<option value="box:${w.id}">${esc(wodDay(w.wod_date) + " · " + w.name + (severalBoxes ? " (" + w.box_name + ")" : ""))}</option>`
+      )
+      .join("");
   f.innerHTML =
-    ws
-      .filter(w => w.name !== "__AUTRES__")
-      .map(w => `<option value="${w.id}">${esc(w.name)}</option>`)
-      .join("") + `<option value="other">Autres</option>`;
-  if (selected) f.value = selected === "other" ? "other" : selected;
-  renderSessionMovementChecks(pid);
+    (boxOptions
+      ? (programOptions
+          ? `<optgroup label="${esc(programs.find(p => p.id === pid)?.name || "Programmation")}">${programOptions}</optgroup>`
+          : "") + `<optgroup label="WOD de la box">${boxOptions}</optgroup>`
+      : programOptions) + `<option value="other">Autres</option>`;
+  if (selected) f.value = selected;
+  if (f.selectedIndex < 0) f.selectedIndex = 0;
+  syncSessionWod();
+}
+// Mouvements (catalogue pour un WOD de box ou « hors programme ») et score selon le WOD choisi.
+function syncSessionWod(session = null) {
+  const f = $("#sessionform");
+  renderSessionMovementChecks(selectedBoxWod() ? "none" : f.elements.program_id.value, f.elements.session_id.value);
+  renderSessionScore(session);
 }
 $("#sessionform").elements.program_id.onchange = e => {
   fillWodOptions(e.target.value);
@@ -35,9 +79,14 @@ function applyPlannedSessionNote() {
     field = f.elements.actual_comment,
     previous = field.dataset.plannedDefault || "";
   if (field.value === previous || !field.value.trim()) {
-    const wod = (wodsByProgram[f.elements.program_id.value] || []).find(x => x.id === f.elements.wod_id.value);
+    const boxWod = selectedBoxWod(),
+      wod = (wodsByProgram[f.elements.program_id.value] || []).find(x => x.id === f.elements.wod_id.value);
     const week = mondayOf(f.elements.session_date.value || today());
-    const planned = wod ? weeklyWodContent(wod.id, week) || wod.planned_comment || "" : "";
+    const planned = boxWod
+      ? boxWod.content || ""
+      : wod
+        ? weeklyWodContent(wod.id, week) || wod.planned_comment || ""
+        : "";
     field.value = planned;
     field.dataset.plannedDefault = planned;
   }
@@ -48,19 +97,77 @@ $("#sessionform").elements.wod_id.onchange = e => {
     fillActivitySelect($("#sessionform").elements.activity_id, w.activity_id || defaultActivity()?.id);
     $("#sessionform").elements.duration_minutes.value = w.duration_minutes || defaultActivity()?.duration_minutes || 60;
   }
+  syncSessionWod();
   applyPlannedSessionNote();
 };
-$("#sessionform").elements.session_date.onchange = applyPlannedSessionNote;
+$("#sessionform").elements.session_date.onchange = e => {
+  const f = $("#sessionform"),
+    refill = () => {
+      fillWodOptions(f.elements.program_id.value, f.elements.wod_id.value);
+      applyPlannedSessionNote();
+    };
+  if (mondayOf(e.target.value || today()) !== formBoxWeek) {
+    loadFormBoxWods(e.target.value, refill);
+    refill();
+  } else applyPlannedSessionNote();
+};
+// Score d’un WOD de box : catégorie de la box et valeur selon le type (temps, répétitions, charge).
+function renderSessionScore(session = null) {
+  const f = $("#sessionform"),
+    w = selectedBoxWod(),
+    show = !!w && w.score_type !== "none",
+    box = $("#scoreinputs");
+  $("#sessionscoresection").hidden = !show;
+  if (!show) {
+    box.innerHTML = "";
+    box.dataset.wod = "";
+    return;
+  }
+  if (box.dataset.wod === w.id && !session) return;
+  box.dataset.wod = w.id;
+  const cats = boxCategories.filter(c => c.box_id === w.box_id),
+    previous = session?.score_category_id || f.elements.score_category_id.value,
+    v = session?.score_value ?? null;
+  f.elements.score_category_id.innerHTML = cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  if (cats.some(c => c.id === previous)) f.elements.score_category_id.value = previous;
+  box.innerHTML =
+    w.score_type === "time"
+      ? `<label>Temps (min : s)<span class="score-time"><input name="score_min" type="number" min="0" max="1440" step="1" inputmode="numeric" placeholder="min" value="${v === null ? "" : Math.floor(v / 60)}"><span>:</span><input name="score_sec" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="s" value="${v === null ? "" : v % 60}"></span></label>`
+      : w.score_type === "reps"
+        ? `<label>Répétitions<input name="score_reps" type="number" min="1" max="100000" step="1" inputmode="numeric" value="${v ?? ""}"></label>`
+        : `<label>Charge (kg)<input name="score_load" type="number" min="0.5" max="1000" step="0.5" inputmode="decimal" value="${v ?? ""}"></label>`;
+}
+// Valeur du score saisie (null si vide) ; le temps est converti en secondes.
+function readSessionScore() {
+  const f = $("#sessionform").elements,
+    w = selectedBoxWod();
+  if (!w || w.score_type === "none") return {score_value: null, score_category_id: null};
+  let value = null;
+  if (w.score_type === "time") {
+    const mn = f.score_min.value,
+      sec = f.score_sec.value;
+    if (mn !== "" || sec !== "") value = Number(mn || 0) * 60 + Number(sec || 0);
+    if (value !== null && (!Number.isInteger(value) || value < 1 || Number(sec || 0) > 59))
+      return {error: "Temps invalide : minutes et secondes (0 à 59)."};
+  } else {
+    const raw = (w.score_type === "reps" ? f.score_reps : f.score_load).value;
+    if (raw !== "") value = Number(raw);
+  }
+  return {score_value: value, score_category_id: value === null ? null : f.score_category_id.value};
+}
 function renderSessionMovementChecks(pid, sessionId = "") {
   const box = $("#sessionmovementchecks"),
     programItems = movementsByProgram[pid] || [],
     fromCatalog = !programItems.length,
     items = fromCatalog ? movementCatalog : programItems,
     field = fromCatalog ? "catalog_movement_ids" : "movement_ids",
+    // Cases déjà cochées dans le formulaire ouvert (changement de date ou de WOD) : gardées.
+    ticked = new Set([...box.querySelectorAll("input:checked")].map(x => x.name + ":" + x.value)),
     isChecked = m =>
-      fromCatalog
+      ticked.has(field + ":" + m.id) ||
+      (fromCatalog
         ? catalogChecks.some(c => c.session_id === sessionId && c.catalog_movement_id === m.id)
-        : movementChecks.some(c => c.session_id === sessionId && c.movement_id === m.id);
+        : movementChecks.some(c => c.session_id === sessionId && c.movement_id === m.id));
   $("#sessionmovementsection").hidden = !items.length;
   box.innerHTML = items
     .map(
@@ -72,13 +179,16 @@ function renderSessionMovementChecks(pid, sessionId = "") {
 function openSession(s = null, presetWodId = "") {
   const f = $("#sessionform");
   f.reset();
+  $("#sessionmovementchecks").innerHTML = "";
   f.elements.session_date.max = today();
   f.elements.session_id.value = s?.id || "";
   f.elements.actual_comment.value = s?.actual_comment || "";
   f.elements.actual_comment.dataset.plannedDefault = "";
   const weekEnd = addDays(selectedWeekStart, 6),
     defaultDate = selectedWeekStart > today() ? today() : weekEnd < today() ? weekEnd : today(),
-    sessionDate = s?.session_date || defaultDate;
+    presetBoxWod = presetWodId.startsWith("box:") ? boxWodsById.get(presetWodId.slice(4)) : null,
+    sessionDate =
+      s?.session_date || (presetBoxWod && presetBoxWod.wod_date <= today() ? presetBoxWod.wod_date : defaultDate);
   f.elements.session_date.value = sessionDate;
   // Programmes réels + « Hors programme » (programme technique caché, créé par le serveur si besoin).
   f.elements.program_id.innerHTML =
@@ -92,7 +202,37 @@ function openSession(s = null, presetWodId = "") {
   if (!selectedProgram) selectedProgram = programForDate(sessionDate);
   f.elements.program_id.value = selectedProgram && !isFallbackProgram(selectedProgram) ? selectedProgram.id : "none";
   const pid = f.elements.program_id.value;
-  fillWodOptions(pid, s?.wod_name === "Autres" ? "other" : s?.wod_id || presetWodId);
+  // Séance sur un WOD de box : le WOD est retrouvé même s’il n’est pas dans la semaine de la séance.
+  if (s?.box_wod_id)
+    rememberBoxWods([
+      {
+        id: s.box_wod_id,
+        box_id: s.box_id,
+        box_name: s.box_name,
+        wod_date: s.box_wod_date || s.session_date,
+        name: s.wod_name,
+        content: s.planned_comment || "",
+        score_type: s.score_type || "none",
+        ...boxWodsById.get(s.box_wod_id),
+      },
+    ]);
+  const initialWod = s?.box_wod_id
+    ? "box:" + s.box_wod_id
+    : s?.wod_name === "Autres"
+      ? "other"
+      : s?.wod_id || presetWodId;
+  loadFormBoxWods(sessionDate, () =>
+    fillWodOptions(f.elements.program_id.value, f.elements.wod_id.value || initialWod)
+  );
+  fillWodOptions(pid, initialWod);
+  // Sans programme : le WOD de la box du jour est proposé par défaut.
+  if (!s && !presetWodId && pid === "none") {
+    const todays = formBoxWods.find(w => w.wod_date === sessionDate);
+    if (todays) {
+      f.elements.wod_id.value = "box:" + todays.id;
+      syncSessionWod();
+    }
+  }
   const selectedWod = (wodsByProgram[pid] || []).find(w => w.id === (s?.wod_id || presetWodId));
   fillActivitySelect(f.elements.activity_id, s?.activity_id || selectedWod?.activity_id || defaultActivity()?.id);
   f.elements.duration_minutes.value =
@@ -111,7 +251,8 @@ function openSession(s = null, presetWodId = "") {
       f.elements.start_time.value = d.toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit", hour12: false});
     }
   };
-  renderSessionMovementChecks(pid, s?.id || "");
+  $("#scoreinputs").dataset.wod = "";
+  syncSessionWod(s);
   if (!s) applyPlannedSessionNote();
   $("#sessiontitle").textContent = s ? "Modifier la séance" : "Enregistrer une séance";
   $("#sessiondialog").showModal();
@@ -187,12 +328,24 @@ async function saveSession(event) {
     movement_ids: [...form.querySelectorAll('input[name="movement_ids"]:checked')].map(x => x.value),
     catalog_movement_ids: [...form.querySelectorAll('input[name="catalog_movement_ids"]:checked')].map(x => x.value),
   };
+  // WOD de box : séance « hors programme » rattachée au WOD de la box, avec son score éventuel.
+  const boxWod = selectedBoxWod();
+  if (boxWod) {
+    const score = readSessionScore();
+    if (score.error) {
+      $("#sessionerror").textContent = score.error;
+      button.disabled = false;
+      return;
+    }
+    Object.assign(body, {program_id: "none", wod_id: "other", box_wod_id: boxWod.id}, score);
+  }
   try {
     await api(id ? "/sessions/" + id : "/sessions", {method: id ? "PUT" : "POST", body: JSON.stringify(body)});
-    await api("/weekly-plans", {
-      method: "DELETE",
-      body: JSON.stringify({week_start: mondayOf(body.session_date), wod_id: body.wod_id}),
-    });
+    if (!boxWod)
+      await api("/weekly-plans", {
+        method: "DELETE",
+        body: JSON.stringify({week_start: mondayOf(body.session_date), wod_id: body.wod_id}),
+      });
     $("#sessiondialog").close();
     selectedWeekStart = mondayOf(body.session_date);
     await load(); // recharge aussi les programmes (état « contient des séances »)

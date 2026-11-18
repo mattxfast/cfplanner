@@ -36,6 +36,10 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Dans **Mon compte → Mes box**, un utilisateur demande à rejoindre une box (adhésion, validée par un gestionnaire de la box) ou à la gérer (validée par un administrateur, dans « Gestionnaires de box »). Prénom et nom sont obligatoires pour faire une demande (ils sont affichés aux gestionnaires et dans les classements). Un utilisateur peut être membre de plusieurs box et gérer plusieurs box ; une demande peut être annulée et une box quittée à tout moment.
 - Un gestionnaire validé devient aussi membre de la box et voit l'onglet **Ma box** (icône maison) dans la barre du bas : demandes d'adhésion à valider ou refuser, membres (un gestionnaire ne peut pas être retiré), catégories de score de la box (ajout, renommage, ordre via ⇅, suppression ; au moins une catégorie). S'il gère plusieurs box, il choisit la box en haut de l'onglet.
 - WOD de la box (rubrique « WOD » de l'onglet **Ma box**) : le gestionnaire met en ligne les WOD passés ou à venir, semaine par semaine (‹ › ou choix de la date). Un WOD a une date, un nom facultatif (« WOD du JJ/MM/AAAA » par défaut), un contenu et un type de score : temps (For Time), répétitions (AMRAP), charge (kg) ou sans score. Plusieurs WOD peuvent avoir la même date. Les membres validés de la box voient ses WOD (`GET /api/box-wods?from=…&to=…`, 93 jours au plus).
+- Séance sur un WOD de box : la liste « WOD effectué » du formulaire propose, en plus des WOD de la programmation et de « Autres », les WOD des box dont on est membre pour la semaine de la date de séance (jusqu'à aujourd'hui ; changer la date affiche ceux d'une autre semaine). Sans programme, le WOD de la box du jour est choisi par défaut. Pour un WOD avec score, on saisit sa catégorie (RX, Inter, Scaled… selon la box) et son score : temps (min : s, enregistré en secondes), répétitions ou charge (kg). Le score est facultatif. La séance est rattachée au programme technique « Hors programme » (WOD « Autres ») avec la référence du WOD de box ; elle apparaît dans l'historique avec le nom du WOD, la box et le score.
+- Dans **Séances**, la rubrique « WOD de la box » liste les WOD de la semaine (y compris les semaines à venir) avec le nombre de séances, un bouton ＋ pour enregistrer et un bouton coupe pour le classement.
+- Classement d'un WOD de box (`GET /api/box-wods/:id/leaderboard`, réservé aux membres validés de la box) : meilleur score de chaque membre actuel par catégorie (temps le plus court, ou plus de répétitions / charge la plus lourde), avec prénom et nom. Hors ligne, la dernière copie consultée est affichée, avec son propre score saisi hors ligne.
+- Un WOD de box déjà réalisé, une catégorie déjà utilisée dans un score et une box dont les WOD ont des séances ne peuvent plus être supprimés.
 - Un administrateur peut retirer le rôle de gestionnaire ; supprimer une box supprime ses adhésions, ses catégories et ses WOD.
 
 ### Records personnels (PR)
@@ -119,6 +123,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V13 ajoute la colonne `users.is_admin` (administrateurs nommés en plus du compte `ADMIN_EMAIL`).
 - V14 ajoute les tables `boxes` (nom unique sans tenir compte de la casse, ville), `box_members` (box, utilisateur, rôle `member` ou `manager`, statut `pending` ou `approved`) et `box_categories` (catégories de score d'une box, ordonnées).
 - V15 ajoute la table `box_wods` (box, date, nom, contenu, type de score `time`, `reps`, `load` ou `none`), indexée par box et date.
+- V16 ajoute à `training_sessions` les colonnes `box_wod_id`, `score_value` et `score_category_id` (séance sur un WOD de box et son score), avec un index pour les classements.
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
@@ -154,7 +159,7 @@ Lancer les tests d'intégration (Node.js 20+ ; démarrent le Worker en local sur
 node --test tests/*.test.mjs
 ```
 
-Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions et WOD de box (`tests/boxes.test.mjs`).
+Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions, WOD de box, scores et classements (`tests/boxes.test.mjs`).
 
 Déployer le Worker et les assets :
 

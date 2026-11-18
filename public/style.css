@@ -4014,3 +4014,68 @@ button:active:not(:disabled) {
   white-space: pre-line;
   color: var(--muted);
 }
+/* Séance sur un WOD de box : score (catégorie + valeur). */
+.session-score h3 {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.session-score label {
+  margin: 8px 0 0;
+}
+.score-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.score-time input {
+  margin: 0;
+}
+.session-score .hint {
+  margin: 6px 0 0;
+}
+.box-wod-meta {
+  display: block;
+  margin-top: 2px;
+}
+/* Classement d’un WOD de box, par catégorie. */
+.leaderboard-content {
+  white-space: pre-line;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.leaderboard-category h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.leaderboard-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 10px;
+  font-size: 14px;
+}
+.leaderboard-list li.me {
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+}
+.leaderboard-rank {
+  width: 22px;
+  font-weight: 800;
+  text-align: center;
+}
+.leaderboard-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

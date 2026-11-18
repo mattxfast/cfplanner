@@ -517,6 +517,14 @@
               placeholder="Charges, répétitions, sensations, adaptations, résultat…"
             ></textarea>
           </label>
+          <section id="sessionscoresection" class="session-score" hidden>
+            <h3>Score</h3>
+            <div class="two">
+              <label>Catégorie<select name="score_category_id"></select></label>
+              <div class="score-inputs" id="scoreinputs"></div>
+            </div>
+            <p class="hint">Facultatif : il alimente le classement du WOD entre les membres de la box.</p>
+          </section>
           <section id="sessionmovementsection" class="movement-editor">
             <h3>Focus mouvement</h3>
             <div id="sessionmovementchecks"></div>
@@ -534,6 +542,14 @@
           <button type="button" class="primary" id="choice-record">Enregistrer</button
           ><button type="button" class="primary" id="choice-plan">Planifier</button>
         </div>
+      </dialog>
+      <dialog id="leaderboarddialog" class="modal">
+        <div class="sectionhead">
+          <h2 id="leaderboardtitle">Classement</h2>
+          <button type="button" class="iconbtn" id="closeleaderboard">×</button>
+        </div>
+        <p id="leaderboardmeta" class="muted"></p>
+        <div id="leaderboardbody"></div>
       </dialog>
       <dialog id="prdialog" class="modal">
         <form id="prform">

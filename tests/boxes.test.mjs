@@ -161,3 +161,66 @@ test("WOD de box : saisis par le gestionnaire (passés et à venir), visibles de
   assert.equal(edit.status, 200);
   assert.equal((await alice.del(`/manage/wods/${upcoming.data.id}`)).status, 200);
 });
+
+test("séance sur un WOD de box : score, catégorie et classement entre membres", async () => {
+  const activityId = (await bob.get("/activities")).data.activities[0].id,
+    cats = (await bob.get("/boxes")).data.categories.filter(c => c.box_id === boxId),
+    rx = cats.find(c => c.name === "RX").id,
+    scaled = cats.find(c => c.name === "Scaled").id,
+    session = extra => ({
+      program_id: "none",
+      wod_id: "other",
+      session_date: today(),
+      activity_id: activityId,
+      duration_minutes: 60,
+      movement_ids: [],
+      catalog_movement_ids: [],
+      box_wod_id: boxWodId,
+      ...extra,
+    });
+  // temps en secondes, catégorie obligatoire et propre à la box
+  assert.equal((await bob.post("/sessions", session({score_value: 300}))).status, 400);
+  assert.equal((await bob.post("/sessions", session({score_value: 12.5, score_category_id: rx}))).status, 400);
+  const bobSession = await bob.post("/sessions", session({score_value: 420, score_category_id: rx}));
+  assert.equal(bobSession.status, 200, JSON.stringify(bobSession.data));
+  assert.equal((await carol.post("/sessions", session({score_value: 380, score_category_id: rx}))).status, 200);
+  assert.equal((await alice.post("/sessions", session({score_value: 500, score_category_id: scaled}))).status, 200);
+  // un non-membre ne peut ni enregistrer ce WOD ni voir le classement
+  const outsider = client(worker.base);
+  await outsider.post("/register", {email: "dehors2@test.local", password: PASSWORD});
+  assert.equal((await outsider.post("/sessions", session({score_value: 100, score_category_id: rx}))).status, 404);
+  assert.equal((await outsider.get(`/box-wods/${boxWodId}/leaderboard`)).status, 404);
+  // classement : For Time, le plus petit temps d'abord, par catégorie ; prénom et nom affichés
+  const board = (await bob.get(`/box-wods/${boxWodId}/leaderboard`)).data;
+  const rxRows = board.categories.find(c => c.id === rx).rows;
+  assert.deepEqual(
+    rxRows.map(x => [x.first_name, x.score, x.is_me]),
+    [
+      ["Carol", 380, 0],
+      ["Bob", 420, 1],
+    ]
+  );
+  assert.equal(board.categories.find(c => c.id === scaled).rows[0].first_name, "Alice");
+  // la séance apparaît dans l'historique avec le nom du WOD, la box et le score
+  const week = (await bob.get(`/week-data?from=${mondayOf(today())}&to=${addDays(mondayOf(today()), 6)}`)).data;
+  const logged = week.sessions.find(x => x.id === bobSession.data.id);
+  assert.match(logged.wod_name, /^WOD du /);
+  assert.equal(logged.box_name, "CrossFit Test");
+  assert.equal(logged.score_category_name, "RX");
+  assert.ok(week.boxWods.some(w => w.id === boxWodId));
+  // modification du score
+  assert.equal(
+    (await bob.put(`/sessions/${bobSession.data.id}`, session({score_value: 360, score_category_id: rx}))).status,
+    200
+  );
+  const after = (await bob.get(`/box-wods/${boxWodId}/leaderboard`)).data.categories.find(c => c.id === rx).rows;
+  assert.equal(after[0].first_name, "Bob");
+  // un WOD ou une catégorie déjà utilisés ne se suppriment plus ; la box non plus
+  assert.equal((await alice.del(`/manage/wods/${boxWodId}`)).status, 409);
+  assert.equal((await alice.del(`/manage/categories/${rx}`)).status, 409);
+  assert.equal((await admin.del(`/admin/boxes/${boxId}`)).status, 409);
+  // un membre qui quitte la box disparaît du classement
+  assert.equal((await carol.del(`/boxes/${boxId}/requests`, {role: "member"})).status, 200);
+  const left = (await bob.get(`/box-wods/${boxWodId}/leaderboard`)).data.categories.find(c => c.id === rx).rows;
+  assert.ok(!left.some(x => x.first_name === "Carol"));
+});

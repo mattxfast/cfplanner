@@ -294,6 +294,21 @@ async function ensureV2Schema(env) {
       ).run();
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS box_wods_box_date ON box_wods(box_id,wod_date)").run();
     });
+    await runMigration("v16-session-scores", async () => {
+      const columns = new Set(
+        (await env.DB.prepare("PRAGMA table_info(training_sessions)").all()).results.map(c => c.name)
+      );
+      for (const [name, definition] of [
+        ["box_wod_id", "TEXT"],
+        ["score_value", "REAL"],
+        ["score_category_id", "TEXT"],
+      ])
+        if (!columns.has(name))
+          await env.DB.prepare("ALTER TABLE training_sessions ADD COLUMN " + name + " " + definition).run();
+      await env.DB.prepare(
+        "CREATE INDEX IF NOT EXISTS training_sessions_box_wod ON training_sessions(box_wod_id,score_category_id)"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -403,6 +418,41 @@ const boxRole = (e, userId, boxId, role) =>
   e.DB.prepare("SELECT 1 FROM box_members WHERE box_id=? AND user_id=? AND role=? AND status='approved'")
     .bind(boxId, userId, role)
     .first();
+// Séances : WOD du programme, « Autres » ou WOD d'une box (avec score et catégorie).
+const SESSION_SELECT =
+  "SELECT s.*,a.name AS activity_name,COALESCE(bw.name,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END) AS wod_name,COALESCE(bw.content,w.planned_comment) AS planned_comment,p.name AS program_name,bw.box_id,bw.wod_date AS box_wod_date,bw.score_type,bx.name AS box_name,bc.name AS score_category_name FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id LEFT JOIN activities a ON a.id=s.activity_id LEFT JOIN box_wods bw ON bw.id=s.box_wod_id LEFT JOIN boxes bx ON bx.id=bw.box_id LEFT JOIN box_categories bc ON bc.id=s.score_category_id WHERE s.user_id=?";
+// Séance sur un WOD de box : l'utilisateur doit être membre validé de la box (sauf s'il modifie une séance
+// déjà enregistrée sur ce WOD). Le score dépend du type choisi par le gestionnaire.
+async function sessionBoxWod(e, userId, b, sessionId = null) {
+  if (!b.box_wod_id) return {wod: null};
+  const id = String(b.box_wod_id),
+    kept =
+      sessionId &&
+      (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE id=? AND user_id=? AND box_wod_id=?")
+        .bind(sessionId, userId, id)
+        .first()),
+    wod = await e.DB.prepare(
+      "SELECT w.id,w.box_id,w.score_type FROM box_wods w WHERE w.id=? AND (? OR EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved'))"
+    )
+      .bind(id, kept ? 1 : 0, userId)
+      .first();
+  if (!wod) return {error: "WOD de box introuvable.", status: 404};
+  const raw = b.score_value;
+  if (wod.score_type === "none" || raw === null || raw === undefined || raw === "")
+    return {wod, value: null, category: null};
+  const v = Number(raw);
+  if (wod.score_type === "time" && (!Number.isInteger(v) || v < 1 || v > 86400))
+    return {error: "Temps invalide.", status: 400};
+  if (wod.score_type === "reps" && (!Number.isInteger(v) || v < 1 || v > 100000))
+    return {error: "Le nombre de répétitions doit être un entier positif.", status: 400};
+  if (wod.score_type === "load" && (!Number.isFinite(v) || v <= 0 || v > 1000))
+    return {error: "Charge invalide.", status: 400};
+  const category = await e.DB.prepare("SELECT id FROM box_categories WHERE id=? AND box_id=?")
+    .bind(String(b.score_category_id || ""), wod.box_id)
+    .first();
+  if (!category) return {error: "Choisis une catégorie (RX, Scaled…).", status: 400};
+  return {wod, value: v, category: category.id};
+}
 // WOD de box : nom facultatif (« WOD du JJ/MM/AAAA » par défaut), date, contenu et type de score.
 const SCORE_TYPES = ["time", "reps", "load", "none"];
 const frenchDate = d => d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4);
@@ -417,6 +467,16 @@ function boxWodInput(b) {
     name: boxText(b.name, 100) || "WOD du " + frenchDate(date),
     content: String(b.content || "").slice(0, 3000),
   };
+}
+// WOD des box dont l'utilisateur est membre validé, entre deux dates.
+async function memberBoxWods(e, userId, from, to) {
+  return (
+    await e.DB.prepare(
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
+    )
+      .bind(userId, from, to)
+      .all()
+  ).results;
 }
 // Période de lecture des WOD de box (au plus 93 jours).
 function wodRange(r) {
@@ -994,6 +1054,13 @@ async function api(r, e, p) {
       return json({ok: true});
     }
     if (r.method === "DELETE" && (m = p.match(/^\/api\/admin\/boxes\/([\w-]+)$/))) {
+      const used = await e.DB.prepare(
+        "SELECT 1 FROM training_sessions s JOIN box_wods w ON w.id=s.box_wod_id WHERE w.box_id=? LIMIT 1"
+      )
+        .bind(m[1])
+        .first();
+      if (used)
+        return json({error: "Des séances sont enregistrées sur les WOD de cette box : suppression impossible."}, 409);
       await e.DB.prepare("DELETE FROM boxes WHERE id=?").bind(m[1]).run();
       return json({ok: true});
     }
@@ -1022,11 +1089,16 @@ async function api(r, e, p) {
     return json({error: "Route admin inconnue."}, 404);
   }
   if (r.method === "GET" && p === "/api/boxes") {
-    const [boxes, mine] = await Promise.all([
+    const [boxes, mine, categories] = await Promise.all([
       e.DB.prepare("SELECT id,name,city FROM boxes ORDER BY name COLLATE NOCASE").all(),
       e.DB.prepare("SELECT box_id,role,status FROM box_members WHERE user_id=?").bind(u.id).all(),
+      e.DB.prepare(
+        "SELECT c.id,c.box_id,c.name FROM box_categories c JOIN box_members m ON m.box_id=c.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' ORDER BY c.box_id,c.sort_order,c.name"
+      )
+        .bind(u.id)
+        .all(),
     ]);
-    return json({boxes: boxes.results, memberships: mine.results});
+    return json({boxes: boxes.results, memberships: mine.results, categories: categories.results});
   }
   // Demande d'adhésion (role=member) ou de gestion (role=manager) : rejouable sans effet (mode hors ligne).
   if ((m = p.match(/^\/api\/boxes\/([\w-]+)\/requests$/)) && (r.method === "POST" || r.method === "DELETE")) {
@@ -1052,12 +1124,42 @@ async function api(r, e, p) {
   if (r.method === "GET" && p === "/api/box-wods") {
     const range = wodRange(r);
     if (!range) return json({error: "Période invalide."}, 400);
-    const x = await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
+    return json({wods: await memberBoxWods(e, u.id, range.from, range.to)});
+  }
+  // Classement d'un WOD de box : meilleur score de chaque membre actuel de la box, par catégorie.
+  if (r.method === "GET" && (m = p.match(/^\/api\/box-wods\/([\w-]+)\/leaderboard$/))) {
+    const wod = await e.DB.prepare(
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id WHERE w.id=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')"
     )
-      .bind(u.id, range.from, range.to)
-      .all();
-    return json({wods: x.results});
+      .bind(m[1], u.id)
+      .first();
+    if (!wod) return json({error: "WOD de box introuvable."}, 404);
+    const [categories, rows] = await Promise.all([
+      e.DB.prepare("SELECT id,name FROM box_categories WHERE box_id=? ORDER BY sort_order,name").bind(wod.box_id).all(),
+      e.DB.prepare(
+        "SELECT s.user_id,u.first_name,u.last_name,s.score_category_id AS category_id," +
+          (wod.score_type === "time" ? "MIN" : "MAX") +
+          "(s.score_value) AS score FROM training_sessions s JOIN users u ON u.id=s.user_id JOIN box_members m ON m.box_id=? AND m.user_id=s.user_id AND m.role='member' AND m.status='approved' WHERE s.box_wod_id=? AND s.score_value IS NOT NULL AND s.score_category_id IS NOT NULL GROUP BY s.user_id,s.score_category_id"
+      )
+        .bind(wod.box_id, wod.id)
+        .all(),
+    ]);
+    const better = wod.score_type === "time" ? (a, b) => a.score - b.score : (a, b) => b.score - a.score;
+    return json({
+      wod,
+      categories: categories.results.map(c => ({
+        ...c,
+        rows: rows.results
+          .filter(x => x.category_id === c.id)
+          .sort(better)
+          .map(x => ({
+            first_name: x.first_name,
+            last_name: x.last_name,
+            score: x.score,
+            is_me: x.user_id === u.id ? 1 : 0,
+          })),
+      })),
+    });
   }
   if (p.startsWith("/api/manage/")) {
     // Espace gestionnaire : chaque route vérifie que l'utilisateur gère la box concernée.
@@ -1129,6 +1231,8 @@ async function api(r, e, p) {
       const wod = await e.DB.prepare("SELECT id,box_id FROM box_wods WHERE id=?").bind(m[1]).first();
       if (!wod || !(await managed(wod.box_id))) return json({error: "WOD introuvable."}, 404);
       if (r.method === "DELETE") {
+        if (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE box_wod_id=? LIMIT 1").bind(m[1]).first())
+          return json({error: "Ce WOD a déjà été réalisé par des membres et ne peut plus être supprimé."}, 409);
         await e.DB.prepare("DELETE FROM box_wods WHERE id=?").bind(m[1]).run();
         return json({ok: true});
       }
@@ -1197,6 +1301,8 @@ async function api(r, e, p) {
           .n <= 1
       )
         return json({error: "La box doit garder au moins une catégorie."}, 400);
+      if (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE score_category_id=? LIMIT 1").bind(m[1]).first())
+        return json({error: "Des scores utilisent cette catégorie : elle ne peut plus être supprimée."}, 409);
       await e.DB.prepare("DELETE FROM box_categories WHERE id=?").bind(m[1]).run();
       return json({ok: true});
     }
@@ -1719,9 +1825,9 @@ async function api(r, e, p) {
       from = q.get("from"),
       to = q.get("to");
     if (!validDate(from) || !validDate(to) || from > to) return json({error: "Période invalide."}, 400);
-    const [s, f, pl, c, cc] = await Promise.all([
+    const [s, f, pl, c, cc, bw] = await Promise.all([
       e.DB.prepare(
-        "SELECT s.*,a.name AS activity_name,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END AS wod_name,w.planned_comment,p.name AS program_name FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id LEFT JOIN activities a ON a.id=s.activity_id WHERE s.user_id=? AND s.session_date>=? AND s.session_date<=? ORDER BY s.session_date DESC,s.created_at DESC"
+        SESSION_SELECT + " AND s.session_date>=? AND s.session_date<=? ORDER BY s.session_date DESC,s.created_at DESC"
       )
         .bind(u.id, from, to)
         .all(),
@@ -1745,6 +1851,7 @@ async function api(r, e, p) {
       )
         .bind(u.id, from, to)
         .all(),
+      daysBetween(from, to) <= 92 ? memberBoxWods(e, u.id, from, to) : [],
     ]);
     return json({
       sessions: s.results,
@@ -1752,14 +1859,14 @@ async function api(r, e, p) {
       plans: pl.results,
       checks: c.results,
       catalogChecks: cc.results,
+      boxWods: bw,
     });
   }
   if (r.method === "GET" && p === "/api/sessions") {
     const q = new URL(r.url).searchParams,
       from = q.get("from"),
       to = q.get("to");
-    let sql =
-      "SELECT s.*,a.name AS activity_name,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END AS wod_name,w.planned_comment,p.name AS program_name FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id LEFT JOIN activities a ON a.id=s.activity_id WHERE s.user_id=?";
+    let sql = SESSION_SELECT;
     const args = [u.id];
     if (validDate(from)) {
       sql += " AND s.session_date>=?";
@@ -1777,11 +1884,18 @@ async function api(r, e, p) {
   }
   if (r.method === "POST" && p === "/api/sessions") {
     const b = await r.json(),
-      date = b.session_date,
-      pid = b.program_id === "none" ? await fallbackProgramId(e, u.id) : b.program_id,
       cid = clientId(b.client_id);
     if (cid && (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE id=? AND user_id=?").bind(cid, u.id).first()))
       return json({ok: true, id: cid});
+    // WOD de box : la séance est rattachée au programme technique « Hors programme » (WOD « Autres »).
+    const box = await sessionBoxWod(e, u.id, b);
+    if (box.error) return json({error: box.error}, box.status);
+    if (box.wod) {
+      b.program_id = "none";
+      b.wod_id = "other";
+    }
+    const date = b.session_date,
+      pid = b.program_id === "none" ? await fallbackProgramId(e, u.id) : b.program_id;
     let wid = b.wod_id;
     const act = await e.DB.prepare(
         "SELECT id FROM activities WHERE id=? AND user_id=(SELECT id FROM users WHERE email=?) AND is_active=1"
@@ -1831,7 +1945,7 @@ async function api(r, e, p) {
       );
     await e.DB.batch([
       e.DB.prepare(
-        "INSERT INTO training_sessions(id,program_id,wod_id,user_id,session_date,actual_comment,activity_id,duration_minutes,started_at,logged_at) VALUES(?,?,?,?,?,?,?,?,?,?)"
+        "INSERT INTO training_sessions(id,program_id,wod_id,user_id,session_date,actual_comment,activity_id,duration_minutes,started_at,logged_at,box_wod_id,score_value,score_category_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
       ).bind(
         id,
         pid,
@@ -1844,7 +1958,10 @@ async function api(r, e, p) {
         typeof b.started_at === "string" && !Number.isNaN(Date.parse(b.started_at))
           ? new Date(b.started_at).toISOString()
           : new Date(Date.now() - duration * 60000).toISOString(),
-        new Date().toISOString()
+        new Date().toISOString(),
+        box.wod?.id || null,
+        box.value ?? null,
+        box.category ?? null
       ),
       ...checks,
     ]);
@@ -1852,7 +1969,13 @@ async function api(r, e, p) {
   }
   m = p.match(/^\/api\/sessions\/([\w-]+)$/);
   if (m && r.method === "PUT") {
-    const b = await r.json();
+    const b = await r.json(),
+      box = await sessionBoxWod(e, u.id, b, m[1]);
+    if (box.error) return json({error: box.error}, box.status);
+    if (box.wod) {
+      b.program_id = "none";
+      b.wod_id = "other";
+    }
     if (b.program_id === "none") b.program_id = await fallbackProgramId(e, u.id);
     if (!validDate(b.session_date)) return json({error: "Date invalide."}, 400);
     const act = await e.DB.prepare(
@@ -1903,7 +2026,7 @@ async function api(r, e, p) {
     );
     await e.DB.batch([
       e.DB.prepare(
-        "UPDATE training_sessions SET program_id=?,wod_id=?,session_date=?,actual_comment=?,activity_id=?,duration_minutes=?,started_at=?,logged_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?"
+        "UPDATE training_sessions SET program_id=?,wod_id=?,session_date=?,actual_comment=?,activity_id=?,duration_minutes=?,started_at=?,logged_at=?,box_wod_id=?,score_value=?,score_category_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?"
       ).bind(
         b.program_id,
         wid,
@@ -1915,6 +2038,9 @@ async function api(r, e, p) {
           ? new Date(b.started_at).toISOString()
           : new Date(Date.now() - duration * 60000).toISOString(),
         new Date().toISOString(),
+        box.wod?.id || null,
+        box.value ?? null,
+        box.category ?? null,
         m[1],
         u.id
       ),

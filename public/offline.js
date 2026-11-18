@@ -45,6 +45,7 @@ const FFOffline = (() => {
       describeSession: () => ({}),
       describePr: () => ({}),
       describeBoxWod: () => ({}),
+      describeMe: () => ({}),
       onChange: () => {},
       onSynced: () => {},
       onDropped: () => {},
@@ -175,6 +176,18 @@ const FFOffline = (() => {
       if (op.method === "POST") data.memberships.push({box_id: m[1], role: body.role, status: "pending"});
     } else if ((m = path.match(/^\/(?:manage\/boxes\/([\w-]+)\/wods|box-wods)\?from=([\d-]+)&to=([\d-]+)$/))) {
       patchBoxWods(data, {box: m[1], from: m[2], to: m[3]}, op, body);
+    } else if ((m = path.match(/^\/box-wods\/([\w-]+)\/leaderboard$/))) {
+      // Classement : son propre score saisi hors ligne y est ajouté (les autres scores restent ceux de la dernière copie).
+      if ((op.method === "POST" || op.method === "PUT") && /^\/sessions(\/|$)/.test(op.path))
+        for (const c of data.categories || []) {
+          c.rows = (c.rows || []).filter(x => !(x.is_me && x.pending));
+          if (body.box_wod_id === m[1] && body.score_category_id === c.id && body.score_value !== null) {
+            const me = hooks.describeMe();
+            c.rows = c.rows.filter(x => !x.is_me);
+            c.rows.push({...me, score: body.score_value, is_me: 1, pending: 1});
+            c.rows.sort((a, b) => (data.wod?.score_type === "time" ? a.score - b.score : b.score - a.score));
+          }
+        }
     } else if ((m = path.match(/^\/manage\/boxes\/([\w-]+)$/))) {
       patchManagedBox(data, m[1], op, body);
     } else if (path === "/prs") {

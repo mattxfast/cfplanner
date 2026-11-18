@@ -3,12 +3,36 @@
 
 let boxes = [],
   boxMemberships = [],
+  boxCategories = [],
   managedBoxId = "",
   managedBox = null,
   managedWodWeek = "",
   boxCategoryReorder = false;
 const SCORE_LABELS = {time: "Temps (For Time)", reps: "Répétitions (AMRAP)", load: "Charge (kg)", none: "Sans score"};
 const defaultWodName = date => "WOD du " + fmt(date);
+// WOD de box déjà chargés (semaine affichée, formulaire de séance, séances) : nom et type de score hors ligne.
+const boxWodsById = new Map();
+function rememberBoxWods(list) {
+  for (const w of list || []) boxWodsById.set(w.id, {...boxWodsById.get(w.id), ...w});
+  return list || [];
+}
+const memberBoxIds = () => boxIds("member");
+// Score affiché : temps en min:s (h:min:s au-delà d’une heure), répétitions ou charge en kg.
+function formatScore(type, value) {
+  if (value === null || value === undefined || value === "") return "";
+  const v = Number(value);
+  if (type === "time") {
+    const h = Math.floor(v / 3600),
+      mn = Math.floor((v % 3600) / 60),
+      sec = String(v % 60).padStart(2, "0");
+    return h ? h + ":" + String(mn).padStart(2, "0") + ":" + sec : mn + ":" + sec;
+  }
+  if (type === "reps") return v + " rép.";
+  if (type === "load") return v.toLocaleString("fr-FR") + " kg";
+  return String(v);
+}
+const TROPHY_ICON =
+  '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20.5h6"/></svg>';
 const wodDay = date =>
   new Intl.DateTimeFormat("fr-FR", {weekday: "short", day: "2-digit", month: "2-digit"}).format(
     new Date(date + "T12:00:00")
@@ -29,6 +53,7 @@ const boxIds = (role, status = "approved") =>
 function setBoxes(d) {
   boxes = d.boxes || [];
   boxMemberships = d.memberships || [];
+  boxCategories = d.categories || [];
   renderMyBoxes();
   renderBoxNav();
 }
@@ -366,3 +391,40 @@ function bindManagedBox() {
       })
   );
 }
+
+// ----- Classement d’un WOD de box (membres de la box uniquement) -----
+async function openLeaderboard(wodId) {
+  const known = boxWodsById.get(wodId);
+  $("#leaderboardtitle").textContent = known?.name || "Classement";
+  $("#leaderboardmeta").textContent = "";
+  $("#leaderboardbody").innerHTML = `<p class="muted">Chargement…</p>`;
+  $("#leaderboarddialog").showModal();
+  try {
+    const d = await api("/box-wods/" + wodId + "/leaderboard"),
+      w = rememberBoxWods([d.wod])[0];
+    $("#leaderboardtitle").textContent = w.name;
+    $("#leaderboardmeta").textContent = [w.box_name, fmt(w.wod_date), SCORE_LABELS[w.score_type]].join(" · ");
+    $("#leaderboardbody").innerHTML =
+      (w.content ? `<p class="leaderboard-content">${esc(w.content)}</p>` : "") +
+      (w.score_type === "none"
+        ? `<p class="muted">Ce WOD n’a pas de score.</p>`
+        : d.categories
+            .map(
+              c =>
+                `<section class="leaderboard-category"><h3>${esc(c.name)}</h3>${
+                  c.rows.length
+                    ? `<ol class="leaderboard-list">${c.rows
+                        .map(
+                          (x, i) =>
+                            `<li class="${x.is_me ? "me" : ""}"><span class="leaderboard-rank">${i + 1}</span><span class="leaderboard-name">${esc(personName(x))}${x.pending ? ` <small class="muted">(en attente)</small>` : ""}</span><b>${esc(formatScore(w.score_type, x.score))}</b></li>`
+                        )
+                        .join("")}</ol>`
+                    : `<p class="muted">Aucun score.</p>`
+                }</section>`
+            )
+            .join(""));
+  } catch (e) {
+    $("#leaderboardbody").innerHTML = `<p class="error">${esc(e.message)}</p>`;
+  }
+}
+$("#closeleaderboard").onclick = () => $("#leaderboarddialog").close();
