@@ -682,9 +682,10 @@ const boxText = (v, max) =>
     .trim()
     .replace(/\s+/g, " ")
     .slice(0, max);
-// Limitation des tentatives de connexion : 5 échecs par e-mail ou 20 par adresse IP sur 15 minutes.
+// Limitation des tentatives de connexion : 5 échecs par e-mail ou 60 par adresse IP sur 15 minutes (une box entière
+// partage souvent la même adresse IP via son Wi-Fi).
 const LOGIN_WINDOW = 15 * 60,
-  LOGIN_LIMITS = {email: 5, ip: 20};
+  LOGIN_LIMITS = {email: 5, ip: 60};
 const loginKeys = (r, email) => ({
   email: "email:" + email,
   ip: "ip:" + (r.headers.get("CF-Connecting-IP") || "inconnue"),
@@ -794,7 +795,7 @@ async function api(r, e, p) {
       allowed =
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
         (await count("reset:" + email)) < 3 &&
-        (await count("reset-ip:" + ip)) < 10;
+        (await count("reset-ip:" + ip)) < 30;
     if (allowed) {
       const now = Math.floor(Date.now() / 1000);
       await e.DB.batch([
