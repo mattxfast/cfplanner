@@ -258,6 +258,8 @@ $("#boxwodform").onsubmit = async e => {
     $("#boxwoddialog").close();
     managedWodWeek = mondayOf(body.wod_date);
     await loadManagedBox();
+    // Le gestionnaire est aussi membre : sa page Séances reprend le WOD modifié (mouvements, contenu…).
+    loadSessions().catch(() => {});
     toast(id ? "WOD modifié." : "WOD ajouté.");
   } catch (x) {
     $("#boxwoderror").textContent = x.message;
@@ -407,6 +409,7 @@ async function boxAction(path, method, body, message) {
     await api(path, {method, body: body ? JSON.stringify(body) : undefined});
     await loadManagedBox();
     loadBoxes().catch(() => {}); // met à jour l’alerte rouge de l’icône gestionnaire
+    loadSessions().catch(() => {}); // WOD supprimé ou modifié : page Séances à jour
     if (message) toast(message);
   } catch (e) {
     toast(e.message);
