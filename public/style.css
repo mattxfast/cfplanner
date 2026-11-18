@@ -1834,29 +1834,26 @@ button:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#userbar .account-icon,
-#userbar .logout-icon {
-  width: 32px;
-  height: 32px;
+/* Pastille du compte : initiales dans un rond aux couleurs du bandeau ; cerclée quand Mon compte est affiché. */
+#userbar .account-avatar {
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--content-bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  color: var(--ink-soft);
   padding: 0;
-  font-size: 17px;
   flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--banner-border);
+  background: var(--banner-bg);
+  color: var(--banner-ink);
+  font: 800 13px Manrope;
+  letter-spacing: 0.02em;
 }
-#userbar .logout-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+#userbar .account-avatar.active {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--banner-border);
 }
 /* Mon compte : même structure que les autres pages (bandeau de titre, rubriques, contenus). */
 .page-banner {
@@ -1919,13 +1916,7 @@ button:disabled {
     gap: 5px;
   }
   #userbar .user-name {
-    font-size: 11px;
-    max-width: 120px;
-  }
-  #userbar .account-icon,
-  #userbar .logout-icon {
-    width: 30px;
-    height: 30px;
+    display: none;
   }
 }
 
@@ -2116,8 +2107,7 @@ button:disabled {
   border-color: var(--danger);
   color: var(--surface);
 }
-/* Icônes du haut (profil, espace gestionnaire, administration) : mises en évidence sur leur page. */
-#userbar .account-icon.active,
+/* Icônes du haut (espace gestionnaire, administration) : mises en évidence sur leur page. */
 #userbar .settings-icon.active {
   background: var(--banner-bg);
   border-color: var(--banner-border);
