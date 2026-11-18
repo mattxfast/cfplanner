@@ -1411,6 +1411,17 @@ header {
   line-height: 1;
   padding: 6px 11px;
 }
+/* « Semaine du » : lien de retour à la semaine en cours. */
+.weeknav .week-current {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 .weekcount .smallbtn {
   width: 30px;
   height: 30px;

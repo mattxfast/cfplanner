@@ -229,7 +229,7 @@ function renderWeek() {
   const p = programForDate(from);
   const week = sessions.filter(x => x.session_date >= from && x.session_date <= to);
   const folded = window.cfSessionFolded || (window.cfSessionFolded = new Set());
-  const nav = `<div class="weeknav"><button class="smallbtn" id="prevweek" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="weekdate" type="date" value="${dateInput}" max="${now}"></label><button class="smallbtn" id="nextweek" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
+  const nav = `<div class="weeknav"><button class="smallbtn" id="prevweek" aria-label="Semaine précédente" title="Semaine précédente">‹</button><div class="weekdate-label"><button type="button" class="week-current" id="thisweek" title="Revenir à la semaine en cours">Semaine du</button><input id="weekdate" type="date" value="${dateInput}" max="${now}" aria-label="Semaine du"></div><button class="smallbtn" id="nextweek" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
   if (future && (!p || isFallbackProgram(p))) {
     $("#weekboard").innerHTML =
       `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>${weekProgramSection(null, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
@@ -259,6 +259,7 @@ function renderWeek() {
       };
     });
   $("#prevweek").onclick = () => changeWeek(addDays(from, -7));
+  $("#thisweek").onclick = () => changeWeek(mondayOf(now));
   $("#nextweek").onclick = () => changeWeek(addDays(from, 7));
   $("#weekdate").onchange = e => changeWeek(mondayOf(e.target.value));
   $("#weekboard")

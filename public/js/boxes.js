@@ -192,7 +192,7 @@ function boxGroup(key, title, actions, body) {
 function boxWodsGroup(d) {
   // Comme la page Séances : la semaine en bandeau principal (avec le ＋ « Nouveau WOD »), les WOD dessous.
   const week = managedWodWeek,
-    nav = `<div class="weekbar card"><div class="weeknav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="boxwodweek" type="date" value="${week}"></label><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button><button type="button" class="admin-add" id="addboxwod" aria-label="Nouveau WOD" title="Nouveau WOD">＋</button></div></div>`;
+    nav = `<div class="weekbar card"><div class="weeknav"><button type="button" class="smallbtn" id="boxwodprev" aria-label="Semaine précédente" title="Semaine précédente">‹</button><div class="weekdate-label"><button type="button" class="week-current" id="boxwodthisweek" title="Revenir à la semaine en cours">Semaine du</button><input id="boxwodweek" type="date" value="${week}" aria-label="Semaine du"></div><button type="button" class="smallbtn" id="boxwodnext" aria-label="Semaine suivante" title="Semaine suivante">›</button><button type="button" class="admin-add" id="addboxwod" aria-label="Nouveau WOD" title="Nouveau WOD">＋</button></div></div>`;
   return `<div id="boxwodboard">${nav}<div class="admin-data-list">${
     d.wods
       .map(
@@ -461,6 +461,7 @@ function bindManagedBox() {
   if (boxPage === "wods") {
     $("#addboxwod").onclick = () => openBoxWod();
     $("#boxwodprev").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, -7));
+    $("#boxwodthisweek").onclick = () => changeManagedWodWeek(mondayOf(today()));
     $("#boxwodnext").onclick = () => changeManagedWodWeek(addDays(managedWodWeek, 7));
     $("#boxwodweek").onchange = e => e.target.value && changeManagedWodWeek(mondayOf(e.target.value));
   }
