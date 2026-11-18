@@ -58,8 +58,13 @@ function renderWodWeeklyProgramming(program, wod) {
     "</div></div>"
   );
 }
+// Programmes repliés par défaut : seuls ceux que l’utilisateur a dépliés (pendant la session) sont ouverts.
+function programFolds() {
+  const open = window.cfOpenPrograms || (window.cfOpenPrograms = new Set());
+  return {has: id => !open.has(id), add: id => open.delete(id), delete: id => open.add(id)};
+}
 function renderPrograms() {
-  const collapsed = window.cfCollapsedPrograms || (window.cfCollapsedPrograms = new Set());
+  const collapsed = programFolds();
   const folded = window.cfProgramSections || (window.cfProgramSections = new Set());
   const reordering = window.cfReorderSections || (window.cfReorderSections = new Set());
   const reorderToggle = (key, count, label) =>
@@ -295,7 +300,7 @@ function followedProgramCard(p) {
   const author = [p.author_first_name, p.author_last_name].filter(Boolean).join(" "),
     week = mondayOf(today()),
     movements = movementsByProgram[p.id] || [],
-    collapsed = window.cfCollapsedPrograms || (window.cfCollapsedPrograms = new Set()),
+    collapsed = programFolds(),
     folded = window.cfProgramSections || (window.cfProgramSections = new Set()),
     fold = (key, label) =>
       `<button class="smallbtn section-collapse program-section-toggle" data-toggle-program-section="${p.id}:${key}" aria-label="${label}" aria-expanded="${!folded.has(p.id + ":" + key)}">${folded.has(p.id + ":" + key) ? "＋" : "−"}</button>`;
@@ -517,7 +522,12 @@ $("#programform").onsubmit = async e => {
       is_public: $("#programform").elements.is_public.checked,
     };
   try {
-    await api(id ? "/programs/" + id : "/programs", {method: id ? "PUT" : "POST", body: JSON.stringify(body)});
+    const saved = await api(id ? "/programs/" + id : "/programs", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    // Un programme qui vient d’être créé s’affiche déplié pour y ajouter ses WOD.
+    if (!id && saved?.id) programFolds().delete(saved.id);
     $("#programdialog").close();
     e.target.reset();
     await load();
