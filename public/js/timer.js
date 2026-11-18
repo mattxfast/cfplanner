@@ -44,6 +44,7 @@ const timer = {
   pausedTotal: 0,
   rounds: 0,
   lastBeep: "",
+  midBeep: false,
   frame: 0,
   wakeLock: null,
   audio: null,
@@ -74,15 +75,22 @@ function timerBuildPlan() {
   const s = timer.settings[timer.mode],
     plan = [{kind: "prep", label: "Prépare-toi", duration: TIMER_PREP}];
   if (timer.mode === "fortime")
-    plan.push({kind: "work", label: "For Time", duration: s.cap ? s.cap * 60 : Infinity, countUp: true});
+    plan.push({
+      kind: "work",
+      label: "For Time",
+      big: s.cap ? s.cap + " min" : "Sans limite",
+      duration: s.cap ? s.cap * 60 : Infinity,
+      countUp: true,
+    });
   if (timer.mode === "amrap") plan.push({kind: "work", label: "AMRAP", duration: s.minutes * 60});
   if (timer.mode === "emom")
     for (let i = 1; i <= s.rounds; i++)
-      plan.push({kind: "work", label: "EMOM", duration: s.every, round: i, rounds: s.rounds});
+      plan.push({kind: "work", label: "EMOM", big: `Tour ${i} / ${s.rounds}`, duration: s.every});
   if (timer.mode === "tabata")
     for (let i = 1; i <= s.rounds; i++) {
-      plan.push({kind: "work", label: `Travail · tour ${i} / ${s.rounds}`, duration: s.work});
-      if (s.rest && i < s.rounds) plan.push({kind: "rest", label: `Repos · tour ${i} / ${s.rounds}`, duration: s.rest});
+      plan.push({kind: "work", label: "Travail", big: `Tour ${i} / ${s.rounds}`, duration: s.work});
+      if (s.rest && i < s.rounds)
+        plan.push({kind: "rest", label: "Repos", big: `Tour ${i} / ${s.rounds}`, duration: s.rest});
     }
   return plan;
 }
@@ -109,21 +117,32 @@ function timerSegmentAt(t) {
   return null;
 }
 
-// Sons : bips courts (3-2-1) et long (départ, changement de phase, fin). Le contexte audio est créé au premier toucher.
-function timerBeep(long = false) {
+// Sons : bips courts (3-2-1), long (« Go », changement de phase, fin) et double bip aigu (mi-temps).
+// Le contexte audio est créé au premier toucher. Sur iPhone, la session audio « playback » fait sonner les bips
+// même quand le bouton silencieux est activé (iOS 17 et plus).
+function timerTone(freq, at, length) {
+  const ctx = timer.audio,
+    osc = ctx.createOscillator(),
+    gain = ctx.createGain(),
+    t0 = ctx.currentTime + at;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(0.6, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + length);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + length + 0.05);
+}
+function timerBeep(kind = "short") {
   try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
     timer.audio = timer.audio || new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = timer.audio,
-      osc = ctx.createOscillator(),
-      gain = ctx.createGain();
-    osc.frequency.value = long ? 880 : 660;
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (long ? 0.6 : 0.18));
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + (long ? 0.65 : 0.2));
-    if (navigator.vibrate) navigator.vibrate(long ? 300 : 80);
+    if (timer.audio.state !== "running") timer.audio.resume();
+    if (kind === "mid") {
+      timerTone(1175, 0, 0.15);
+      timerTone(1175, 0.22, 0.15);
+    } else timerTone(kind === "long" ? 880 : 660, 0, kind === "long" ? 0.6 : 0.18);
+    if (navigator.vibrate) navigator.vibrate(kind === "long" ? 300 : kind === "mid" ? [80, 60, 80] : 80);
   } catch {}
 }
 
@@ -154,9 +173,9 @@ function timerRender() {
   view.classList.toggle("timer-active", timer.state !== "idle");
   view.dataset.phase = timer.state === "done" ? "done" : current?.seg.kind || "idle";
   const workTime = Math.max(0, t - TIMER_PREP);
-  // EMOM : numéro du tour affiché en grand au-dessus du temps.
-  bigRound.hidden = !current?.seg.round;
-  if (current?.seg.round) bigRound.textContent = `Tour ${current.seg.round} / ${current.seg.rounds}`;
+  // For Time : temps limite ; EMOM et Tabata : numéro du tour. Affichés en grand au-dessus du temps.
+  bigRound.hidden = timer.state === "done" || !current?.seg.big;
+  if (!bigRound.hidden) bigRound.textContent = current.seg.big;
   if (timer.state === "idle") {
     const plan = timerBuildPlan(),
       total = plan.slice(1).reduce((n, s) => n + s.duration, 0);
@@ -203,19 +222,26 @@ function timerTick() {
     current = timerSegmentAt(t);
   if (!current) {
     timerStop("done");
-    timerBeep(true);
+    timerBeep("long");
     return;
   }
-  // Un bip par seconde pendant les 3 dernières secondes d’un segment, un bip long au début de chaque segment de travail/repos.
+  // Un bip par seconde pendant les 3 dernières secondes d’un segment (le décompte 3-2-1 avant le départ compris),
+  // un bip long au début de chaque segment de travail/repos (« Go »), un double bip à la moitié du temps total.
   const {index, seg, left, into} = current,
-    key = index + ":" + Math.ceil(left);
+    key = index + ":" + Math.ceil(left),
+    total = timer.plan.slice(1).reduce((n, s) => n + s.duration, 0);
   if (Number.isFinite(seg.duration) && left <= 3 && left > 0 && timer.lastBeep !== key) {
     timer.lastBeep = key;
-    timerBeep(false);
+    timerBeep("short");
+  }
+  if (!timer.midBeep && Number.isFinite(total) && total >= 60 && t - TIMER_PREP >= total / 2) {
+    timer.midBeep = true;
+    if (into < 0.25) timer.lastBeep = "start:" + index; // le double bip remplace alors le bip de changement de tour
+    timerBeep("mid");
   }
   if (index > 0 && into < 0.25 && timer.lastBeep !== "start:" + index) {
     timer.lastBeep = "start:" + index;
-    timerBeep(true);
+    timerBeep("long");
   }
   timerRender();
   timer.frame = requestAnimationFrame(timerTick);
@@ -238,7 +264,8 @@ function timerStart() {
     timer.pausedTotal = 0;
     timer.rounds = 0;
     timer.lastBeep = "";
-    timerBeep(false);
+    timer.midBeep = false;
+    timerBeep("short");
     timerKeepAwake(true);
     timerTick();
   }
@@ -299,7 +326,7 @@ $("#timerstart").onclick = () => (timer.state === "done" ? (timerStop("idle"), t
 $("#timerreset").onclick = () => timerStop("idle");
 $("#timerfinish").onclick = () => {
   timerStop("done");
-  timerBeep(true);
+  timerBeep("long");
 };
 $("#timerround").onclick = () => {
   timer.rounds++;
