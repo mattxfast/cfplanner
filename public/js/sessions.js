@@ -100,7 +100,7 @@ function renderSessions() {
             })()}${s.score_value !== null && s.score_value !== undefined && s.score_type ? `<p><b>Score :</b> ${esc(formatScore(s.score_type, s.score_value))}${s.score_category_name ? " · " + esc(s.score_category_name) : ""}</p>` : ""}${s.actual_comment ? `<p><b>Réalisé :</b> ${esc(s.actual_comment)}</p>` : ""}</div></article>`
         )
         .join("")
-    : `<div class="card empty">Aucune séance enregistrée cette semaine. Touche ＋ pour en ajouter une.</div>`;
+    : sectionEmpty("Aucune séance enregistrée cette semaine");
   $("#sessionlist")
     .querySelectorAll("[data-leaderboard]")
     .forEach(b => (b.onclick = () => openLeaderboard(b.dataset.leaderboard)));
@@ -175,20 +175,49 @@ function weekMovementsSection(week, programMovements, folded) {
   }
   const movementCounts = [...items.values()],
     baseItems = movementCounts.filter(x => x.base);
-  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? baseItems.filter(x => x.count > 0).length + "/" + baseItems.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : `<p class="muted">${programMovements.length ? "Aucun mouvement défini dans ce programme." : "Aucun mouvement travaillé cette semaine."}</p>`}</div></div></section>`;
+  return `<section class="weekother session-fold ${folded.has("movements") ? "collapsed" : ""}" data-session-fold="movements"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les mouvements" aria-expanded="${!folded.has("movements")}">${folded.has("movements") ? "＋" : "−"}</button><h2>Focus mouvement</h2><span>${programMovements.length ? baseItems.filter(x => x.count > 0).length + "/" + baseItems.length : movementCounts.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${movementCounts.length ? movementCounts.map(x => `<article class="weekwod card ${x.count ? "done" : ""}"><b>${esc(x.movement.name)}</b><div class="weekcount"><strong>${x.count}×</strong></div></article>`).join("") : sectionEmpty("Aucun mouvement travaillé cette semaine")}</div></div></section>`;
 }
+// Rubrique « WOD de la programmation » : toujours affichée (« Pas de programmation en cours » sans programme).
+function weekProgramSection(p, week, folded, from) {
+  const ws = p ? visibleWods(p.id) : [],
+    countFor = w => week.filter(x => x.wod_id === w.id).length,
+    done = ws.filter(w => countFor(w) > 0);
+  if (!p)
+    return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2></div><div class="session-fold-body"><div class="weekwodlist">${sectionEmpty("Pas de programmation en cours")}</div></div></section>`;
+  return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>${done.length}/${ws.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
+    ws.length
+      ? ws
+          .map(w => {
+            const n = countFor(w);
+            const planned = weeklyPlans.some(x => x.wod_id === w.id);
+            return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><div><b>${esc(w.name)}</b>${(() => {
+              const content = weeklyWodContent(w.id, from);
+              const display = content || w.planned_comment;
+              return display ? `<p>${esc(display)}</p>` : "";
+            })()}</div><div class="weekcount"><strong>${n}×</strong><button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
+          })
+          .join("")
+      : sectionEmpty("Pas de WOD pour cette programmation")
+  }</div></div></section>`;
+}
+// Rubrique vide : un message au style d’un contenu de rubrique (toutes les rubriques restent affichées).
+const sectionEmpty = text => `<article class="weekwod card section-empty"><span>${esc(text)}</span></article>`;
 // Rubrique « WOD de la box » de la semaine (membres d’une box) : WOD du gestionnaire, séances, classement.
 function weekBoxSection(week, folded) {
   // Comme « WOD de la programmation » sans programme : pas de rubrique sans WOD de la box cette semaine.
-  if (!memberBoxIds().length || !boxWods.length) return "";
+  // Rubrique toujours affichée (« Pas de WOD de la box cette semaine » si vide).
   const severalBoxes = memberBoxIds().length > 1,
     done = boxWods.filter(w => week.some(x => x.box_wod_id === w.id));
-  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${boxWods
-    .map(w => {
-      const n = week.filter(x => x.box_wod_id === w.id).length;
-      return `<article class="weekwod card ${n ? "done" : ""}"><div><b>${esc(boxWodLabel(w))}</b><small class="muted box-wod-meta">${esc(wodDay(w.wod_date))}${severalBoxes ? " · " + esc(w.box_name) : ""}</small>${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div><div class="weekcount"><strong>${n}×</strong>${w.wod_date <= today() ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div></article>`;
-    })
-    .join("")}</div></div></section>`;
+  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
+    boxWods.length
+      ? boxWods
+          .map(w => {
+            const n = week.filter(x => x.box_wod_id === w.id).length;
+            return `<article class="weekwod card ${n ? "done" : ""}"><div><b>${esc(boxWodLabel(w))}</b><small class="muted box-wod-meta">${esc(wodDay(w.wod_date))}${severalBoxes ? " · " + esc(w.box_name) : ""}</small>${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div><div class="weekcount"><strong>${n}×</strong>${w.wod_date <= today() ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div></article>`;
+          })
+          .join("")
+      : sectionEmpty("Pas de WOD de la box cette semaine")
+  }</div></div></section>`;
 }
 function renderWeek() {
   const now = today();
@@ -203,32 +232,18 @@ function renderWeek() {
   const nav = `<div class="weeknav"><button class="smallbtn" id="prevweek" aria-label="Semaine précédente" title="Semaine précédente">‹</button><label class="weekdate-label">Semaine du <input id="weekdate" type="date" value="${dateInput}" max="${now}"></label><button class="smallbtn" id="nextweek" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
   if (future && (!p || isFallbackProgram(p))) {
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>${weekBoxSection(week, folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>${weekProgramSection(null, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
   } else if (!p || isFallbackProgram(p)) {
     // Semaine sans programme : les séances sont enregistrées « hors programme ».
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(null, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
   } else {
     const ws = visibleWods(p.id),
       countFor = w => week.filter(x => x.wod_id === w.id).length,
       done = ws.filter(w => countFor(w) > 0);
     const programMovements = movementsByProgram[p.id] || [];
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><div class="weekstat weekstat-program"><strong>${done.length}/${ws.length}</strong><span>Nombre de séances de la programmation</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance" ${future ? "disabled" : ""}>＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div><section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>${done.length}/${ws.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
-        ws.length
-          ? ws
-              .map(w => {
-                const n = countFor(w);
-                const planned = weeklyPlans.some(x => x.wod_id === w.id);
-                return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><div><b>${esc(w.name)}</b>${(() => {
-                  const content = weeklyWodContent(w.id, from);
-                  const display = content || w.planned_comment;
-                  return display ? `<p>${esc(display)}</p>` : "";
-                })()}</div><div class="weekcount"><strong>${n}×</strong><button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
-              })
-              .join("")
-          : `<div class="card empty">Aucun WOD dans ce programme.</div>`
-      }</div></div></section>${weekBoxSection(week, folded)}${weekMovementsSection(week, programMovements, folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><div class="weekstat weekstat-program"><strong>${done.length}/${ws.length}</strong><span>Nombre de séances de la programmation</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance" ${future ? "disabled" : ""}>＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(p, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, programMovements, folded)}`;
   }
   $("#weekboard")
     .querySelectorAll("[data-session-fold]")

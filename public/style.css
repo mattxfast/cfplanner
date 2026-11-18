@@ -3527,6 +3527,7 @@ button:disabled {
 /* Lignes de liste unifiées : « Focus mouvement » (Séances, Programmes), historique des séances et des PR, en-têtes de programme et listes du paramétrage ont exactement
    la même hauteur, le même texte, les mêmes boutons et le même écart entre boutons. */
 #view-sessions [data-session-fold="movements"] .weekwod,
+#view-sessions .weekwod.section-empty,
 #view-programs .program-section .movement-row,
 #view-admin .admin-row,
 #view-box .admin-row {
@@ -4256,5 +4257,10 @@ button:active:not(:disabled) {
 }
 .program-search-result small {
   display: block;
+  color: var(--muted);
+}
+/* Séances : rubrique vide, message au style d'un contenu de rubrique (ligne de liste unifiée, texte discret). */
+#view-sessions [data-session-fold] .weekwod.section-empty,
+#view-sessions .weekwod.section-empty {
   color: var(--muted);
 }
