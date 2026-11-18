@@ -357,6 +357,21 @@ async function ensureV2Schema(env) {
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS programs_user ON programs(user_id)").run();
       await env.DB.prepare("CREATE INDEX IF NOT EXISTS box_members_role_status ON box_members(role,status)").run();
     });
+    await runMigration("v20-box-wod-types", async () => {
+      // Types de WOD propres à chaque box (WOD, Haltéro, Gym…), paramétrables par ses gestionnaires.
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS box_wod_types (id TEXT PRIMARY KEY, box_id TEXT NOT NULL REFERENCES boxes(id) ON DELETE CASCADE, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(box_id,name))"
+      ).run();
+      const columns = await env.DB.prepare("PRAGMA table_info(box_wods)").all();
+      if (!columns.results.some(column => column.name === "type_id"))
+        await env.DB.prepare("ALTER TABLE box_wods ADD COLUMN type_id TEXT").run();
+      // Box existantes : types par défaut ; leurs WOD existants deviennent des « WOD ».
+      const boxes = (await env.DB.prepare("SELECT id FROM boxes").all()).results;
+      for (const box of boxes) await env.DB.batch(defaultWodTypeStatements(env, box.id));
+      await env.DB.prepare(
+        "UPDATE box_wods SET type_id=(SELECT t.id FROM box_wod_types t WHERE t.box_id=box_wods.box_id ORDER BY t.sort_order LIMIT 1) WHERE type_id IS NULL"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -609,6 +624,38 @@ const clientId = v =>
 // Box : un utilisateur est membre et/ou gestionnaire d'une box (demande « pending » puis validation « approved »).
 // Les adhésions sont validées par un gestionnaire de la box, les gestionnaires par un administrateur.
 const DEFAULT_BOX_CATEGORIES = ["RX", "Inter", "Scaled"];
+// Listes paramétrables d'une box (noms de tables fixes, jamais issus de la requête).
+const BOX_LISTS = {
+  categories: {
+    table: "box_categories",
+    used: "SELECT 1 FROM training_sessions WHERE score_category_id=? LIMIT 1",
+    usedError: "Des scores utilisent cette catégorie : elle ne peut plus être supprimée.",
+    missing: "Catégorie introuvable.",
+    exists: "Cette catégorie existe déjà.",
+    required: "Nom de la catégorie requis.",
+    last: "La box doit garder au moins une catégorie.",
+  },
+  "wod-types": {
+    table: "box_wod_types",
+    used: "SELECT 1 FROM box_wods WHERE type_id=? LIMIT 1",
+    usedError: "Des WOD utilisent ce type : il ne peut plus être supprimé.",
+    missing: "Type de WOD introuvable.",
+    exists: "Ce type de WOD existe déjà.",
+    required: "Nom du type de WOD requis.",
+    last: "La box doit garder au moins un type de WOD.",
+  },
+};
+// Types de WOD par défaut d'une box ; le premier (« WOD ») est proposé par défaut à la saisie.
+const DEFAULT_WOD_TYPES = ["WOD", "Haltéro", "Gym", "FBB", "Hyrox", "Endurance"];
+const defaultWodTypeStatements = (e, boxId) =>
+  DEFAULT_WOD_TYPES.map((name, i) =>
+    e.DB.prepare("INSERT OR IGNORE INTO box_wod_types(id,box_id,name,sort_order) VALUES(?,?,?,?)").bind(
+      crypto.randomUUID(),
+      boxId,
+      name,
+      i
+    )
+  );
 const boxRole = (e, userId, boxId, role) =>
   e.DB.prepare("SELECT 1 FROM box_members WHERE box_id=? AND user_id=? AND role=? AND status='approved'")
     .bind(boxId, userId, role)
@@ -651,15 +698,27 @@ async function sessionBoxWod(e, userId, b, sessionId = null) {
 // WOD de box : nom facultatif (« WOD du JJ/MM/AAAA » par défaut), date, contenu et type de score.
 const SCORE_TYPES = ["time", "reps", "load", "none"];
 const frenchDate = d => d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4);
-function boxWodInput(b) {
+// Type de WOD : celui choisi (s'il appartient à la box), sinon le premier de la liste (« WOD » par défaut).
+// Nom par défaut : « <type> du JJ/MM/AAAA ».
+async function boxWodInput(e, boxId, b) {
   const date = String(b.wod_date || ""),
     type = String(b.score_type || "");
   if (!validDate(date)) return {error: "Date du WOD invalide."};
   if (!SCORE_TYPES.includes(type)) return {error: "Type de score invalide."};
+  const wodType =
+    (b.type_id &&
+      (await e.DB.prepare("SELECT id,name FROM box_wod_types WHERE id=? AND box_id=?")
+        .bind(String(b.type_id), boxId)
+        .first())) ||
+    (await e.DB.prepare("SELECT id,name FROM box_wod_types WHERE box_id=? ORDER BY sort_order,name LIMIT 1")
+      .bind(boxId)
+      .first());
+  if (b.type_id && wodType?.id !== String(b.type_id)) return {error: "Type de WOD invalide."};
   return {
     date,
     type,
-    name: boxText(b.name, 100) || "WOD du " + frenchDate(date),
+    typeId: wodType?.id || null,
+    name: boxText(b.name, 100) || (wodType?.name || "WOD") + " du " + frenchDate(date),
     content: String(b.content || "").slice(0, 3000),
   };
 }
@@ -668,7 +727,7 @@ function boxWodInput(b) {
 async function memberBoxWods(e, userId, from, to) {
   return (
     await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? AND w.wod_date<=? ORDER BY w.wod_date,w.created_at"
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name FROM box_wods w JOIN boxes b ON b.id=w.box_id LEFT JOIN box_wod_types t ON t.id=w.type_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
     )
       .bind(userId, from, to, localToday())
       .all()
@@ -1252,6 +1311,7 @@ async function api(r, e, p) {
           ...DEFAULT_BOX_CATEGORIES.map((c, i) =>
             e.DB.prepare("INSERT INTO box_categories(id,box_id,name,sort_order) VALUES(?,?,?,?)").bind(uid(), id, c, i)
           ),
+          ...defaultWodTypeStatements(e, id),
         ]);
       } catch {
         return json({error: "Une box porte déjà ce nom."}, 409);
@@ -1381,7 +1441,7 @@ async function api(r, e, p) {
   // Classement d'un WOD de box : meilleur score de chaque membre actuel de la box, par catégorie.
   if (r.method === "GET" && (m = p.match(/^\/api\/box-wods\/([\w-]+)\/leaderboard$/))) {
     const wod = await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type FROM box_wods w JOIN boxes b ON b.id=w.box_id WHERE w.id=? AND w.wod_date<=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')"
+      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type,t.name AS type_name FROM box_wods w JOIN boxes b ON b.id=w.box_id LEFT JOIN box_wod_types t ON t.id=w.type_id WHERE w.id=? AND w.wod_date<=? AND EXISTS(SELECT 1 FROM box_members m WHERE m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved')"
     )
       .bind(m[1], localToday(), u.id)
       .first();
@@ -1419,7 +1479,7 @@ async function api(r, e, p) {
     const deny = () => json({error: "Box introuvable."}, 404);
     if (r.method === "GET" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)$/))) {
       if (!(await managed(m[1]))) return deny();
-      const [box, members, categories] = await Promise.all([
+      const [box, members, categories, types] = await Promise.all([
         e.DB.prepare("SELECT id,name,city FROM boxes WHERE id=?").bind(m[1]).first(),
         e.DB.prepare(
           "SELECT m.user_id,m.status,m.created_at,u.first_name,u.last_name,u.email,EXISTS(SELECT 1 FROM box_members g WHERE g.box_id=m.box_id AND g.user_id=m.user_id AND g.role='manager' AND g.status='approved') AS is_manager FROM box_members m JOIN users u ON u.id=m.user_id WHERE m.box_id=? AND m.role='member' ORDER BY u.last_name COLLATE NOCASE,u.first_name COLLATE NOCASE"
@@ -1429,8 +1489,11 @@ async function api(r, e, p) {
         e.DB.prepare("SELECT id,name,sort_order FROM box_categories WHERE box_id=? ORDER BY sort_order,name")
           .bind(m[1])
           .all(),
+        e.DB.prepare("SELECT id,name,sort_order FROM box_wod_types WHERE box_id=? ORDER BY sort_order,name")
+          .bind(m[1])
+          .all(),
       ]);
-      return json({box, members: members.results, categories: categories.results});
+      return json({box, members: members.results, categories: categories.results, types: types.results});
     }
     // Infos de la box (nom, ville), modifiables par ses gestionnaires.
     if (r.method === "PUT" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)$/))) {
@@ -1475,21 +1538,21 @@ async function api(r, e, p) {
         const range = wodRange(r);
         if (!range) return json({error: "Période invalide."}, 400);
         const x = await e.DB.prepare(
-          "SELECT id,box_id,wod_date,name,content,score_type FROM box_wods WHERE box_id=? AND wod_date>=? AND wod_date<=? ORDER BY wod_date,created_at"
+          "SELECT w.id,w.box_id,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name FROM box_wods w LEFT JOIN box_wod_types t ON t.id=w.type_id WHERE w.box_id=? AND w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
         )
           .bind(m[1], range.from, range.to)
           .all();
         return json({wods: x.results});
       }
       const b = await r.json(),
-        input = boxWodInput(b),
         id = clientId(b.client_id) || uid();
-      if (input.error) return json({error: input.error}, 400);
       if (await e.DB.prepare("SELECT 1 FROM box_wods WHERE id=?").bind(id).first()) return json({ok: true, id});
+      const input = await boxWodInput(e, m[1], b);
+      if (input.error) return json({error: input.error}, 400);
       await e.DB.prepare(
-        "INSERT INTO box_wods(id,box_id,wod_date,name,content,score_type,created_by) VALUES(?,?,?,?,?,?,?)"
+        "INSERT INTO box_wods(id,box_id,wod_date,name,content,score_type,type_id,created_by) VALUES(?,?,?,?,?,?,?,?)"
       )
-        .bind(id, m[1], input.date, input.name, input.content, input.type, u.id)
+        .bind(id, m[1], input.date, input.name, input.content, input.type, input.typeId, u.id)
         .run();
       return json({ok: true, id});
     }
@@ -1502,39 +1565,54 @@ async function api(r, e, p) {
         await e.DB.prepare("DELETE FROM box_wods WHERE id=?").bind(m[1]).run();
         return json({ok: true});
       }
-      const input = boxWodInput(await r.json());
+      const input = await boxWodInput(e, wod.box_id, await r.json());
       if (input.error) return json({error: input.error}, 400);
       await e.DB.prepare(
-        "UPDATE box_wods SET wod_date=?,name=?,content=?,score_type=?,updated_at=CURRENT_TIMESTAMP WHERE id=?"
+        "UPDATE box_wods SET wod_date=?,name=?,content=?,score_type=?,type_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?"
       )
-        .bind(input.date, input.name, input.content, input.type, m[1])
+        .bind(input.date, input.name, input.content, input.type, input.typeId, m[1])
         .run();
       return json({ok: true});
     }
-    if (r.method === "POST" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/categories$/))) {
+    // Listes paramétrables de la box : catégories de score et types de WOD (ajout, ordre, renommage, suppression).
+    if (r.method === "POST" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/(categories|wod-types)$/))) {
       if (!(await managed(m[1]))) return deny();
-      const b = await r.json(),
+      const list = BOX_LISTS[m[2]],
+        b = await r.json(),
         name = boxText(b.name, 40),
         id = clientId(b.client_id) || uid();
-      if (!name) return json({error: "Nom de la catégorie requis."}, 400);
-      if (await e.DB.prepare("SELECT 1 FROM box_categories WHERE id=? AND box_id=?").bind(id, m[1]).first())
+      if (!name) return json({error: list.required}, 400);
+      if (
+        await e.DB.prepare("SELECT 1 FROM " + list.table + " WHERE id=? AND box_id=?")
+          .bind(id, m[1])
+          .first()
+      )
         return json({ok: true, id});
       try {
         await e.DB.prepare(
-          "INSERT INTO box_categories(id,box_id,name,sort_order) VALUES(?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM box_categories WHERE box_id=?),0))"
+          "INSERT INTO " +
+            list.table +
+            "(id,box_id,name,sort_order) VALUES(?,?,?,COALESCE((SELECT MAX(sort_order)+1 FROM " +
+            list.table +
+            " WHERE box_id=?),0))"
         )
           .bind(id, m[1], name, m[1])
           .run();
       } catch {
-        return json({error: "Cette catégorie existe déjà."}, 409);
+        return json({error: list.exists}, 409);
       }
       return json({ok: true, id});
     }
-    if (r.method === "PUT" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/categories\/order$/))) {
+    if (r.method === "PUT" && (m = p.match(/^\/api\/manage\/boxes\/([\w-]+)\/(categories|wod-types)\/order$/))) {
       if (!(await managed(m[1]))) return deny();
-      const b = await r.json(),
+      const list = BOX_LISTS[m[2]],
+        b = await r.json(),
         ids = Array.isArray(b.ids) ? b.ids.map(String) : [],
-        current = (await e.DB.prepare("SELECT id FROM box_categories WHERE box_id=?").bind(m[1]).all()).results;
+        current = (
+          await e.DB.prepare("SELECT id FROM " + list.table + " WHERE box_id=?")
+            .bind(m[1])
+            .all()
+        ).results;
       if (
         !ids.length ||
         new Set(ids).size !== ids.length ||
@@ -1544,32 +1622,44 @@ async function api(r, e, p) {
         return json({error: "La liste a changé. Actualise la page."}, 409);
       await e.DB.batch(
         ids.map((id, i) =>
-          e.DB.prepare("UPDATE box_categories SET sort_order=? WHERE id=? AND box_id=?").bind(i, id, m[1])
+          e.DB.prepare("UPDATE " + list.table + " SET sort_order=? WHERE id=? AND box_id=?").bind(i, id, m[1])
         )
       );
       return json({ok: true});
     }
-    if ((m = p.match(/^\/api\/manage\/categories\/([\w-]+)$/)) && (r.method === "PUT" || r.method === "DELETE")) {
-      const category = await e.DB.prepare("SELECT id,box_id FROM box_categories WHERE id=?").bind(m[1]).first();
-      if (!category || !(await managed(category.box_id))) return json({error: "Catégorie introuvable."}, 404);
+    if (
+      (m = p.match(/^\/api\/manage\/(categories|wod-types)\/([\w-]+)$/)) &&
+      (r.method === "PUT" || r.method === "DELETE")
+    ) {
+      const list = BOX_LISTS[m[1]],
+        item = await e.DB.prepare("SELECT id,box_id FROM " + list.table + " WHERE id=?")
+          .bind(m[2])
+          .first();
+      if (!item || !(await managed(item.box_id))) return json({error: list.missing}, 404);
       if (r.method === "PUT") {
         const name = boxText((await r.json()).name, 40);
-        if (!name) return json({error: "Nom de la catégorie requis."}, 400);
+        if (!name) return json({error: list.required}, 400);
         try {
-          await e.DB.prepare("UPDATE box_categories SET name=? WHERE id=?").bind(name, m[1]).run();
+          await e.DB.prepare("UPDATE " + list.table + " SET name=? WHERE id=?")
+            .bind(name, m[2])
+            .run();
         } catch {
-          return json({error: "Cette catégorie existe déjà."}, 409);
+          return json({error: list.exists}, 409);
         }
         return json({ok: true});
       }
       if (
-        (await e.DB.prepare("SELECT COUNT(*) AS n FROM box_categories WHERE box_id=?").bind(category.box_id).first())
-          .n <= 1
+        (
+          await e.DB.prepare("SELECT COUNT(*) AS n FROM " + list.table + " WHERE box_id=?")
+            .bind(item.box_id)
+            .first()
+        ).n <= 1
       )
-        return json({error: "La box doit garder au moins une catégorie."}, 400);
-      if (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE score_category_id=? LIMIT 1").bind(m[1]).first())
-        return json({error: "Des scores utilisent cette catégorie : elle ne peut plus être supprimée."}, 409);
-      await e.DB.prepare("DELETE FROM box_categories WHERE id=?").bind(m[1]).run();
+        return json({error: list.last}, 400);
+      if (await e.DB.prepare(list.used).bind(m[2]).first()) return json({error: list.usedError}, 409);
+      await e.DB.prepare("DELETE FROM " + list.table + " WHERE id=?")
+        .bind(m[2])
+        .run();
       return json({ok: true});
     }
     return json({error: "Route inconnue."}, 404);

@@ -444,3 +444,47 @@ test("tâches à valider : adhésions pour le gestionnaire, demandes de gestionn
   await admin.put(`/admin/boxes/${boxId}/managers/${fredId}`, {approve: false});
   assert.equal((await alice.get("/boxes")).data.pending.members, before);
 });
+
+test("types de WOD : liste par box pré-remplie, WOD par défaut, paramétrable par le gestionnaire", async () => {
+  let types = (await alice.get(`/manage/boxes/${boxId}`)).data.types;
+  assert.deepEqual(
+    types.map(t => t.name),
+    ["WOD", "Haltéro", "Gym", "FBB", "Hyrox", "Endurance"]
+  );
+  const day = today(),
+    halt = types.find(t => t.name === "Haltéro").id;
+  // sans type : « WOD » ; avec type : nom par défaut « Haltéro du JJ/MM/AAAA »
+  const plain = await alice.post(`/manage/boxes/${boxId}/wods`, {wod_date: day, score_type: "none"});
+  const lift = await alice.post(`/manage/boxes/${boxId}/wods`, {wod_date: day, score_type: "load", type_id: halt});
+  assert.equal(lift.status, 200, JSON.stringify(lift.data));
+  const list = (await alice.get(`/manage/boxes/${boxId}/wods?from=${day}&to=${day}`)).data.wods;
+  assert.equal(list.find(w => w.id === plain.data.id).type_name, "WOD");
+  const l = list.find(w => w.id === lift.data.id);
+  assert.equal(l.type_name, "Haltéro");
+  assert.match(l.name, /^Haltéro du /);
+  assert.equal(
+    (await bob.get(`/box-wods?from=${day}&to=${day}`)).data.wods.find(w => w.id === lift.data.id).type_name,
+    "Haltéro"
+  );
+  // un type d'une autre box est refusé
+  assert.equal(
+    (await alice.post(`/manage/boxes/${boxId}/wods`, {wod_date: day, score_type: "none", type_id: "inconnu"})).status,
+    400
+  );
+  // ajout, renommage, ordre ; suppression refusée si utilisé ; réservé au gestionnaire
+  assert.equal((await bob.post(`/manage/boxes/${boxId}/wod-types`, {name: "Pirate"})).status, 404);
+  const added = await alice.post(`/manage/boxes/${boxId}/wod-types`, {name: "Mobilité"});
+  assert.equal(added.status, 200);
+  assert.equal((await alice.post(`/manage/boxes/${boxId}/wod-types`, {name: "Gym"})).status, 409);
+  assert.equal((await alice.put(`/manage/wod-types/${added.data.id}`, {name: "Mobilité & souplesse"})).status, 200);
+  types = (await alice.get(`/manage/boxes/${boxId}`)).data.types;
+  assert.equal(
+    (await alice.put(`/manage/boxes/${boxId}/wod-types/order`, {ids: types.map(t => t.id).reverse()})).status,
+    200
+  );
+  assert.equal((await alice.get(`/manage/boxes/${boxId}`)).data.types[0].name, "Mobilité & souplesse");
+  assert.equal((await alice.del(`/manage/wod-types/${halt}`)).status, 409);
+  assert.equal((await alice.del(`/manage/wod-types/${added.data.id}`)).status, 200);
+  await alice.del(`/manage/wods/${plain.data.id}`);
+  await alice.del(`/manage/wods/${lift.data.id}`);
+});

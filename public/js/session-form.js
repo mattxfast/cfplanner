@@ -48,7 +48,7 @@ function fillWodOptions(pid, selected = "") {
     boxOptions = list
       .map(
         w =>
-          `<option value="box:${w.id}">${esc(wodDay(w.wod_date) + " · " + w.name + (severalBoxes ? " (" + w.box_name + ")" : ""))}</option>`
+          `<option value="box:${w.id}">${esc(wodDay(w.wod_date) + " · " + boxWodLabel(w) + (severalBoxes ? " (" + w.box_name + ")" : ""))}</option>`
       )
       .join("");
   f.innerHTML =

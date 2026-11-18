@@ -8,9 +8,12 @@ let boxes = [],
   managedBoxId = "",
   managedBox = null,
   managedWodWeek = "",
-  boxCategoryReorder = false;
+  boxListReorder = new Set();
 const SCORE_LABELS = {time: "Temps (For Time)", reps: "Répétitions (AMRAP)", load: "Charge (kg)", none: "Sans score"};
-const defaultWodName = date => "WOD du " + fmt(date);
+const defaultWodName = (date, type = "WOD") => (type || "WOD") + " du " + fmt(date);
+// Libellé d’un WOD de box : son type devant son nom, sauf si le nom commence déjà par le type.
+const boxWodLabel = w =>
+  w.type_name && !String(w.name || "").startsWith(w.type_name) ? w.type_name + " · " + w.name : w.name;
 // WOD de box déjà chargés (semaine affichée, formulaire de séance, séances) : nom et type de score hors ligne.
 const boxWodsById = new Map();
 function rememberBoxWods(list) {
@@ -192,7 +195,7 @@ function boxWodsGroup(d) {
     d.wods
       .map(
         w =>
-          `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(w.name)}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
+          `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(boxWodLabel(w))}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
       )
       .join("") || `<div class="card empty">Aucun WOD cette semaine.</div>`
   }</div></div>`;
@@ -204,16 +207,25 @@ function openBoxWod(w = null) {
   f.reset();
   f.elements.id.value = w?.id || "";
   f.elements.wod_date.value = w?.wod_date || (now >= managedWodWeek && now <= weekEnd ? now : managedWodWeek);
-  f.elements.name.value = w?.name && w.name !== defaultWodName(w.wod_date) ? w.name : "";
-  f.elements.name.placeholder = defaultWodName(f.elements.wod_date.value);
+  const types = managedBox?.types || [];
+  f.elements.type_id.innerHTML = types.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  f.elements.type_id.value = w?.type_id && types.some(t => t.id === w.type_id) ? w.type_id : types[0]?.id || "";
+  f.elements.name.value = w?.name && w.name !== defaultWodName(w.wod_date, w.type_name) ? w.name : "";
+  syncBoxWodPlaceholder();
   f.elements.score_type.value = w?.score_type || "time";
   f.elements.content.value = w?.content || "";
   $("#boxwoddialogtitle").textContent = w ? "Modifier le WOD" : "Ajouter un WOD";
   $("#boxwoderror").textContent = "";
   $("#boxwoddialog").showModal();
 }
-$("#boxwodform").elements.wod_date.onchange = e =>
-  ($("#boxwodform").elements.name.placeholder = defaultWodName(e.target.value || today()));
+// Nom par défaut affiché : « <type> du JJ/MM/AAAA ».
+function syncBoxWodPlaceholder() {
+  const f = $("#boxwodform").elements,
+    type = (managedBox?.types || []).find(t => t.id === f.type_id.value)?.name;
+  f.name.placeholder = defaultWodName(f.wod_date.value || today(), type);
+}
+$("#boxwodform").elements.wod_date.onchange = syncBoxWodPlaceholder;
+$("#boxwodform").elements.type_id.onchange = syncBoxWodPlaceholder;
 $("#boxwodform").onsubmit = async e => {
   e.preventDefault();
   const f = e.target.elements,
@@ -222,6 +234,7 @@ $("#boxwodform").onsubmit = async e => {
       wod_date: f.wod_date.value,
       name: f.name.value.trim(),
       score_type: f.score_type.value,
+      type_id: f.type_id.value || undefined,
       content: f.content.value,
     };
   if (!id) body.client_id = crypto.randomUUID?.();
@@ -249,8 +262,7 @@ function renderManagedBox() {
   const d = managedBox;
   if (!d) return;
   const pending = d.members.filter(x => x.status === "pending"),
-    members = d.members.filter(x => x.status === "approved"),
-    cats = d.categories;
+    members = d.members.filter(x => x.status === "approved");
   const person = x => `${esc(personName(x))} <small class="muted">${esc(x.email)}</small>`;
   const membersPage = () =>
     boxGroup(
@@ -282,20 +294,101 @@ function renderManagedBox() {
       "",
       `<form id="boxinfoform" class="profile-card"><label>Nom de la box<input name="name" maxlength="80" required value="${esc(d.box.name)}"></label><label>Ville<input name="city" maxlength="80" value="${esc(d.box.city || "")}"></label><button class="primary">Enregistrer</button></form>`
     ) +
-    boxGroup(
-      "categories",
-      "Catégories",
-      `${cats.length > 1 ? `<button type="button" class="smallbtn reorder-toggle ${boxCategoryReorder ? "active" : ""}" id="toggle-category-reorder" aria-pressed="${boxCategoryReorder}" aria-label="Réorganiser les catégories" title="Réorganiser les catégories">⇅</button>` : ""}<button type="button" class="admin-add" id="addcategory" aria-label="Ajouter une catégorie">＋</button>`,
-      cats
-        .map(
-          (c, i) =>
-            `<div class="admin-row"><span>${esc(c.name)}</span><span class="admin-row-actions">${boxCategoryReorder ? `<button class="smallbtn admin-reorder" data-move-category="${c.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i === 0 ? "disabled" : ""}>${BOX_ICONS.up}</button><button class="smallbtn admin-reorder" data-move-category="${c.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i === cats.length - 1 ? "disabled" : ""}>${BOX_ICONS.down}</button>` : ""}<button class="smallbtn" data-edit-category="${c.id}" aria-label="Renommer" title="Renommer">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-category="${c.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
-        )
-        .join("") || `<p class="muted">Aucune catégorie.</p>`
-    );
+    boxListGroup("wod-types", d.types || []) +
+    boxListGroup("categories", d.categories);
   $("#boxmanager").innerHTML =
     boxPage === "members" ? membersPage() : boxPage === "info" ? infoPage() : boxWodsGroup(d);
   bindManagedBox();
+}
+// Listes paramétrables de la box (types de WOD, catégories de score) : ajout, renommage, ordre (⇅), suppression.
+const BOX_LIST_UI = {
+  "wod-types": {
+    key: "types",
+    title: "Types de WOD",
+    ask: "Nom du nouveau type de WOD :",
+    added: "Type de WOD ajouté.",
+    renamed: "Type de WOD renommé.",
+    deleted: "Type de WOD supprimé.",
+  },
+  categories: {
+    key: "categories",
+    title: "Catégories",
+    ask: "Nom de la nouvelle catégorie :",
+    added: "Catégorie ajoutée.",
+    renamed: "Catégorie renommée.",
+    deleted: "Catégorie supprimée.",
+  },
+};
+function boxListGroup(kind, items) {
+  const reorder = boxListReorder.has(kind);
+  return boxGroup(
+    kind,
+    BOX_LIST_UI[kind].title,
+    `${items.length > 1 ? `<button type="button" class="smallbtn reorder-toggle ${reorder ? "active" : ""}" data-list-reorder="${kind}" aria-pressed="${reorder}" aria-label="Réorganiser" title="Réorganiser">⇅</button>` : ""}<button type="button" class="admin-add" data-list-add="${kind}" aria-label="Ajouter" title="Ajouter">＋</button>`,
+    items
+      .map(
+        (c, i) =>
+          `<div class="admin-row"><span>${esc(c.name)}${kind === "wod-types" && i === 0 ? ` <span class="tracked-tag">Par défaut</span>` : ""}</span><span class="admin-row-actions">${reorder ? `<button class="smallbtn admin-reorder" data-list-move="${kind}" data-id="${c.id}" data-direction="-1" aria-label="Monter" title="Monter" ${i === 0 ? "disabled" : ""}>${BOX_ICONS.up}</button><button class="smallbtn admin-reorder" data-list-move="${kind}" data-id="${c.id}" data-direction="1" aria-label="Descendre" title="Descendre" ${i === items.length - 1 ? "disabled" : ""}>${BOX_ICONS.down}</button>` : ""}<button class="smallbtn" data-list-edit="${kind}" data-id="${c.id}" aria-label="Renommer" title="Renommer">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-list-del="${kind}" data-id="${c.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
+      )
+      .join("") || `<p class="muted">Liste vide.</p>`
+  );
+}
+function bindBoxLists(root, d) {
+  const items = kind => d[BOX_LIST_UI[kind].key] || [];
+  root.querySelectorAll("[data-list-add]").forEach(
+    b =>
+      (b.onclick = () => {
+        const kind = b.dataset.listAdd,
+          name = (prompt(BOX_LIST_UI[kind].ask, "") || "").trim();
+        if (name)
+          boxAction(
+            "/manage/boxes/" + d.box.id + "/" + kind,
+            "POST",
+            {name, client_id: crypto.randomUUID?.()},
+            BOX_LIST_UI[kind].added
+          );
+      })
+  );
+  root.querySelectorAll("[data-list-reorder]").forEach(
+    b =>
+      (b.onclick = () => {
+        const kind = b.dataset.listReorder;
+        if (boxListReorder.has(kind)) boxListReorder.delete(kind);
+        else boxListReorder.add(kind);
+        renderManagedBox();
+      })
+  );
+  root.querySelectorAll("[data-list-move]").forEach(
+    b =>
+      (b.onclick = () => {
+        const kind = b.dataset.listMove,
+          ids = items(kind).map(c => c.id),
+          i = ids.indexOf(b.dataset.id),
+          j = i + Number(b.dataset.direction);
+        if (j < 0 || j >= ids.length) return;
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+        boxAction("/manage/boxes/" + d.box.id + "/" + kind + "/order", "PUT", {ids});
+      })
+  );
+  root.querySelectorAll("[data-list-edit]").forEach(
+    b =>
+      (b.onclick = () => {
+        const kind = b.dataset.listEdit,
+          c = items(kind).find(x => x.id === b.dataset.id),
+          name = (prompt("Renommer :", c.name) || "").trim();
+        if (name && name !== c.name)
+          boxAction("/manage/" + kind + "/" + c.id, "PUT", {name}, BOX_LIST_UI[kind].renamed);
+      })
+  );
+  root.querySelectorAll("[data-list-del]").forEach(
+    b =>
+      (b.onclick = () => {
+        const kind = b.dataset.listDel,
+          c = items(kind).find(x => x.id === b.dataset.id);
+        if (confirm("Supprimer « " + c.name + " » ?"))
+          boxAction("/manage/" + kind + "/" + c.id, "DELETE", null, BOX_LIST_UI[kind].deleted);
+      })
+  );
 }
 async function boxAction(path, method, body, message) {
   try {
@@ -378,52 +471,7 @@ function bindManagedBox() {
           boxAction("/manage/wods/" + w.id, "DELETE", null, "WOD supprimé.");
       })
   );
-  const add = $("#addcategory");
-  if (add)
-    add.onclick = () => {
-      const name = prompt("Nom de la nouvelle catégorie :", "");
-      if (name && name.trim())
-        boxAction(
-          "/manage/boxes/" + d.box.id + "/categories",
-          "POST",
-          {name: name.trim(), client_id: crypto.randomUUID?.()},
-          "Catégorie ajoutée."
-        );
-    };
-  const reorder = $("#toggle-category-reorder");
-  if (reorder)
-    reorder.onclick = () => {
-      boxCategoryReorder = !boxCategoryReorder;
-      renderManagedBox();
-    };
-  root.querySelectorAll("[data-move-category]").forEach(
-    b =>
-      (b.onclick = () => {
-        const ids = d.categories.map(c => c.id),
-          i = ids.indexOf(b.dataset.moveCategory),
-          j = i + Number(b.dataset.direction);
-        if (j < 0 || j >= ids.length) return;
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-        boxAction("/manage/boxes/" + d.box.id + "/categories/order", "PUT", {ids});
-      })
-  );
-  root.querySelectorAll("[data-edit-category]").forEach(
-    b =>
-      (b.onclick = () => {
-        const c = d.categories.find(x => x.id === b.dataset.editCategory),
-          name = prompt("Renommer la catégorie :", c.name);
-        if (name && name.trim() && name.trim() !== c.name)
-          boxAction("/manage/categories/" + c.id, "PUT", {name: name.trim()}, "Catégorie renommée.");
-      })
-  );
-  root.querySelectorAll("[data-del-category]").forEach(
-    b =>
-      (b.onclick = () => {
-        const c = d.categories.find(x => x.id === b.dataset.delCategory);
-        if (confirm("Supprimer la catégorie « " + c.name + " » ?"))
-          boxAction("/manage/categories/" + c.id, "DELETE", null, "Catégorie supprimée.");
-      })
-  );
+  bindBoxLists(root, d);
 }
 
 // ----- Classement d’un WOD de box (membres de la box uniquement) -----
@@ -436,7 +484,7 @@ async function openLeaderboard(wodId) {
   try {
     const d = await api("/box-wods/" + wodId + "/leaderboard"),
       w = rememberBoxWods([d.wod])[0];
-    $("#leaderboardtitle").textContent = w.name;
+    $("#leaderboardtitle").textContent = boxWodLabel(w);
     $("#leaderboardmeta").textContent = [w.box_name, fmt(w.wod_date), SCORE_LABELS[w.score_type]].join(" · ");
     $("#leaderboardbody").innerHTML =
       (w.content ? `<p class="leaderboard-content">${esc(w.content)}</p>` : "") +

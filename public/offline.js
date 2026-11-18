@@ -130,15 +130,20 @@ const FFOffline = (() => {
       if (op.method === "PUT" && body.approve)
         data.members = (data.members || []).map(x => (x.user_id === m[2] ? {...x, status: "approved"} : x));
       else data.members = (data.members || []).filter(x => x.user_id !== m[2] || x.is_manager);
-    } else if (op.method === "POST" && op.path === "/manage/boxes/" + boxId + "/categories") {
-      const id = body.client_id || op.at;
-      data.categories = [...(data.categories || []).filter(c => c.id !== id), {id, name: body.name, pending: 1}];
-    } else if (op.method === "PUT" && op.path === "/manage/boxes/" + boxId + "/categories/order") {
-      const order = body.ids || [];
-      data.categories = [...(data.categories || [])].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-    } else if ((m = op.path.match(/^\/manage\/categories\/([\w-]+)$/))) {
-      if (op.method === "DELETE") data.categories = (data.categories || []).filter(c => c.id !== m[1]);
-      else data.categories = (data.categories || []).map(c => (c.id === m[1] ? {...c, name: body.name} : c));
+    } else if ((m = op.path.match(/^\/manage\/boxes\/([\w-]+)\/(categories|wod-types)(\/order)?$/)) && m[1] === boxId) {
+      // Listes paramétrables : catégories de score (data.categories) et types de WOD (data.types).
+      const key = m[2] === "categories" ? "categories" : "types";
+      if (m[3]) {
+        const order = body.ids || [];
+        data[key] = [...(data[key] || [])].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+      } else {
+        const id = body.client_id || op.at;
+        data[key] = [...(data[key] || []).filter(c => c.id !== id), {id, name: body.name, pending: 1}];
+      }
+    } else if ((m = op.path.match(/^\/manage\/(categories|wod-types)\/([\w-]+)$/))) {
+      const key = m[1] === "categories" ? "categories" : "types";
+      if (op.method === "DELETE") data[key] = (data[key] || []).filter(c => c.id !== m[2]);
+      else data[key] = (data[key] || []).map(c => (c.id === m[2] ? {...c, name: body.name} : c));
     }
   }
   function patch(path, data, op) {
