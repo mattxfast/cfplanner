@@ -150,7 +150,7 @@ Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont p
 
 `wrangler.toml` déclare le Worker `myfitfactory` (adresse `myfitfactory.mattxfast.workers.dev` ; l'ancienne adresse `fitfactory.mattxfast.workers.dev` affiche une page « déménagé »), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `fitfactory` → Logs, ou via `npx wrangler tail fitfactory`). La base D1 s'appelle `myfitfactory` (hébergée en Europe de l'Ouest ; copie de `fitfactory`, elle-même copie de `cfplanner` : une base D1 ne se renomme pas). Le cookie de session s'appelle `fitfactory_session` et la préférence de thème `fitfactory-theme` ; les anciens noms (`cfplanner_session`, `cfplanner-theme`) sont encore acceptés et remplacés automatiquement, sans déconnexion. Cette adresse identifie l'administrateur principal et le propriétaire du référentiel commun des activités (les autres administrateurs gèrent ce même référentiel).
 
-Les polices (DM Sans et Manrope, sous-ensemble latin, licence OFL) sont hébergées dans `public/fonts/` et la bibliothèque Excel (SheetJS 0.18.5, Apache-2.0) dans `public/vendor/` : l'application ne charge aucune ressource externe.
+Les polices (DM Sans, Manrope et Saira pour le nom de l'application, sous-ensemble latin, licence OFL) sont hébergées dans `public/fonts/` et la bibliothèque Excel (SheetJS 0.18.5, Apache-2.0) dans `public/vendor/` : l'application ne charge aucune ressource externe.
 
 Envoi des e-mails « mot de passe oublié » (facultatif) via [Resend](https://resend.com) : créer une clé d'API, puis
 

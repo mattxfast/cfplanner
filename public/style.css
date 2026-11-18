@@ -55,6 +55,13 @@
   font-display: swap;
   src: url(/fonts/manrope-latin-800-normal.woff2) format("woff2");
 }
+@font-face {
+  font-family: "Saira";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/saira-latin-800-normal.woff2) format("woff2");
+}
 /* Palette de couleurs : toutes les couleurs de l’interface sont définies ici, par rôle.
    Pour essayer d’autres couleurs, il suffit de modifier ces variables. */
 :root {
@@ -310,7 +317,7 @@ header {
 }
 .brand b {
   display: block;
-  font: 800 16px Manrope;
+  font: 800 17px Saira;
 }
 .brand small {
   color: var(--muted);
