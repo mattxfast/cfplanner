@@ -1,4 +1,4 @@
-name = "fitfactory"
+name = "myfitfactory"
 main = "src/worker.js"
 compatibility_date = "2026-11-13"
 
@@ -9,8 +9,8 @@ not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "fitfactory"
-database_id = "adad0c5a-186a-4511-84e6-342420d78d10"
+database_name = "myfitfactory"
+database_id = "5bcfe6d5-4fcb-415d-ad63-b36aa7d63aeb"
 migrations_dir = "migrations"
 
 [vars]

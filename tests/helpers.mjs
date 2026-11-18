@@ -11,7 +11,7 @@ export const ADMIN_EMAIL = "admin@test.local";
 export async function startWorker(port = 8790 + Math.floor(Math.random() * 100)) {
   const dir = mkdtempSync(join(tmpdir(), "fitfactory-test-"));
   const wrangler = ["-y", "wrangler@4"];
-  execFileSync("npx", [...wrangler, "d1", "migrations", "apply", "fitfactory", "--local", "--persist-to", dir], {
+  execFileSync("npx", [...wrangler, "d1", "migrations", "apply", "myfitfactory", "--local", "--persist-to", dir], {
     cwd: ROOT,
     stdio: "ignore",
     env: {...process.env, CI: "1"},

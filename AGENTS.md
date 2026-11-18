@@ -5,7 +5,7 @@ Plusieurs agents interviennent **à tour de rôle** : ce fichier est la référe
 
 ## Le projet
 
-MyFitFactory (nom affiché ; anciennement FitFactory puis CFPlanner ; dépôt GitHub, Worker Cloudflare, base D1, cookie de session et préférence de thème : `fitfactory` ; les anciens noms `cfplanner_session` et `cfplanner-theme` restent acceptés pour la transition) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
+MyFitFactory (anciennement FitFactory puis CFPlanner ; dépôt GitHub `mattxfast/myfitfactory`, Worker Cloudflare et base D1 : `myfitfactory`, adresse `myfitfactory.mattxfast.workers.dev` ; cookie de session et préférence de thème : `fitfactory_session` et `fitfactory-theme` ; les anciens noms `cfplanner_session` et `cfplanner-theme` restent acceptés pour la transition) est une application web personnelle de planification et de suivi CrossFit : programmes, WOD, séances réalisées, mouvements travaillés et records personnels (PR). L'interface et les messages d'erreur sont en **français**.
 
 ## Architecture
 
