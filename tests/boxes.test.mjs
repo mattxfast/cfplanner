@@ -488,3 +488,34 @@ test("types de WOD : liste par box pré-remplie, WOD par défaut, paramétrable 
   await alice.del(`/manage/wods/${plain.data.id}`);
   await alice.del(`/manage/wods/${lift.data.id}`);
 });
+
+test("mouvements d'un WOD de box : cochés par le gestionnaire, transmis aux membres", async () => {
+  await admin.post("/admin/movements", {name: "Thruster test", measurement_method: "load"});
+  await admin.post("/admin/movements", {name: "Pull-up test", measurement_method: "reps"});
+  const catalog = (await alice.get("/movement-catalog")).data.movements,
+    thruster = catalog.find(m => m.name === "Thruster test").id,
+    pullup = catalog.find(m => m.name === "Pull-up test").id,
+    day = today();
+  const created = await alice.post(`/manage/boxes/${boxId}/wods`, {
+    wod_date: day,
+    score_type: "time",
+    catalog_movement_ids: [thruster, pullup, "inconnu"],
+  });
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+  const mine = (await alice.get(`/manage/boxes/${boxId}/wods?from=${day}&to=${day}`)).data.wods.find(
+    w => w.id === created.data.id
+  );
+  assert.deepEqual([...mine.movement_ids].sort(), [thruster, pullup].sort());
+  const seen = (await bob.get(`/box-wods?from=${day}&to=${day}`)).data.wods.find(w => w.id === created.data.id);
+  assert.deepEqual([...seen.movement_ids].sort(), [thruster, pullup].sort());
+  // modification : la liste est remplacée ; sans le champ, elle est gardée
+  await alice.put(`/manage/wods/${created.data.id}`, {
+    wod_date: day,
+    score_type: "time",
+    catalog_movement_ids: [pullup],
+  });
+  await alice.put(`/manage/wods/${created.data.id}`, {wod_date: day, score_type: "time", content: "x"});
+  const after = (await bob.get(`/box-wods?from=${day}&to=${day}`)).data.wods.find(w => w.id === created.data.id);
+  assert.deepEqual(after.movement_ids, [pullup]);
+  assert.equal((await alice.del(`/manage/wods/${created.data.id}`)).status, 200);
+});

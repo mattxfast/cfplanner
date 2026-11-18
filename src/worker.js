@@ -372,6 +372,12 @@ async function ensureV2Schema(env) {
         "UPDATE box_wods SET type_id=(SELECT t.id FROM box_wod_types t WHERE t.box_id=box_wods.box_id ORDER BY t.sort_order LIMIT 1) WHERE type_id IS NULL"
       ).run();
     });
+    await runMigration("v23-box-wod-movements", async () => {
+      // Mouvements du catalogue travaillés dans un WOD de box (cochés par le gestionnaire, proposés aux membres).
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS box_wod_movements (box_wod_id TEXT NOT NULL REFERENCES box_wods(id) ON DELETE CASCADE, catalog_movement_id TEXT NOT NULL REFERENCES movement_catalog(id) ON DELETE CASCADE, PRIMARY KEY(box_wod_id,catalog_movement_id))"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -722,16 +728,38 @@ async function boxWodInput(e, boxId, b) {
     content: String(b.content || "").slice(0, 3000),
   };
 }
+// Mouvements d'un WOD de box : remplace la liste par les mouvements du catalogue envoyés (inconnus ignorés).
+async function boxWodMovementStatements(e, wodId, ids) {
+  const unique = [...new Set((Array.isArray(ids) ? ids : []).map(String).filter(Boolean))].slice(0, 100),
+    valid = unique.length
+      ? (
+          await e.DB.prepare("SELECT id FROM movement_catalog WHERE id IN (" + unique.map(() => "?").join(",") + ")")
+            .bind(...unique)
+            .all()
+        ).results.map(x => x.id)
+      : [];
+  return [
+    e.DB.prepare("DELETE FROM box_wod_movements WHERE box_wod_id=?").bind(wodId),
+    ...valid.map(id =>
+      e.DB.prepare("INSERT INTO box_wod_movements(box_wod_id,catalog_movement_id) VALUES(?,?)").bind(wodId, id)
+    ),
+  ];
+}
+// Liste des WOD avec leurs mouvements (identifiants du catalogue, séparés par des virgules en base).
+const WOD_MOVEMENTS =
+  "(SELECT group_concat(x.catalog_movement_id) FROM box_wod_movements x WHERE x.box_wod_id=w.id) AS movement_ids";
+const withMovementIds = rows => rows.map(r => ({...r, movement_ids: r.movement_ids ? r.movement_ids.split(",") : []}));
 // WOD des box dont l'utilisateur est membre validé, entre deux dates : jamais ceux de demain et après (seuls les
 // gestionnaires voient les WOD à venir, dans leur espace).
 async function memberBoxWods(e, userId, from, to) {
-  return (
-    await e.DB.prepare(
-      "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name FROM box_wods w JOIN boxes b ON b.id=w.box_id LEFT JOIN box_wod_types t ON t.id=w.type_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
-    )
-      .bind(userId, from, to, localToday())
-      .all()
-  ).results;
+  const x = await e.DB.prepare(
+    "SELECT w.id,w.box_id,b.name AS box_name,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name," +
+      WOD_MOVEMENTS +
+      " FROM box_wods w JOIN boxes b ON b.id=w.box_id LEFT JOIN box_wod_types t ON t.id=w.type_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=? AND m.role='member' AND m.status='approved' WHERE w.wod_date>=? AND w.wod_date<=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
+  )
+    .bind(userId, from, to, localToday())
+    .all();
+  return withMovementIds(x.results);
 }
 // Période de lecture des WOD de box (au plus 93 jours).
 function wodRange(r) {
@@ -1538,22 +1566,25 @@ async function api(r, e, p) {
         const range = wodRange(r);
         if (!range) return json({error: "Période invalide."}, 400);
         const x = await e.DB.prepare(
-          "SELECT w.id,w.box_id,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name FROM box_wods w LEFT JOIN box_wod_types t ON t.id=w.type_id WHERE w.box_id=? AND w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
+          "SELECT w.id,w.box_id,w.wod_date,w.name,w.content,w.score_type,w.type_id,t.name AS type_name," +
+            WOD_MOVEMENTS +
+            " FROM box_wods w LEFT JOIN box_wod_types t ON t.id=w.type_id WHERE w.box_id=? AND w.wod_date>=? AND w.wod_date<=? ORDER BY w.wod_date,t.sort_order,w.created_at"
         )
           .bind(m[1], range.from, range.to)
           .all();
-        return json({wods: x.results});
+        return json({wods: withMovementIds(x.results)});
       }
       const b = await r.json(),
         id = clientId(b.client_id) || uid();
       if (await e.DB.prepare("SELECT 1 FROM box_wods WHERE id=?").bind(id).first()) return json({ok: true, id});
       const input = await boxWodInput(e, m[1], b);
       if (input.error) return json({error: input.error}, 400);
-      await e.DB.prepare(
-        "INSERT INTO box_wods(id,box_id,wod_date,name,content,score_type,type_id,created_by) VALUES(?,?,?,?,?,?,?,?)"
-      )
-        .bind(id, m[1], input.date, input.name, input.content, input.type, input.typeId, u.id)
-        .run();
+      await e.DB.batch([
+        e.DB.prepare(
+          "INSERT INTO box_wods(id,box_id,wod_date,name,content,score_type,type_id,created_by) VALUES(?,?,?,?,?,?,?,?)"
+        ).bind(id, m[1], input.date, input.name, input.content, input.type, input.typeId, u.id),
+        ...(await boxWodMovementStatements(e, id, b.catalog_movement_ids)),
+      ]);
       return json({ok: true, id});
     }
     if ((m = p.match(/^\/api\/manage\/wods\/([\w-]+)$/)) && (r.method === "PUT" || r.method === "DELETE")) {
@@ -1562,16 +1593,23 @@ async function api(r, e, p) {
       if (r.method === "DELETE") {
         if (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE box_wod_id=? LIMIT 1").bind(m[1]).first())
           return json({error: "Ce WOD a déjà été réalisé par des membres et ne peut plus être supprimé."}, 409);
-        await e.DB.prepare("DELETE FROM box_wods WHERE id=?").bind(m[1]).run();
+        await e.DB.batch([
+          e.DB.prepare("DELETE FROM box_wod_movements WHERE box_wod_id=?").bind(m[1]),
+          e.DB.prepare("DELETE FROM box_wods WHERE id=?").bind(m[1]),
+        ]);
         return json({ok: true});
       }
-      const input = await boxWodInput(e, wod.box_id, await r.json());
+      const b = await r.json(),
+        input = await boxWodInput(e, wod.box_id, b);
       if (input.error) return json({error: input.error}, 400);
-      await e.DB.prepare(
-        "UPDATE box_wods SET wod_date=?,name=?,content=?,score_type=?,type_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?"
-      )
-        .bind(input.date, input.name, input.content, input.type, input.typeId, m[1])
-        .run();
+      await e.DB.batch([
+        e.DB.prepare(
+          "UPDATE box_wods SET wod_date=?,name=?,content=?,score_type=?,type_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?"
+        ).bind(input.date, input.name, input.content, input.type, input.typeId, m[1]),
+        ...(b.catalog_movement_ids === undefined
+          ? []
+          : await boxWodMovementStatements(e, m[1], b.catalog_movement_ids)),
+      ]);
       return json({ok: true});
     }
     // Listes paramétrables de la box : catégories de score et types de WOD (ajout, ordre, renommage, suppression).

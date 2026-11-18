@@ -39,7 +39,12 @@ FFOffline.init({
   // WOD de box créé ou modifié hors ligne : nom par défaut et nom de la box.
   describeBoxWod: b => {
     const type = (managedBox?.types || []).find(t => t.id === b.type_id) || (managedBox?.types || [])[0];
-    return {name: b.name || defaultWodName(b.wod_date, type?.name), type_name: type?.name, box_name: boxName(b.box_id)};
+    return {
+      ...(b.catalog_movement_ids ? {movement_ids: b.catalog_movement_ids} : {}),
+      name: b.name || defaultWodName(b.wod_date, type?.name),
+      type_name: type?.name,
+      box_name: boxName(b.box_id),
+    };
   },
   describeMe: () => ({first_name: user?.first_name || "", last_name: user?.last_name || ""}),
   onChange: renderSyncStatus,

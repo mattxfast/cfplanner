@@ -63,8 +63,17 @@ function fillWodOptions(pid, selected = "") {
 }
 // Mouvements (catalogue pour un WOD de box ou « hors programme ») et score selon le WOD choisi.
 function syncSessionWod(session = null) {
-  const f = $("#sessionform");
-  renderSessionMovementChecks(selectedBoxWod() ? "none" : f.elements.program_id.value, f.elements.session_id.value);
+  const f = $("#sessionform"),
+    boxWod = selectedBoxWod(),
+    box = $("#sessionmovementchecks");
+  renderSessionMovementChecks(boxWod ? "none" : f.elements.program_id.value, f.elements.session_id.value);
+  // Nouvelle séance sur un WOD de box : ses mouvements (cochés par le gestionnaire) sont cochés par défaut,
+  // une seule fois par WOD choisi ; l’utilisateur peut ensuite les modifier.
+  if (boxWod && !f.elements.session_id.value && box.dataset.presetWod !== boxWod.id) {
+    const preset = new Set(boxWod.movement_ids || []);
+    box.querySelectorAll('input[name="catalog_movement_ids"]').forEach(i => (i.checked = preset.has(i.value)));
+    box.dataset.presetWod = boxWod.id;
+  }
   renderSessionScore(session);
 }
 $("#sessionform").elements.program_id.onchange = e => {
@@ -180,6 +189,7 @@ function openSession(s = null, presetWodId = "") {
   const f = $("#sessionform");
   f.reset();
   $("#sessionmovementchecks").innerHTML = "";
+  $("#sessionmovementchecks").dataset.presetWod = "";
   f.elements.session_date.max = today();
   f.elements.session_id.value = s?.id || "";
   f.elements.actual_comment.value = s?.actual_comment || "";

@@ -214,6 +214,15 @@ function openBoxWod(w = null) {
   syncBoxWodPlaceholder();
   f.elements.score_type.value = w?.score_type || "time";
   f.elements.content.value = w?.content || "";
+  // Mouvements du catalogue travaillés dans ce WOD : cochés par défaut dans la séance des membres.
+  const ticked = new Set(w?.movement_ids || []);
+  $("#boxwodmovements").innerHTML =
+    movementCatalog
+      .map(
+        m =>
+          `<label class="movement-check"><input type="checkbox" name="catalog_movement_ids" value="${esc(m.id)}" ${ticked.has(m.id) ? "checked" : ""}><span>${esc(m.name)}</span></label>`
+      )
+      .join("") || `<p class="muted">Le catalogue de mouvements est vide.</p>`;
   $("#boxwoddialogtitle").textContent = w ? "Modifier le WOD" : "Ajouter un WOD";
   $("#boxwoderror").textContent = "";
   $("#boxwoddialog").showModal();
@@ -236,6 +245,9 @@ $("#boxwodform").onsubmit = async e => {
       score_type: f.score_type.value,
       type_id: f.type_id.value || undefined,
       content: f.content.value,
+      catalog_movement_ids: [...e.target.querySelectorAll('input[name="catalog_movement_ids"]:checked')].map(
+        x => x.value
+      ),
     };
   if (!id) body.client_id = crypto.randomUUID?.();
   try {
