@@ -211,8 +211,8 @@ function weekProgramSection(p, week, folded, from) {
 const sectionEmpty = text => `<article class="weekwod card section-empty"><span>${esc(text)}</span></article>`;
 // Rubrique « WOD de la box » de la semaine (membres d’une box) : WOD du gestionnaire, séances, classement.
 function weekBoxSection(week, folded) {
-  // Rubrique toujours affichée. ＋ du titre : rejoindre une box. Sans box : bulle « Rejoindre une box » (ou demande en
-  // attente) ; membre sans WOD cette semaine : « Pas de WOD de la box cette semaine ».
+  // Rubrique toujours affichée. Sans box : bulle « Rejoindre une box » (ou demande en attente) ; membre sans WOD cette
+  // semaine : « Pas de WOD de la box cette semaine ». Les autres box se rejoignent depuis Mon compte → Mes box.
   const pending = boxMemberships.filter(m => m.role === "member" && m.status === "pending"),
     empty = memberBoxIds().length
       ? sectionEmpty("Pas de WOD de la box cette semaine")
@@ -223,7 +223,7 @@ function weekBoxSection(week, folded) {
         : `<button type="button" class="weekwod card section-empty join-box-empty" data-join-box>Rejoindre une box</button>`;
   const severalBoxes = memberBoxIds().length > 1,
     done = boxWods.filter(w => week.some(x => x.box_wod_id === w.id));
-  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span><button type="button" class="primary addsession-compact addwod week-join-box" data-join-box aria-label="Rejoindre une box" title="Rejoindre une box">＋</button></div><div class="session-fold-body"><div class="weekwodlist">${
+  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
     boxWods.length
       ? boxWods
           .map(w => {
