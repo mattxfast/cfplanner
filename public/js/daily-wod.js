@@ -9,7 +9,12 @@ let dailyWods = [],
   dailyReplaceId = null,
   dailyRunning = false;
 // WOD du jour déjà chargés (semaine affichée, séances) : retrouvés dans le formulaire de séance, même hors ligne.
-function rememberDailyWods(list) {
+// Ceux de la semaine chargée que le serveur ne renvoie plus (supprimés, ici ou sur un autre appareil) sont oubliés.
+function rememberDailyWods(list, from = null) {
+  const ids = new Set((list || []).map(w => w.id));
+  if (from)
+    for (const [id, w] of dailyWodsById)
+      if (w.wod_date >= from && w.wod_date <= addDays(from, 6) && !ids.has(id)) dailyWodsById.delete(id);
   for (const w of list || []) dailyWodsById.set(w.id, {...dailyWodsById.get(w.id), ...w});
   return list || [];
 }
@@ -96,6 +101,7 @@ function bindDailySection(root) {
         if (!confirm("Supprimer ce WOD du jour ?")) return;
         try {
           await sendApi("/daily-wods/" + b.dataset.dailyDel, "DELETE");
+          dailyWodsById.delete(b.dataset.dailyDel);
           await loadSessions();
           toast("WOD du jour supprimé.");
         } catch (e) {
