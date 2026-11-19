@@ -42,7 +42,7 @@ function weekDailySection(from, folded) {
       }</div></article>`;
     })
     .join("");
-  return `<section class="session-fold ${folded.has("daily") ? "collapsed" : ""}" data-session-fold="daily"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier le WOD du jour" aria-expanded="${!folded.has("daily")}">${folded.has("daily") ? "＋" : "−"}</button><h2>WOD du jour</h2>${list.length ? `<span>${done}/${list.length}</span>` : ""}${canGenerate ? `<button type="button" class="smallbtn weekheading-action" id="dailynew" aria-label="Générer mon WOD du jour" title="Générer mon WOD du jour">${AI_ICON}</button>` : ""}</div><div class="session-fold-body"><div class="weekwodlist">${
+  return `<section class="session-fold ${folded.has("daily") ? "collapsed" : ""}" data-session-fold="daily"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier le WOD du jour" aria-expanded="${!folded.has("daily")}">${folded.has("daily") ? "＋" : "−"}</button><h2>WOD du jour</h2><span>${done}/${list.length}</span>${canGenerate ? `<button type="button" class="smallbtn weekheading-action" id="dailynew" aria-label="Générer mon WOD du jour" title="Générer mon WOD du jour">${AI_ICON}</button>` : ""}</div><div class="session-fold-body"><div class="weekwodlist">${
     cards ||
     (canGenerate
       ? `<article class="weekwod card section-empty daily-empty"><span>Besoin d’un entraînement ? L’IA te prépare ton WOD du jour.</span><button type="button" class="primary" data-daily-new>${AI_ICON}<span>Générer</span></button></article>`

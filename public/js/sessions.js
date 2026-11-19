@@ -92,6 +92,7 @@ function renderSessions() {
       renderSessions();
     };
   }
+  $("#sessionhistorycount").textContent = sessions.length;
   $("#sessionlist").innerHTML = sessions.length
     ? sessions
         .map(
@@ -192,7 +193,7 @@ function weekProgramSection(p, week, folded, from) {
     // Génération par IA : seulement dans ses propres programmes (pas un programme suivi).
     own = p && !p.followed && !p.read_only && !p.is_default;
   if (!p)
-    return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2></div><div class="session-fold-body"><div class="weekwodlist">${sectionEmpty("Pas de programmation en cours")}</div></div></section>`;
+    return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>0/0</span></div><div class="session-fold-body"><div class="weekwodlist">${sectionEmpty("Pas de programmation en cours")}</div></div></section>`;
   return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>${done.length}/${ws.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
     ws.length
       ? ws

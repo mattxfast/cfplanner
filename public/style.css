@@ -865,7 +865,8 @@ header {
 .weekheading h2 {
   font-size: 17px;
 }
-.weekheading span {
+.weekheading span,
+.section-toolbar .section-count {
   font-size: 11px;
   color: var(--muted);
   background: var(--content-bg);
@@ -1117,7 +1118,8 @@ header {
   font-weight: 800;
   color: var(--ink-soft);
 }
-.weekheading span {
+.weekheading span,
+.section-toolbar .section-count {
   margin-left: auto;
   background: var(--surface);
   color: var(--muted-strong);
