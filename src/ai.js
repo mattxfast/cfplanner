@@ -347,21 +347,69 @@ export function dailyChrono(c) {
   };
 }
 
-// Mouvements du catalogue cités dans le WOD (comparaison des noms sans accents ni casse) : cochés par défaut dans la
-// séance enregistrée ensuite.
+// Mouvements du catalogue cités dans le WOD : cochés par défaut dans la séance enregistrée ensuite. Les noms sont
+// comparés sans accents, casse, ponctuation ni pluriel (« Wall balls » = « Wall ball », « Pull-ups » = « Pull up »),
+// avec les abréviations courantes (T2B, HSPU, DU, C&J…), et un nom du catalogue d’au moins deux mots cité dans un nom
+// plus long est reconnu (« Kettlebell swing russe » → « Kettlebell swing »).
+const MOVEMENT_ALIASES = {
+  t2b: "toes to bar",
+  ttb: "toes to bar",
+  c2b: "chest to bar",
+  ctb: "chest to bar",
+  hspu: "handstand push up",
+  hsw: "handstand walk",
+  du: "double under",
+  dus: "double under",
+  mu: "muscle up",
+  bmu: "bar muscle up",
+  rmu: "ring muscle up",
+  ohs: "overhead squat",
+  kb: "kettlebell",
+  kbs: "kettlebell swing",
+  db: "dumbbell",
+  wb: "wall ball",
+  bjo: "box jump over",
+  bbjo: "burpee box jump over",
+  sdhp: "sumo deadlift high pull",
+  cj: "clean jerk",
+  "c j": "clean jerk",
+  pc: "power clean",
+  ps: "power snatch",
+  rdl: "romanian deadlift",
+  ghd: "ghd sit up",
+};
+export function movementKey(v) {
+  let k = String(v || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (MOVEMENT_ALIASES[k]) k = MOVEMENT_ALIASES[k];
+  return k
+    .split(" ")
+    .map(w => MOVEMENT_ALIASES[w] || w)
+    .join(" ")
+    .split(" ")
+    .filter(w => w !== "and" && w !== "et")
+    .map(w => (w.length >= 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w))
+    .join(" ");
+}
 export function dailyMovementIds(wod, catalog) {
-  const key = v =>
-    String(v || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-  const byName = new Map(catalog.map(m => [key(m.name), m.id]));
+  const entries = catalog.map(m => ({id: m.id, key: movementKey(m.name)})).filter(m => m.key),
+    byKey = new Map(entries.map(m => [m.key, m.id])),
+    // Noms du catalogue du plus long au plus court : « Bar muscle up » avant « Muscle up ».
+    byLength = [...entries].sort((a, b) => b.key.length - a.key.length);
   const ids = new Set();
   for (const b of wod.blocs || [])
     for (const m of b.mouvements || []) {
-      const id = byName.get(key(m.nom));
+      const k = movementKey(m.nom);
+      if (!k) continue;
+      // Nom plus long que celui du catalogue : seulement pour un nom du catalogue d’au moins deux mots (« Deadlift »
+      // ne doit pas reconnaître « Sumo deadlift high pull »).
+      const id =
+        byKey.get(k) || byLength.find(c => c.key.includes(" ") && (" " + k + " ").includes(" " + c.key + " "))?.id;
       if (id) ids.add(id);
     }
   return [...ids].slice(0, 40);
