@@ -81,9 +81,10 @@ function switchView(v) {
   if (v === "nutrition") loadNutrition();
 }
 document.querySelectorAll(".navtab[data-view]").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
-// Origine du WOD d’une séance, affichée dans l’historique : box, WOD du jour, programmation, ou séance libre (« Autres »).
+// Origine du WOD d’une séance, affichée dans l’historique : nom de la box, WOD du jour, programmation, ou séance libre
+// (« Autres »).
 function sessionSource(s) {
-  if (s.box_wod_id) return "WOD de la box";
+  if (s.box_wod_id) return s.box_name || "WOD de la box";
   if (s.daily_wod_id) return "WOD du jour";
   if (s.wod_name === "Autres") return "Séance libre";
   return "WOD de la prog";
@@ -156,7 +157,6 @@ function openSessionDetail(id) {
   $("#sessiondetailmeta").textContent = [
     fmt(s.session_date),
     sessionSource(s),
-    s.box_name,
     s.program_name && !s.box_name && !s.daily_wod_id ? s.program_name : "",
   ]
     .filter(Boolean)

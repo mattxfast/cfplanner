@@ -3617,6 +3617,7 @@ button:disabled {
 #sessionlist .entryactions .smallbtn,
 #prhistorylist .entryactions .smallbtn,
 #view-sessions .weekcount .smallbtn,
+#view-sessions .weekheading .weekheading-action,
 #view-admin .admin-row-actions .smallbtn,
 #view-box .admin-row-actions .smallbtn {
   width: var(--list-button-size) !important;
@@ -3948,7 +3949,7 @@ button:disabled {
 
 /* WOD du jour (page Séances) : ✨ du titre juste avant le compteur ; rubrique vide ; fenêtre de génération. */
 .weekheading .weekheading-action {
-  margin-left: auto;
+  margin: -4px 0 -4px auto; /* bouton de la taille des boutons de ligne sans agrandir le titre */
 }
 .weekheading .weekheading-action + span {
   margin-left: 0;
