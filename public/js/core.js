@@ -47,9 +47,10 @@ const mondayOf = s => {
 };
 const OFFLINE_MESSAGE = "Pas de connexion internet : réessaie quand le réseau revient.";
 // Envoi réseau : une coupure ou un délai dépassé donne une erreur marquée « offline » (gérée par offline.js).
-async function sendApi(path, method, body) {
+// Délai par défaut : 8 s en lecture, 15 s en écriture (plus long pour la génération par IA).
+async function sendApi(path, method, body, timeout = method === "GET" ? 8000 : 15000) {
   const ctrl = new AbortController(),
-    timer = setTimeout(() => ctrl.abort(), method === "GET" ? 8000 : 15000);
+    timer = setTimeout(() => ctrl.abort(), timeout);
   let r;
   try {
     r = await fetch("/api" + path, {

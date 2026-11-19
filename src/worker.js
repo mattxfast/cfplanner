@@ -1,4 +1,13 @@
 import {vapidKeys, sendPush, isAllowedEndpoint, localEcdhKeys} from "./push.js";
+import {
+  AI_DAILY_LIMIT,
+  AI_PROMPT_VERSION,
+  aiProfileInput,
+  aiOptionsInput,
+  buildPrompt,
+  callOpenAI,
+  wodToText,
+} from "./ai.js";
 const SESSION_DAYS = 30,
   enc = new TextEncoder();
 const json = (d, s = 200, h = {}) =>
@@ -383,6 +392,18 @@ async function ensureV2Schema(env) {
       const columns = await env.DB.prepare("PRAGMA table_info(users)").all();
       if (!columns.results.some(column => column.name === "box_prompt_dismissed"))
         await env.DB.prepare("ALTER TABLE users ADD COLUMN box_prompt_dismissed INTEGER NOT NULL DEFAULT 0").run();
+    });
+    await runMigration("v25-ai-wod-generation", async () => {
+      // Génération de WOD par IA : profil d'entraînement de l'athlète et journal des générations (traçabilité, quota).
+      await env.DB.batch([
+        env.DB.prepare(
+          "CREATE TABLE IF NOT EXISTS ai_profiles (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, level TEXT NOT NULL DEFAULT '', goals TEXT NOT NULL DEFAULT '', equipment TEXT NOT NULL DEFAULT '', constraints TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        ),
+        env.DB.prepare(
+          "CREATE TABLE IF NOT EXISTS ai_generations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, wod_id TEXT REFERENCES program_wods(id) ON DELETE SET NULL, week_start TEXT NOT NULL, options TEXT NOT NULL, result TEXT NOT NULL, prompt_version TEXT NOT NULL, model TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        ),
+        env.DB.prepare("CREATE INDEX IF NOT EXISTS ai_generations_user_date ON ai_generations(user_id,created_at)"),
+      ]);
     });
   })().catch(err => {
     schemaReady = null;
@@ -2222,6 +2243,110 @@ async function api(r, e, p) {
       return json({error: "Un WOD porte déjà ce nom dans ce programme."}, 409);
     }
     return json({ok: true, id});
+  }
+  // Génération de WOD par IA : profil d'entraînement et génération du contenu d'un WOD pour une semaine.
+  if (p === "/api/ai-profile" && r.method === "GET") {
+    const [profile, used] = await Promise.all([
+      e.DB.prepare("SELECT level,goals,equipment,constraints FROM ai_profiles WHERE user_id=?").bind(u.id).first(),
+      e.DB.prepare("SELECT COUNT(*) AS n FROM ai_generations WHERE user_id=? AND created_at>datetime('now','-1 day')")
+        .bind(u.id)
+        .first(),
+    ]);
+    return json({
+      enabled: !!e.OPENAI_API_KEY,
+      profile: profile || {level: "", goals: "", equipment: "", constraints: ""},
+      remaining: Math.max(0, AI_DAILY_LIMIT - (used?.n || 0)),
+    });
+  }
+  if (p === "/api/ai-profile" && r.method === "PUT") {
+    const v = aiProfileInput(await r.json());
+    if (v.error) return json({error: v.error}, 400);
+    await e.DB.prepare(
+      "INSERT INTO ai_profiles(user_id,level,goals,equipment,constraints,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET level=excluded.level,goals=excluded.goals,equipment=excluded.equipment,constraints=excluded.constraints,updated_at=CURRENT_TIMESTAMP"
+    )
+      .bind(u.id, v.level, v.goals, v.equipment, v.constraints)
+      .run();
+    return json({ok: true});
+  }
+  m = p.match(/^\/api\/wods\/([\w-]+)\/generate$/);
+  if (m && r.method === "POST") {
+    if (!e.OPENAI_API_KEY)
+      return json({error: "La génération par IA n'est pas encore configurée (clé OpenAI manquante)."}, 503);
+    const b = await r.json(),
+      week = String(b.week_start || ""),
+      options = aiOptionsInput(b);
+    if (options.error) return json({error: options.error}, 400);
+    if (!validDate(week) || new Date(week + "T12:00:00Z").getUTCDay() !== 1)
+      return json({error: "La semaine doit commencer un lundi."}, 400);
+    // Uniquement ses propres programmes (pas un programme suivi, ni le programme technique « Hors programme »).
+    const wod = await e.DB.prepare(
+      "SELECT w.id,w.name,w.planned_comment,w.program_id,p.name AS program_name,p.start_monday,p.end_monday FROM program_wods w JOIN programs p ON p.id=w.program_id WHERE w.id=? AND w.user_id=? AND p.user_id=? AND p.is_default=0 AND w.name<>'__AUTRES__'"
+    )
+      .bind(m[1], u.id, u.id)
+      .first();
+    if (!wod) return json({error: "WOD introuvable."}, 404);
+    if (addDays(week, 6) < wod.start_monday || week > wod.end_monday)
+      return json({error: "Cette semaine est hors période du programme."}, 400);
+    const used = await e.DB.prepare(
+      "SELECT COUNT(*) AS n FROM ai_generations WHERE user_id=? AND created_at>datetime('now','-1 day')"
+    )
+      .bind(u.id)
+      .first();
+    if ((used?.n || 0) >= AI_DAILY_LIMIT)
+      return json({error: "Limite de " + AI_DAILY_LIMIT + " générations par 24 h atteinte. Réessaie demain."}, 429);
+    const [profile, records, catalog, focus, planned, done] = await Promise.all([
+      e.DB.prepare("SELECT level,goals,equipment,constraints FROM ai_profiles WHERE user_id=?").bind(u.id).first(),
+      e.DB.prepare(
+        "SELECT mc.name,mc.measurement_method,MAX(pr.value) AS value,pr.rep_count FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? GROUP BY pr.movement_id,pr.rep_count ORDER BY mc.sort_order,pr.rep_count LIMIT 40"
+      )
+        .bind(u.id)
+        .all(),
+      e.DB.prepare(
+        "SELECT id,name,measurement_method FROM movement_catalog ORDER BY sort_order,name COLLATE NOCASE"
+      ).all(),
+      e.DB.prepare("SELECT name FROM program_movements WHERE program_id=? AND user_id=? ORDER BY sort_order")
+        .bind(wod.program_id, u.id)
+        .all(),
+      e.DB.prepare(
+        "SELECT x.week_start,w.name,x.content FROM weekly_wod_programming x JOIN program_wods w ON w.id=x.wod_id WHERE w.program_id=? AND w.user_id=? AND x.week_start BETWEEN ? AND ? AND x.content<>'' AND NOT (x.wod_id=? AND x.week_start=?) ORDER BY x.week_start,w.sort_order LIMIT 20"
+      )
+        .bind(wod.program_id, u.id, addDays(week, -14), week, wod.id, week)
+        .all(),
+      e.DB.prepare(
+        "SELECT s.session_date,COALESCE(bw.name,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END) AS name,COALESCE(NULLIF(s.actual_comment,''),bw.content,'') AS comment FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id LEFT JOIN box_wods bw ON bw.id=s.box_wod_id WHERE s.user_id=? AND s.session_date BETWEEN ? AND ? ORDER BY s.session_date LIMIT 20"
+      )
+        .bind(u.id, addDays(week, -14), addDays(week, 6))
+        .all(),
+    ]);
+    const first = mondayOfDate(wod.start_monday);
+    const prompt = buildPrompt({
+      profile,
+      options,
+      records: records.results,
+      catalog: catalog.results,
+      focus: focus.results.map(x => x.name),
+      program: {name: wod.program_name},
+      wod,
+      weekIndex: daysBetween(first, week) / 7 + 1,
+      weekCount: daysBetween(first, mondayOfDate(wod.end_monday)) / 7 + 1,
+      weekLabel: frenchDate(week) + " au " + frenchDate(addDays(week, 6)),
+      planned: planned.results.map(x => ({week: frenchDate(x.week_start), name: x.name, content: x.content})),
+      sessions: done.results.map(x => ({date: frenchDate(x.session_date), name: x.name, comment: x.comment})),
+    });
+    const out = await callOpenAI(e, prompt);
+    if (out.error) return json({error: out.error}, 502);
+    const content = wodToText(out.wod);
+    await e.DB.batch([
+      e.DB.prepare(
+        "INSERT INTO weekly_wod_programming(wod_id,user_id,week_start,content,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(wod_id,week_start) DO UPDATE SET content=excluded.content,updated_at=CURRENT_TIMESTAMP"
+      ).bind(wod.id, u.id, week, content),
+      // Le contenu semaine par semaine n'existe que pour un WOD « suivi » : il le devient.
+      e.DB.prepare("UPDATE program_wods SET is_tracked=1 WHERE id=? AND user_id=?").bind(wod.id, u.id),
+      e.DB.prepare(
+        "INSERT INTO ai_generations(id,user_id,wod_id,week_start,options,result,prompt_version,model) VALUES(?,?,?,?,?,?,?,?)"
+      ).bind(uid(), u.id, wod.id, week, JSON.stringify(options), JSON.stringify(out.wod), AI_PROMPT_VERSION, out.model),
+    ]);
+    return json({ok: true, content, wod: out.wod});
   }
   m = p.match(/^\/api\/wods\/([\w-]+)\/weekly-programming$/);
   if (m && r.method === "PUT") {

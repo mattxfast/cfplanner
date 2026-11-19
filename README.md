@@ -33,6 +33,16 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Ajout de mouvements depuis le catalogue commun, géré par l’administrateur.
 - Réorganisation des mouvements via le même bouton ⇅.
 
+### Génération de WOD par IA
+- Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), deux boutons « étincelles » :
+  - **au niveau du programme** (titre de la rubrique WOD) : on choisit le nombre de WOD par semaine (1 à 7) ; les WOD manquants sont créés (« WOD 1 », « WOD 2 »…, marqués « suivi »), puis l'IA écrit le contenu de chaque WOD pour chaque semaine du programme, l'un après l'autre, avec une barre d'avancement. Le contenu déjà écrit est gardé, sauf si « Remplacer le contenu déjà écrit » est coché ;
+  - **au niveau d'un WOD** : l'IA écrit le contenu de ce WOD pour la semaine choisie (un contenu existant est remplacé).
+- Options de la séance : durée (15 à 180 min), blocs (échauffement, travail technique, force, metcon, retour au calme), format du metcon (AMRAP, EMOM, For Time, Intervalles, Chipper ou au choix de l'IA), consigne libre. Pour un WOD seul, de 0 à 5 mouvements imposés du catalogue pour la technique et pour la force (aucun : l'IA choisit).
+- Profil d'athlète mémorisé (niveau, objectifs, matériel, contraintes ; pas de données médicales), saisi dans la même fenêtre. Le prompt inclut aussi les records (PR), les mouvements « Focus » du programme, la programmation déjà écrite des deux semaines précédentes et de la semaine, et les séances réalisées sur la même période, pour la progression et la variété.
+- Le WOD est demandé à l'API OpenAI au format JSON imposé (structured outputs, `src/ai.js`), mis en texte (2 000 caractères au plus) dans la programmation hebdomadaire, où il reste modifiable. Le WOD devient « suivi ». Chaque génération est journalisée (`ai_generations` : options, JSON renvoyé, version du prompt `wod-seance-v1`, modèle).
+- Limite de 100 générations par utilisateur et par 24 h. La génération demande le réseau (jamais mise en file d'attente hors ligne). Sans clé OpenAI configurée, la fenêtre l'indique et le bouton « Générer » est désactivé.
+- Routes : `GET`/`PUT /api/ai-profile` (profil, génération activée ou non, générations restantes) et `POST /api/wods/:id/generate` (`week_start`, `duration_minutes`, `blocks`, `technique_movements`, `force_movements`, `metcon_format`, `instructions`).
+
 ### Box
 - Les administrateurs créent la liste des box CrossFit qui utilisent l'application (nom unique, ville) ; chaque nouvelle box reçoit les catégories RX, Inter et Scaled.
 - Rejoindre une box rapidement : à l'ouverture de l'application, tant que l'utilisateur n'a demandé aucune box, une fenêtre d'accueil lui propose de saisir son prénom et son nom et de choisir sa box (recherche par nom ou ville, un toucher sur « Rejoindre ») ; « Plus tard » la ferme jusqu'à la prochaine ouverture, « Je ne suis dans aucune box » ne la propose plus (`users.box_prompt_dismissed`, sur le compte). Dans **Séances**, le ＋ du titre « WOD de la box » ouvre la même fenêtre ; sans box, la rubrique affiche « Rejoindre une box » (ou la demande en attente de validation).
@@ -147,6 +157,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V20 ajoute la table `box_wod_types` (types de WOD d'une box, ordonnés) et la colonne `box_wods.type_id` ; chaque box existante reçoit les types WOD, Haltéro, Gym, FBB, Hyrox, Endurance et ses WOD existants deviennent des « WOD ».
 - V23 ajoute la table `box_wod_movements` (mouvements du catalogue travaillés dans un WOD de box).
 - V24 ajoute la colonne `users.box_prompt_dismissed` (fenêtre d'accueil des box à ne plus proposer).
+- V25 ajoute les tables `ai_profiles` (profil d'athlète pour la génération par IA) et `ai_generations` (journal des générations, indexé par utilisateur et date).
 - V20 supprime le thème « Automatique (selon le téléphone) » : un compte réglé ainsi suit le thème par défaut, un thème par défaut « auto » devient « Sombre ».
 - V21 ajoute l'index `reminder_settings_hour` (heure du rappel, dernier envoi) pour les passages de la tâche des rappels.
 - V22 ajoute les index `programs_user` (programmes d'un utilisateur) et `box_members_role_status` (demandes en attente), pour une box de plusieurs centaines de membres.
@@ -167,6 +178,14 @@ npx wrangler secret put RESEND_API_KEY
 
 et ajouter dans `wrangler.toml`, section `[vars]`, l'expéditeur : `MAIL_FROM = "FitFactory <adresse@domaine-verifie>"` (sans domaine vérifié, Resend n'autorise que `onboarding@resend.dev` vers l'adresse du compte Resend). Sans cette configuration, le lien est écrit dans les logs du Worker.
 
+Génération de WOD par IA (facultatif) : créer une clé d'API sur [platform.openai.com](https://platform.openai.com) (crédit prépayé), puis
+
+```bash
+npx wrangler secret put OPENAI_API_KEY
+```
+
+Le modèle utilisé par défaut est `gpt-5-mini` ; pour en changer, ajouter `OPENAI_MODEL = "…"` dans la section `[vars]` de `wrangler.toml`. `OPENAI_API_URL` ne sert qu'aux tests (faux service local). Sans clé, la génération est simplement indisponible.
+
 Pour un autre environnement, configurez `ADMIN_EMAIL` avec l'adresse du compte administrateur de cet environnement. La variable n'est pas un secret. Les mots de passe, jetons et clés privées ne doivent jamais être enregistrés dans le dépôt.
 
 ## Développement et déploiement
@@ -185,7 +204,7 @@ Lancer les tests d'intégration (Node.js 20+ ; démarrent le Worker en local sur
 node --test tests/*.test.mjs
 ```
 
-Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions, WOD de box, scores, classements, programmes publics suivis et préférences du compte (`tests/boxes.test.mjs`).
+Ils couvrent la connexion et le cookie de session, la limitation des tentatives, l'isolation des données entre utilisateurs, la création sans doublon des séances et PR rejouées (mode hors ligne), l'administration et les réglages des rappels (`tests/api.test.mjs`), ainsi que les administrateurs multiples, les box, gestionnaires, adhésions, WOD de box, scores, classements, programmes publics suivis et préférences du compte (`tests/boxes.test.mjs`), ainsi que la génération de WOD par IA avec un faux service OpenAI local (`tests/ai.test.mjs`).
 
 Déployer le Worker et les assets :
 

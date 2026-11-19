@@ -1,0 +1,148 @@
+// Génération de WOD par IA : profil, contrôles d'accès et de saisie, appel à un faux service OpenAI local.
+import {test, before, after} from "node:test";
+import assert from "node:assert/strict";
+import {createServer} from "node:http";
+import {startWorker, client, ADMIN_EMAIL, today, mondayOf, addDays} from "./helpers.mjs";
+
+const PASSWORD = "MotDePasse-Test-123";
+const FAKE_WOD = {
+  titre: "Squat et sprint",
+  duree_estimee_min: 60,
+  blocs: [
+    {type: "echauffement", duree_min: 10, format: null, time_cap_min: null, description: "Mobilité", mouvements: []},
+    {
+      type: "force",
+      duree_min: 20,
+      format: "5x5",
+      time_cap_min: null,
+      description: "Monter progressivement",
+      mouvements: [{nom: "Back squat", reps: "5", charge: "75% 1RM", scaling: null}],
+    },
+  ],
+  objectif_score: null,
+  notes_coach: "Bonne séance",
+};
+let worker,
+  openai,
+  requests = [],
+  admin,
+  alice,
+  bob,
+  programId,
+  wodId,
+  squatId,
+  week;
+
+before(async () => {
+  openai = createServer((req, res) => {
+    let raw = "";
+    req.on("data", c => (raw += c));
+    req.on("end", () => {
+      requests.push({auth: req.headers.authorization, body: JSON.parse(raw)});
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          model: "faux-modele",
+          status: "completed",
+          output: [{type: "message", content: [{type: "output_text", text: JSON.stringify(FAKE_WOD)}]}],
+        })
+      );
+    });
+  });
+  await new Promise(r => openai.listen(0, "127.0.0.1", r));
+  worker = await startWorker(undefined, {
+    OPENAI_API_KEY: "cle-de-test",
+    OPENAI_API_URL: `http://127.0.0.1:${openai.address().port}/v1/responses`,
+  });
+  admin = client(worker.base);
+  alice = client(worker.base);
+  bob = client(worker.base);
+  await admin.post("/register", {email: ADMIN_EMAIL, password: PASSWORD});
+  await alice.post("/register", {email: "alice@test.local", password: PASSWORD});
+  await bob.post("/register", {email: "bob@test.local", password: PASSWORD});
+  await admin.post("/admin/movements", {name: "Back squat", measurement_method: "load"});
+  squatId = (await alice.get("/movement-catalog")).data.movements.find(m => m.name === "Back squat").id;
+  const activityId = (await alice.get("/activities")).data.activities[0].id;
+  week = mondayOf(today());
+  const program = await alice.post("/programs", {name: "Force IA", start: week, end: addDays(week, 7)});
+  programId = program.data.id;
+  const wod = await alice.post(`/programs/${programId}/wods`, {
+    name: "WOD 1",
+    activity_id: activityId,
+    duration_minutes: 60,
+  });
+  wodId = wod.data.id;
+});
+after(() => {
+  worker?.stop();
+  openai?.close();
+});
+
+const options = extra => ({
+  week_start: week,
+  duration_minutes: 60,
+  blocks: {echauffement: true, technique: false, force: true, metcon: false, retour_au_calme: false},
+  force_movements: [squatId],
+  ...extra,
+});
+
+test("IA : profil d'entraînement", async () => {
+  const empty = await alice.get("/ai-profile");
+  assert.equal(empty.status, 200);
+  assert.equal(empty.data.enabled, true);
+  assert.equal(empty.data.remaining, 100);
+  assert.equal((await alice.put("/ai-profile", {level: "expert"})).status, 400);
+  assert.equal(
+    (
+      await alice.put("/ai-profile", {
+        level: "intermediaire",
+        goals: "Force",
+        equipment: "",
+        constraints: "Pas de course",
+      })
+    ).status,
+    200
+  );
+  assert.equal((await alice.get("/ai-profile")).data.profile.constraints, "Pas de course");
+  assert.equal((await bob.get("/ai-profile")).data.profile.level, "");
+});
+
+test("IA : contrôles d'accès et de saisie", async () => {
+  assert.equal((await bob.post(`/wods/${wodId}/generate`, options())).status, 404);
+  assert.equal(
+    (await alice.post(`/wods/${wodId}/generate`, options({blocks: {echauffement: false}}))).status,
+    400,
+    "au moins un bloc"
+  );
+  assert.equal(
+    (await alice.post(`/wods/${wodId}/generate`, options({force_movements: ["a", "b", "c", "d", "e", "f"]}))).status,
+    400,
+    "5 mouvements au plus"
+  );
+  assert.equal((await alice.post(`/wods/${wodId}/generate`, options({duration_minutes: 5}))).status, 400);
+  assert.equal((await alice.post(`/wods/${wodId}/generate`, options({week_start: addDays(week, 28)}))).status, 400);
+  assert.equal(requests.length, 0, "aucun appel au service d'IA pour une demande refusée");
+});
+
+test("IA : génération d'un WOD pour une semaine", async () => {
+  const res = await alice.post(`/wods/${wodId}/generate`, options({instructions: "Focus jambes"}));
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  assert.match(res.data.content, /^Squat et sprint \(~60 min\)/);
+  assert.match(res.data.content, /- 5 Back squat @ 75% 1RM/);
+  const call = requests.at(-1);
+  assert.equal(call.auth, "Bearer cle-de-test");
+  assert.equal(call.body.text.format.type, "json_schema");
+  assert.equal(call.body.text.format.strict, true);
+  assert.match(call.body.input, /Niveau : Intermédiaire/);
+  assert.match(call.body.input, /Contraintes : Pas de course/);
+  assert.match(call.body.input, /Force : oui — mouvements imposés : Back squat/);
+  assert.match(call.body.input, /Metcon : non/);
+  assert.match(call.body.input, /Consigne particulière : Focus jambes/);
+  const data = (await alice.get("/program-data")).data;
+  assert.equal(
+    data.weeklyWodPrograms.find(x => x.wod_id === wodId && x.week_start === week)?.content,
+    res.data.content
+  );
+  assert.equal(data.wods[programId].find(w => w.id === wodId)?.is_tracked, 1, "le WOD devient suivi");
+  assert.equal((await alice.get("/ai-profile")).data.remaining, 99);
+});

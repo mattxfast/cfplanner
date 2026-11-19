@@ -8,7 +8,8 @@ import {fileURLToPath} from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const ADMIN_EMAIL = "admin@test.local";
 
-export async function startWorker(port = 8790 + Math.floor(Math.random() * 100)) {
+// vars : variables supplémentaires du Worker (ex. clé et adresse d’un faux service OpenAI).
+export async function startWorker(port = 8790 + Math.floor(Math.random() * 100), vars = {}) {
   const dir = mkdtempSync(join(tmpdir(), "fitfactory-test-"));
   const wrangler = ["-y", "wrangler@4"];
   execFileSync("npx", [...wrangler, "d1", "migrations", "apply", "myfitfactory", "--local", "--persist-to", dir], {
@@ -32,6 +33,7 @@ export async function startWorker(port = 8790 + Math.floor(Math.random() * 100))
       String(port + 1000),
       "--var",
       `ADMIN_EMAIL:${ADMIN_EMAIL}`,
+      ...Object.entries(vars).flatMap(([k, v]) => ["--var", `${k}:${v}`]),
     ],
     {cwd: ROOT, stdio: "ignore", env: {...process.env, CI: "1"}}
   );
