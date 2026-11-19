@@ -1837,14 +1837,6 @@ button:disabled {
   gap: 8px;
   min-width: 0;
 }
-#userbar .user-name {
-  font: 700 13px Manrope;
-  color: var(--ink-soft);
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 /* Pastille du compte : initiales dans un rond aux couleurs du bandeau ; cerclée quand Mon compte est affiché. */
 #userbar .account-avatar {
   width: 34px;
@@ -1925,9 +1917,6 @@ button:disabled {
 @media (max-width: 650px) {
   #userbar {
     gap: 5px;
-  }
-  #userbar .user-name {
-    display: none;
   }
 }
 
