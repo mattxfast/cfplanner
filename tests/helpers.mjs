@@ -50,7 +50,8 @@ export async function startWorker(port, vars = {}) {
       `ADMIN_EMAIL:${ADMIN_EMAIL}`,
       ...Object.entries(vars).flatMap(([k, v]) => ["--var", `${k}:${v}`]),
     ],
-    {cwd: ROOT, stdio: "ignore", env: {...process.env, CI: "1"}}
+    // Groupe de processus à part : stop() arrête npx, wrangler et workerd ensemble (sinon ils restent en mémoire).
+    {cwd: ROOT, stdio: "ignore", env: {...process.env, CI: "1"}, detached: true}
   );
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 90; i++) {
@@ -64,7 +65,11 @@ export async function startWorker(port, vars = {}) {
   return {
     base,
     stop() {
-      child.kill();
+      try {
+        process.kill(-child.pid);
+      } catch {
+        child.kill();
+      }
       rmSync(dir, {recursive: true, force: true});
     },
   };
