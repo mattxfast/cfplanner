@@ -38,19 +38,19 @@ Prochain numéro libre : **29**
 - [ ] **14.** WOD du jour : WOD de référence tirés au hasard (Fran, Cindy, Murph…), sans IA, gratuits et hors ligne.
 - [ ] **15.** WOD du jour : mode « Mon coach » (WOD proposé chaque matin, semaine équilibrée, notification possible).
 - [ ] **16.** WOD du jour : privilégier les mouvements peu travaillés ces dernières semaines.
-- [ ] **17.** WOD du jour : proposer d'abord le WOD de la box du jour s'il existe, l'IA en alternative.
 - [ ] **18.** Affichage dynamique sur un écran dans la box (WOD du jour, scores, anniversaires, mot du jour, événements) : voir le détail plus bas.
 
 ## Look and feel
 
 - [ ] **19.** Thèmes de couleur supplémentaires dans « Apparence » : orange, rose, vert citron (maquettes faites le 19/11/2026). *Matt doit choisir.*
 - [ ] **20.** Bordure un peu plus foncée pour les blocs « pas de contenu », sur toutes les pages.
-- [ ] **21.** WOD de la box déjà fait : retirer aussi son bouton ＋ (comme pour la programmation).
+- [x] **21.** WOD de la box déjà fait : retirer aussi son bouton ＋ (comme pour la programmation). — fait le 19/11/2026
 - [ ] **22.** Mouvements cochés d'office par le WOD du jour : reconnaître aussi les variantes de noms (« Wall ball » / « Wall balls », pluriels, abréviations).
 - [ ] **23.** Écrans de démarrage et icône : vérifier le rendu sur Android (icône « maskable »).
 
 ## Écartées
 
+- ~~**17.** WOD du jour : proposer d'abord le WOD de la box du jour s'il existe, l'IA en alternative.~~ *Matt : ne sera pas fait.*
 - ~~**24.** Accessibilité : respecter « réduire les animations », renforcer les contrastes.~~ *Matt : non.*
 
 ## Fait
