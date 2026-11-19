@@ -3930,42 +3930,12 @@ button:disabled {
   gap: 8px;
 }
 
-/* WOD du jour (page Séances) : carte avec le WOD dépliable et ses actions ; fenêtre de génération. */
+/* WOD du jour (page Séances) : ✨ du titre juste avant le compteur ; rubrique vide ; fenêtre de génération. */
 .weekheading .weekheading-action {
   margin-left: auto;
 }
-.weekwod.daily-wod {
-  display: block;
-}
-.daily-wod details {
-  margin-top: 8px;
-}
-.daily-wod summary {
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-strong);
-}
-.daily-wod details p {
-  white-space: pre-line;
-  color: var(--ink-soft);
-  font-size: 13px;
-  line-height: 1.45;
-}
-.daily-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.daily-actions .smallbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-.daily-actions .smallbtn:disabled {
-  opacity: 0.5;
+.weekheading .weekheading-action + span {
+  margin-left: 0;
 }
 .daily-empty {
   display: flex;
