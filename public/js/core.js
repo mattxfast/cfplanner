@@ -112,6 +112,14 @@ function showAuth() {
   $("#auth").hidden = false;
   $("#dashboard").hidden = true;
   $("#userbar").innerHTML = "";
+  focusAuthField();
+}
+// Écran de connexion : curseur dans le premier champ vide du formulaire affiché (l’e-mail, ou le mot de passe si
+// l’e-mail est déjà rempli).
+function focusAuthField() {
+  const form = [...document.querySelectorAll("#auth form")].find(f => !f.hidden);
+  const fields = form ? [...form.querySelectorAll("input:not([type=hidden])")] : [];
+  (fields.find(i => !i.value) || fields[0])?.focus({preventScroll: true});
 }
 // Initiales de la pastille du compte : prénom + nom, sinon la première lettre de l’e-mail.
 function userInitials() {
@@ -174,6 +182,7 @@ document.querySelectorAll(".tab").forEach(
       $("#forgotlink").hidden = tab !== "login";
       $("#authhint").textContent =
         tab === "login" ? "Connecte-toi pour retrouver tes programmes." : "Mot de passe de 12 caractères minimum.";
+      focusAuthField();
     })
 );
 // Écran de connexion : panneau « connexion / création », « mot de passe oublié » ou « nouveau mot de passe ».
@@ -183,6 +192,7 @@ function showAuthPanel(panel) {
   $("#forgotform").hidden = panel !== "forgot";
   $("#resetform").hidden = panel !== "reset";
   $("#forgotlink").hidden = tab !== "login";
+  focusAuthField();
 }
 $("#forgotlink").onclick = () => {
   $("#forgotform").elements.email.value = $("#authform").elements.email.value;
