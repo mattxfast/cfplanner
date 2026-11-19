@@ -629,7 +629,6 @@
           <label data-ai-mode="program"
             >WOD par semaine<input name="per_week" type="number" min="1" max="7" value="3" required
           /></label>
-          <label data-ai-mode="wod">Semaine<select name="week_start"></select></label>
           <label
             >Durée de la séance (min)<input
               name="duration_minutes"
@@ -656,7 +655,7 @@
               maxlength="300"
               placeholder="Ex. : focus haut du corps, pas de course"
           /></label>
-          <label class="checkbox-label" data-ai-mode="program"
+          <label class="checkbox-label" data-ai-mode="program wod"
             ><input type="checkbox" name="replace" /> Remplacer le contenu déjà écrit</label
           >
           <details class="ai-profile">

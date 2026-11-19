@@ -1,4 +1,6 @@
-// FitFactory — génération de WOD par IA dans ses propres programmes : un WOD pour une semaine, ou tout le programme.
+// FitFactory — génération de WOD par IA dans ses propres programmes. Trois modes :
+// « program » (page Programmes) : tous les WOD sur toute la période ; « wod » (page Programmes) : un WOD sur toutes les
+// semaines ; « week » (page Séances) : un WOD pour la semaine affichée.
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 // La génération demande le réseau : elle n’entre jamais dans la file d’attente hors ligne.
 
@@ -36,48 +38,43 @@ function syncAiForm() {
   const f = $("#aiform").elements,
     mode = $("#aiform").dataset.mode;
   for (const kind of ["technique", "force"])
-    $(`[data-ai-movements="${kind}"]`).hidden = mode !== "wod" || !f[kind].checked;
+    $(`[data-ai-movements="${kind}"]`).hidden = mode === "program" || !f[kind].checked;
 }
-async function openAiDialog(mode, pid, wodId = null) {
+async function openAiDialog(mode, pid, wodId = null, week = null) {
   const form = $("#aiform"),
     f = form.elements,
     p = programs.find(x => x.id === pid);
   if (!p) return;
   form.reset();
   form.dataset.mode = mode;
+  form.dataset.week = week || "";
   f.program_id.value = pid;
   f.wod_id.value = wodId || "";
-  form.querySelectorAll("[data-ai-mode]").forEach(el => (el.hidden = el.dataset.aiMode !== mode));
+  form.querySelectorAll("[data-ai-mode]").forEach(el => (el.hidden = !el.dataset.aiMode.split(" ").includes(mode)));
   f.per_week.disabled = mode !== "program";
   $("#aierror").textContent = "";
   $("#aiprogress").hidden = true;
   $("#aisubmit").disabled = false;
-  const weeks = programWeeks(p);
-  if (mode === "wod") {
-    const w = visibleWods(pid).find(x => x.id === wodId),
-      current = mondayOf(today()),
-      fallback = weeks.find(x => !weeklyWodContent(wodId, x).trim()) || weeks[0];
-    $("#aititle").textContent = "Générer « " + (w?.name || "WOD") + " »";
-    $("#aiintro").textContent =
-      "L’IA écrit le contenu de ce WOD pour la semaine choisie (un contenu déjà écrit est remplacé).";
-    f.week_start.innerHTML = weeks
-      .map(
-        (x, i) =>
-          `<option value="${x}">S${i + 1} — ${fmt(x)}${weeklyWodContent(wodId, x).trim() ? " · déjà écrit" : ""}</option>`
-      )
-      .join("");
-    f.week_start.value = weeks.includes(current) ? current : fallback;
-    renderAiMovements("technique");
-    renderAiMovements("force");
-  } else {
+  const weeks = programWeeks(p),
+    plural = weeks.length + " semaine" + (weeks.length > 1 ? "s" : ""),
+    w = visibleWods(pid).find(x => x.id === wodId);
+  if (mode === "program") {
     $("#aititle").textContent = "Générer le programme";
     $("#aiintro").textContent =
       "L’IA écrit le contenu de chaque WOD, semaine par semaine (" +
-      weeks.length +
-      " semaine" +
-      (weeks.length > 1 ? "s" : "") +
+      plural +
       "). Les WOD manquants sont créés (« WOD 1 », « WOD 2 »…).";
     f.per_week.value = Math.min(7, Math.max(1, visibleWods(pid).length || 3));
+  } else {
+    $("#aititle").textContent = "Générer « " + (w?.name || "WOD") + " »";
+    $("#aiintro").textContent =
+      mode === "wod"
+        ? "L’IA écrit le contenu de ce WOD pour chaque semaine du programme (" + plural + "), avec une progression."
+        : "L’IA écrit le contenu de ce WOD pour la semaine du " +
+          fmt(week) +
+          (weeklyWodContent(wodId, week).trim() ? " (le contenu déjà écrit est remplacé)." : ".");
+    renderAiMovements("technique");
+    renderAiMovements("force");
   }
   ["echauffement", "technique", "force", "metcon", "retour_au_calme"].forEach(k => (f[k].onchange = syncAiForm));
   syncAiForm();
@@ -102,8 +99,8 @@ function aiRequest(f) {
   return {
     duration_minutes: Number(f.duration_minutes.value),
     blocks: aiBlocks(f),
-    technique_movements: $("#aiform").dataset.mode === "wod" && f.technique.checked ? picked("technique") : [],
-    force_movements: $("#aiform").dataset.mode === "wod" && f.force.checked ? picked("force") : [],
+    technique_movements: $("#aiform").dataset.mode !== "program" && f.technique.checked ? picked("technique") : [],
+    force_movements: $("#aiform").dataset.mode !== "program" && f.force.checked ? picked("force") : [],
     instructions: f.instructions.value.trim(),
   };
 }
@@ -129,16 +126,7 @@ async function generateProgram(f, request) {
       const w = targets[i];
       if (!w || f.replace.checked || !weeklyWodContent(w.id, week).trim()) slots.push({week, index: i});
     }
-  if (!slots.length) throw Error("Tous les WOD ont déjà un contenu. Coche « Remplacer le contenu déjà écrit ».");
-  const remaining = Number($("#aiform").dataset.remaining);
-  if (slots.length > remaining)
-    throw Error(
-      slots.length + " générations nécessaires, il en reste " + remaining + " pour 24 h. Réduis le nombre de WOD."
-    );
-  if (
-    !confirm("Générer " + slots.length + " WOD (" + weeks.length + " semaines) ? Cela peut prendre quelques minutes.")
-  )
-    return false;
+  if (!confirmSlots(slots, weeks)) return false;
   for (let i = targets.length; i < perWeek; i++) {
     let n = i + 1;
     while (names.has(("WOD " + n).toLowerCase())) n++;
@@ -154,10 +142,34 @@ async function generateProgram(f, request) {
     names.add(name.toLowerCase());
     targets.push({id: created.id, name});
   }
+  const done = await runSlots(
+    slots.map(s => ({week: s.week, wod: targets[s.index]})),
+    request
+  );
+  (window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set())).add(targets[0].id);
+  return doneMessage(done);
+}
+// Vérifie le quota restant et demande confirmation avant une génération en série.
+function confirmSlots(slots, weeks) {
+  if (!slots.length) throw Error("Tout a déjà un contenu. Coche « Remplacer le contenu déjà écrit ».");
+  const remaining = Number($("#aiform").dataset.remaining);
+  if (slots.length > remaining)
+    throw Error(
+      slots.length + " générations nécessaires, il en reste " + remaining + " pour 24 h. Réduis le nombre de WOD."
+    );
+  return confirm(
+    "Générer " + slots.length + " WOD (" + weeks.length + " semaines) ? Cela peut prendre quelques minutes."
+  );
+}
+const doneMessage = done =>
+  aiCancelled ? "Génération interrompue : " + done + " WOD écrits." : done + " WOD générés.";
+// Génère les créneaux l’un après l’autre, dans l’ordre des semaines : le contenu déjà écrit sert de contexte au
+// suivant (progression, variété).
+async function runSlots(slots, request) {
   let done = 0;
   for (const s of slots) {
     if (aiCancelled) break;
-    const w = targets[s.index];
+    const w = s.wod;
     aiProgress(
       "Génération " +
         (done + 1) +
@@ -172,8 +184,21 @@ async function generateProgram(f, request) {
     await aiGenerate(w.id, s.week, request);
     done++;
   }
-  (window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set())).add(targets[0].id);
-  return aiCancelled ? "Génération interrompue : " + done + " WOD écrits." : done + " WOD générés.";
+  return done;
+}
+// Un WOD sur toutes les semaines du programme (page Programmes).
+async function generateWodWeeks(f, request) {
+  const pid = f.program_id.value,
+    weeks = programWeeks(programs.find(x => x.id === pid)),
+    wod = visibleWods(pid).find(x => x.id === f.wod_id.value),
+    slots = weeks.filter(week => f.replace.checked || !weeklyWodContent(wod.id, week).trim());
+  if (!confirmSlots(slots, weeks)) return false;
+  const done = await runSlots(
+    slots.map(week => ({week, wod})),
+    request
+  );
+  (window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set())).add(wod.id);
+  return doneMessage(done);
 }
 $("#aiform").onsubmit = async e => {
   e.preventDefault();
@@ -197,12 +222,12 @@ $("#aiform").onsubmit = async e => {
       equipment: f.equipment.value,
       constraints: f.constraints.value,
     });
-    if (form.dataset.mode === "wod") {
+    if (form.dataset.mode === "week") {
       aiProgress("Génération en cours… (jusqu’à une minute)");
-      await aiGenerate(f.wod_id.value, f.week_start.value, request);
-      (window.cfExpandedWodProgramming || (window.cfExpandedWodProgramming = new Set())).add(f.wod_id.value);
+      await aiGenerate(f.wod_id.value, form.dataset.week, request);
       message = "WOD généré : relis-le et ajuste-le si besoin.";
-    } else message = await generateProgram(f, request);
+    } else if (form.dataset.mode === "wod") message = await generateWodWeeks(f, request);
+    else message = await generateProgram(f, request);
   } catch (x) {
     $("#aierror").textContent = x.offline ? OFFLINE_MESSAGE : x.message;
   } finally {
@@ -215,9 +240,10 @@ $("#aiform").onsubmit = async e => {
     toast(message);
   }
   // Recharge aussi après une erreur : des WOD ont pu être créés ou générés avant elle.
+  // On reste sur la page d’où la génération a été lancée (Séances ou Programmes).
   if (message !== false) {
     await load();
-    switchView("programs");
+    switchView(form.dataset.mode === "week" ? "sessions" : "programs");
   }
 };
 $("#closeai").onclick = () => {

@@ -34,10 +34,12 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Réorganisation des mouvements via le même bouton ⇅.
 
 ### Génération de WOD par IA
-- Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), deux boutons « étincelles » :
-  - **au niveau du programme** (titre de la rubrique WOD) : on choisit le nombre de WOD par semaine (1 à 7) ; les WOD manquants sont créés (« WOD 1 », « WOD 2 »…, marqués « suivi »), puis l'IA écrit le contenu de chaque WOD pour chaque semaine du programme, l'un après l'autre, avec une barre d'avancement. Le contenu déjà écrit est gardé, sauf si « Remplacer le contenu déjà écrit » est coché ;
-  - **au niveau d'un WOD** : l'IA écrit le contenu de ce WOD pour la semaine choisie (un contenu existant est remplacé).
-- Options de la séance : durée (15 à 180 min), blocs (échauffement, travail technique, force, metcon, retour au calme), consigne libre. Le format du metcon (AMRAP, EMOM, For Time…) est toujours choisi par l'IA. Pour un WOD seul, de 0 à 5 mouvements imposés du catalogue pour la technique et pour la force (aucun : l'IA choisit).
+- Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), trois boutons « étincelles » :
+  - **Programmes, titre de la rubrique WOD** : tous les WOD sur toute la période. On choisit le nombre de WOD par semaine (1 à 7) ; les WOD manquants sont créés (« WOD 1 », « WOD 2 »…, marqués « suivi »), puis l'IA écrit le contenu de chaque WOD pour chaque semaine, l'un après l'autre, avec l'avancement affiché ;
+  - **Programmes, sur un WOD** : ce WOD sur toutes les semaines du programme, dans l'ordre, avec une progression d'une semaine à l'autre ;
+  - **Séances, sur un WOD de la programmation** : ce WOD pour la semaine affichée (un contenu existant est remplacé).
+- Pour les deux premiers, le contenu déjà écrit est gardé, sauf si « Remplacer le contenu déjà écrit » est coché ; le nombre de générations est annoncé avant de lancer.
+- Options de la séance : durée (15 à 180 min), blocs (échauffement, travail technique, force, metcon, retour au calme), consigne libre. Le format du metcon (AMRAP, EMOM, For Time…) est toujours choisi par l'IA. Pour un WOD (toutes les semaines ou une semaine), de 0 à 5 mouvements imposés du catalogue pour la technique et pour la force (aucun : l'IA choisit).
 - Profil d'athlète mémorisé (niveau, objectifs, matériel, contraintes ; pas de données médicales), saisi dans la même fenêtre. Le prompt inclut aussi les records (PR), les mouvements « Focus » du programme, la programmation déjà écrite des deux semaines précédentes et de la semaine, et les séances réalisées sur la même période, pour la progression et la variété.
 - Le WOD est demandé à l'API OpenAI au format JSON imposé (structured outputs, `src/ai.js`), mis en texte (2 000 caractères au plus) dans la programmation hebdomadaire, où il reste modifiable. Le WOD devient « suivi ». Chaque génération est journalisée (`ai_generations` : options, JSON renvoyé, version du prompt `wod-seance-v1`, modèle).
 - Limite de 100 générations par utilisateur et par 24 h. La génération demande le réseau (jamais mise en file d'attente hors ligne). Sans clé OpenAI configurée, la fenêtre l'indique et le bouton « Générer » est désactivé.

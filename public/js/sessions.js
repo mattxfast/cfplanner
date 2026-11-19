@@ -182,7 +182,9 @@ function weekMovementsSection(week, programMovements, folded) {
 function weekProgramSection(p, week, folded, from) {
   const ws = p ? visibleWods(p.id) : [],
     countFor = w => week.filter(x => x.wod_id === w.id).length,
-    done = ws.filter(w => countFor(w) > 0);
+    done = ws.filter(w => countFor(w) > 0),
+    // Génération par IA : seulement dans ses propres programmes (pas un programme suivi).
+    own = p && !p.followed && !p.read_only && !p.is_default;
   if (!p)
     return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2></div><div class="session-fold-body"><div class="weekwodlist">${sectionEmpty("Pas de programmation en cours")}</div></div></section>`;
   return `<section class="session-fold ${folded.has("wods") ? "collapsed" : ""}" data-session-fold="wods"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD" aria-expanded="${!folded.has("wods")}">${folded.has("wods") ? "＋" : "−"}</button><h2>WOD de la programmation</h2><span>${done.length}/${ws.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
@@ -195,7 +197,7 @@ function weekProgramSection(p, week, folded, from) {
               const content = weeklyWodContent(w.id, from);
               const display = content || w.planned_comment;
               return display ? `<p>${esc(display)}</p>` : "";
-            })()}</div><div class="weekcount"><strong>${n}×</strong><button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
+            })()}</div><div class="weekcount"><strong>${n}×</strong>${own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
           })
           .join("")
       : sectionEmpty("Pas de WOD pour cette programmation")
@@ -274,6 +276,9 @@ function renderWeek() {
   $("#weekboard")
     .querySelectorAll("[data-log-wod]")
     .forEach(b => (b.onclick = () => openWodChoice(b.dataset.logWod)));
+  $("#weekboard")
+    .querySelectorAll("[data-ai-week]")
+    .forEach(b => (b.onclick = () => openAiDialog("week", p.id, b.dataset.aiWeek, from)));
   $("#weekboard")
     .querySelectorAll("[data-log-boxwod]")
     .forEach(b => (b.onclick = () => openSession(null, "box:" + b.dataset.logBoxwod)));
