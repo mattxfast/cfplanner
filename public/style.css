@@ -1036,6 +1036,35 @@ header {
   border-top: 1px solid var(--line);
   font-size: 13px;
 }
+/* Enregistrement d'une séance : « Focus mouvement » repliable, nombre de mouvements cochés dans le titre. */
+.movement-fold summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.movement-fold summary::-webkit-details-marker {
+  display: none;
+}
+.movement-fold summary::before {
+  content: "＋";
+  font-weight: 700;
+  color: var(--action-ink);
+}
+.movement-fold[open] summary::before {
+  content: "−";
+}
+.movement-fold summary h3 {
+  margin: 0;
+}
+.movement-fold summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.movement-fold[open] summary {
+  margin-bottom: 8px;
+}
 .movement-editor.compact {
   margin-top: 16px;
   padding-top: 12px;

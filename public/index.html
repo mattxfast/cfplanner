@@ -880,8 +880,13 @@
             <p class="hint">Facultatif : il alimente le classement du WOD entre les membres de la box.</p>
           </section>
           <section id="sessionmovementsection" class="movement-editor">
-            <h3>Focus mouvement</h3>
-            <div id="sessionmovementchecks"></div>
+            <details id="sessionmovementdetails" class="movement-fold">
+              <summary>
+                <h3>Focus mouvement</h3>
+                <span id="sessionmovementcount"></span>
+              </summary>
+              <div id="sessionmovementchecks"></div>
+            </details>
           </section>
           <button type="button" class="primary" id="savesession">Enregistrer la séance</button>
           <div class="error" id="sessionerror"></div>

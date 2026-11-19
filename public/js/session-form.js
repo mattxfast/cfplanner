@@ -103,7 +103,14 @@ function syncSessionWod(session = null) {
     box.dataset.presetWod = boxWod.id;
   }
   renderSessionScore(session);
+  syncSessionMovementCount();
 }
+// Liste des mouvements repliée par défaut : le titre indique combien sont cochés.
+function syncSessionMovementCount() {
+  const n = $("#sessionmovementchecks").querySelectorAll("input:checked").length;
+  $("#sessionmovementcount").textContent = n ? n + (n > 1 ? " cochés" : " coché") : "aucun coché";
+}
+$("#sessionmovementchecks").onchange = syncSessionMovementCount;
 $("#sessionform").elements.program_id.onchange = e => {
   fillWodOptions(e.target.value);
   const w = (wodsByProgram[e.target.value] || [])[0];
@@ -229,6 +236,7 @@ function openSession(s = null, presetWodId = "") {
   f.reset();
   $("#sessionmovementchecks").innerHTML = "";
   $("#sessionmovementchecks").dataset.presetWod = "";
+  $("#sessionmovementdetails").open = false;
   f.elements.session_date.max = today();
   f.elements.session_id.value = s?.id || "";
   f.elements.actual_comment.value = s?.actual_comment || "";
