@@ -25,7 +25,7 @@ Prochain numéro libre : **29**
 
 ## Code
 
-- [ ] **7.** Finir le nettoyage du CSS : supprimer les `!important` restants de `style.css` (52 au 19/11/2026, 374 au départ).
+- [x] **7.** Finir le nettoyage du CSS : supprimer les `!important` restants de `style.css` (52 au 19/11/2026, 374 au départ). — fait le 19/11/2026 : 50 retirés sans aucun changement de rendu (styles calculés comparés sur 116 états × 4 thèmes, mobile et grand écran) ; restent les 2 du réglage « réduire les animations », où ils sont l'usage normal
 - [x] **8.** Tests : éviter les collisions de ports entre fichiers de test (port choisi au hasard dans 8790–8889) et les serveurs `wrangler dev` restés ouverts, qui font échouer des tests sans raison. — fait le 19/11/2026 (`ff06c92`, `03c6a78`)
 
 ## Fonctionnalités

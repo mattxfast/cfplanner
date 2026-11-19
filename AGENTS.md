@@ -59,7 +59,7 @@ Les agents poussent **directement sur `main`**. Il n'y a pas de relecture de pul
 ## Frontend et CSS
 
 - Réutiliser les composants et classes existants avant d'en créer de nouveaux.
-- Ne pas empiler de nouvelles surcharges CSS : modifier la règle existante plutôt que d'en ajouter une plus spécifique, et éviter `!important`.
+- Ne pas empiler de nouvelles surcharges CSS : modifier la règle existante plutôt que d'en ajouter une plus spécifique. Pas de `!important` (seule exception : le bloc « réduire les animations » en fin de `style.css`).
 - Utiliser les variables CSS de `:root` pour les couleurs et les espacements.
 - Interface responsive : vérifier le rendu mobile.
 
