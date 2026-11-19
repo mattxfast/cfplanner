@@ -33,6 +33,14 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Ajout de mouvements depuis le catalogue commun, géré par l’administrateur.
 - Réorganisation des mouvements via le même bouton ⇅.
 
+### WOD du jour (IA, hors programme)
+- Pour l'athlète qui s'entraîne au jour le jour : rubrique **WOD du jour** de la page Séances (après « WOD de la programmation »). Le bouton ✨ du titre (ou « Générer » quand la rubrique est vide) n'apparaît que sur la semaine qui contient aujourd'hui ou demain.
+- Fenêtre de génération : pour aujourd'hui ou demain, durée (20 min à 1 h 30), lieu (box, maison, extérieur, sans matériel), forme du jour (normale, en forme, fatigué), envie particulière ; derniers choix mémorisés sur l'appareil ; même profil d'athlète que la génération des programmes. Le prompt (`wod-du-jour-v1`) inclut aussi les records, les séances des deux dernières semaines et les WOD du jour récents, pour la variété.
+- Le WOD est gardé (table `daily_wods`) : on peut le générer le matin et enregistrer la séance le soir. Chaque carte propose **Chrono** (chrono préréglé par l'IA — For Time, AMRAP, EMOM ou Tabata, valeurs ramenées aux plus proches des listes — lancé avec son décompte, le texte du WOD affiché dessous), **Séance** (formulaire pré-rempli : WOD du jour choisi, mouvements du catalogue cités dans le WOD cochés ; séance « hors programme » rattachée par `daily_wod_id`), **Autre** (en génère un autre à la place) et suppression ; ces deux dernières disparaissent une fois une séance enregistrée.
+- Sans programme, le WOD du jour du jour (pas encore enregistré) est proposé par défaut dans le formulaire de séance ; il apparaît aussi dans la liste « WOD effectué » (groupe « WOD du jour ») pour la semaine de la séance. Dans l'historique, la séance porte le nom du WOD et l'étiquette « WOD du jour ».
+- Limite : 10 WOD du jour par utilisateur et par 24 h, dans la limite générale de 100 générations. Génération et suppression demandent le réseau ; le WOD déjà généré reste lisible et utilisable hors ligne.
+- Routes : `POST /api/daily-wods` (`wod_date`, `duration_minutes`, `place`, `energy`, `instructions`, `replace_id` facultatif) et `DELETE /api/daily-wods/:id` (refusé si une séance y est rattachée) ; `GET /api/week-data` renvoie `dailyWods` ; `POST`/`PUT /api/sessions` acceptent `daily_wod_id`. Migration V27 : table `daily_wods`, colonne `training_sessions.daily_wod_id`.
+
 ### Génération de WOD par IA
 - Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), trois boutons « étincelles » :
   - **Programmes, titre de la rubrique WOD** : tous les WOD sur toute la période. On choisit le nombre de WOD par semaine (1 à 7) ; les WOD manquants sont créés (« WOD 1 », « WOD 2 »…, marqués « suivi »), puis l'IA écrit le contenu de chaque WOD pour chaque semaine, l'un après l'autre, avec l'avancement affiché ;

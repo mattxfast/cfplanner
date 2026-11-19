@@ -1,0 +1,179 @@
+// myFitFactory — WOD du jour (page Séances) : l’athlète qui s’entraîne au jour le jour, hors programme, fait générer
+// son entraînement par l’IA (aujourd’hui ou demain), le retrouve dans la rubrique « WOD du jour » de la semaine, lance
+// le chrono préréglé et enregistre sa séance quand il veut (elle est rattachée au WOD).
+// Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
+// La génération demande le réseau : elle n’entre jamais dans la file d’attente hors ligne.
+
+const dailyWodsById = new Map();
+let dailyWods = [],
+  dailyReplaceId = null,
+  dailyRunning = false;
+// WOD du jour déjà chargés (semaine affichée, séances) : retrouvés dans le formulaire de séance, même hors ligne.
+function rememberDailyWods(list) {
+  for (const w of list || []) dailyWodsById.set(w.id, {...dailyWodsById.get(w.id), ...w});
+  return list || [];
+}
+const CHRONO_ICON =
+  '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.5-1.5"/></svg>';
+const dailyDayLabel = d =>
+  d === today() ? "Aujourd’hui" : d === addDays(today(), 1) ? "Demain" : wodDay(d).replace(/^\w/, c => c.toUpperCase());
+// Texte du WOD sans sa première ligne (le titre, déjà affiché au-dessus).
+const dailyBody = w => String(w?.content || "").replace(/^[^\n]*\n+/, "");
+const dailySessions = id => sessions.filter(s => s.daily_wod_id === id).length;
+// La génération ne concerne qu’aujourd’hui ou demain : le bouton ✨ n’apparaît que sur la semaine qui les contient.
+const dailyCanGenerate = from => {
+  const to = addDays(from, 6);
+  return (today() >= from && today() <= to) || (addDays(today(), 1) >= from && addDays(today(), 1) <= to);
+};
+
+// Rubrique « WOD du jour » de la semaine (toujours affichée, comme les autres rubriques).
+function weekDailySection(from, folded) {
+  const list = dailyWods,
+    done = list.filter(w => dailySessions(w.id)).length,
+    canGenerate = dailyCanGenerate(from);
+  const cards = list
+    .map(w => {
+      const n = dailySessions(w.id),
+        future = w.wod_date > today();
+      return `<article class="weekwod card daily-wod ${n ? "done" : ""}"><small>${esc(dailyDayLabel(w.wod_date))}${n ? " · séance enregistrée" : ""}</small><b>${esc(w.title)}</b><details ${n ? "" : "open"}><summary>Voir le WOD</summary><p>${esc(dailyBody(w))}</p></details><div class="daily-actions"><button type="button" class="smallbtn" data-daily-chrono="${w.id}" title="Lancer le chrono">${CHRONO_ICON}<span>Chrono</span></button><button type="button" class="smallbtn" data-daily-log="${w.id}" ${future ? "disabled" : ""} title="${future ? "Prévu pour demain" : "Enregistrer la séance"}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Séance</span></button>${
+        n
+          ? ""
+          : `<button type="button" class="smallbtn" data-daily-replace="${w.id}" title="Générer un autre WOD à la place">${AI_ICON}<span>Autre</span></button><button type="button" class="smallbtn delete" data-daily-del="${w.id}" aria-label="Supprimer ce WOD" title="Supprimer ce WOD"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>`
+      }</div></article>`;
+    })
+    .join("");
+  return `<section class="session-fold ${folded.has("daily") ? "collapsed" : ""}" data-session-fold="daily"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier le WOD du jour" aria-expanded="${!folded.has("daily")}">${folded.has("daily") ? "＋" : "−"}</button><h2>WOD du jour</h2>${list.length ? `<span>${done}/${list.length}</span>` : ""}${canGenerate ? `<button type="button" class="smallbtn weekheading-action" id="dailynew" aria-label="Générer mon WOD du jour" title="Générer mon WOD du jour">${AI_ICON}</button>` : ""}</div><div class="session-fold-body"><div class="weekwodlist">${
+    cards ||
+    (canGenerate
+      ? `<article class="weekwod card section-empty daily-empty"><span>Besoin d’un entraînement ? L’IA te prépare ton WOD du jour.</span><button type="button" class="primary" data-daily-new>${AI_ICON}<span>Générer</span></button></article>`
+      : sectionEmpty("Pas de WOD du jour cette semaine"))
+  }</div></div></section>`;
+}
+function bindDailySection(root) {
+  root.querySelectorAll("#dailynew, [data-daily-new]").forEach(b => (b.onclick = () => openDailyDialog()));
+  root
+    .querySelectorAll("[data-daily-replace]")
+    .forEach(b => (b.onclick = () => openDailyDialog(b.dataset.dailyReplace)));
+  root.querySelectorAll("[data-daily-chrono]").forEach(
+    b =>
+      (b.onclick = () => {
+        const w = dailyWodsById.get(b.dataset.dailyChrono);
+        if (w) timerPreset(w.chrono, w);
+      })
+  );
+  root
+    .querySelectorAll("[data-daily-log]")
+    .forEach(b => (b.onclick = () => openSession(null, "daily:" + b.dataset.dailyLog)));
+  root.querySelectorAll("[data-daily-del]").forEach(
+    b =>
+      (b.onclick = async () => {
+        if (!confirm("Supprimer ce WOD du jour ?")) return;
+        try {
+          await sendApi("/daily-wods/" + b.dataset.dailyDel, "DELETE");
+          await loadSessions();
+          toast("WOD du jour supprimé.");
+        } catch (e) {
+          toast(e.offline ? OFFLINE_MESSAGE : e.message);
+        }
+      })
+  );
+}
+
+// Fenêtre de génération : derniers choix mémorisés sur l’appareil, profil d’athlète partagé avec la génération
+// des programmes.
+function dailyLastChoices() {
+  try {
+    return JSON.parse(localStorage.getItem("fitfactory-daily") || "{}");
+  } catch {
+    return {};
+  }
+}
+async function openDailyDialog(replaceId = null) {
+  const form = $("#dailyform"),
+    f = form.elements,
+    last = dailyLastChoices(),
+    replaced = replaceId ? dailyWodsById.get(replaceId) : null;
+  form.reset();
+  dailyReplaceId = replaceId;
+  const days = [today(), addDays(today(), 1)];
+  f.wod_date.innerHTML = days
+    .map(d => `<option value="${d}">${esc(dailyDayLabel(d) + " (" + wodDay(d) + ")")}</option>`)
+    .join("");
+  f.wod_date.value = replaced && days.includes(replaced.wod_date) ? replaced.wod_date : today();
+  f.duration_minutes.value = String(last.duration_minutes || 45);
+  if (!f.duration_minutes.value) f.duration_minutes.value = "45";
+  for (const k of ["place", "energy"]) {
+    const input = form.querySelector(`input[name="${k}"][value="${last[k]}"]`);
+    if (input) input.checked = true;
+  }
+  $("#dailytitle").textContent = replaced ? "Autre WOD du jour" : "WOD du jour";
+  $("#dailysubmit").textContent = replaced ? "Générer un autre WOD" : "Générer mon WOD";
+  $("#dailyerror").textContent = "";
+  $("#dailyprogress").hidden = true;
+  $("#dailysubmit").disabled = false;
+  $("#dailydialog").showModal();
+  try {
+    const d = await sendApi("/ai-profile", "GET");
+    for (const k of ["level", "goals", "equipment", "constraints"]) f[k].value = d.profile[k] || "";
+    if (!d.enabled) {
+      $("#dailyerror").textContent =
+        "La génération par IA n’est pas encore activée : l’administrateur doit configurer la clé OpenAI.";
+      $("#dailysubmit").disabled = true;
+    }
+  } catch (e) {
+    $("#dailyerror").textContent = e.offline ? OFFLINE_MESSAGE : e.message;
+    $("#dailysubmit").disabled = true;
+  }
+}
+$("#dailyform").onsubmit = async e => {
+  e.preventDefault();
+  if (dailyRunning) return;
+  const f = e.target.elements,
+    request = {
+      wod_date: f.wod_date.value,
+      duration_minutes: Number(f.duration_minutes.value),
+      place: f.place.value,
+      energy: f.energy.value,
+      instructions: f.instructions.value.trim(),
+      ...(dailyReplaceId ? {replace_id: dailyReplaceId} : {}),
+    };
+  $("#dailyerror").textContent = "";
+  if (!navigator.onLine) {
+    $("#dailyerror").textContent = OFFLINE_MESSAGE;
+    return;
+  }
+  try {
+    localStorage.setItem(
+      "fitfactory-daily",
+      JSON.stringify({duration_minutes: request.duration_minutes, place: request.place, energy: request.energy})
+    );
+  } catch {}
+  dailyRunning = true;
+  $("#dailysubmit").disabled = true;
+  $("#dailyprogress").hidden = false;
+  $("#dailyprogress").textContent = "Ton coach prépare le WOD… (jusqu’à une minute)";
+  try {
+    await sendApi("/ai-profile", "PUT", {
+      level: f.level.value,
+      goals: f.goals.value,
+      equipment: f.equipment.value,
+      constraints: f.constraints.value,
+    });
+    const d = await sendApi("/daily-wods", "POST", request, AI_TIMEOUT);
+    rememberDailyWods([d.wod]);
+    $("#dailydialog").close();
+    selectedWeekStart = mondayOf(d.wod.wod_date);
+    await loadSessions();
+    toast("WOD du jour prêt : bon entraînement !");
+  } catch (x) {
+    $("#dailyerror").textContent = x.offline ? OFFLINE_MESSAGE : x.message;
+  } finally {
+    dailyRunning = false;
+    $("#dailysubmit").disabled = false;
+    $("#dailyprogress").hidden = true;
+  }
+};
+$("#closedaily").onclick = () => {
+  if (dailyRunning && !confirm("Abandonner la génération en cours ?")) return;
+  $("#dailydialog").close();
+};

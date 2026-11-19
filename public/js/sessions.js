@@ -25,6 +25,7 @@ async function load() {
     catalogChecks = w.catalogChecks || [];
     weeklyPlans = w.plans;
     boxWods = rememberBoxWods(w.boxWods);
+    dailyWods = rememberDailyWods(w.dailyWods);
     weekCompetition = !!w.flags.find(x => x.week_start === from)?.competition;
     prRecords = pr.records;
     setBoxes(bx);
@@ -53,6 +54,7 @@ async function loadSessions() {
   catalogChecks = w.catalogChecks || [];
   weeklyPlans = w.plans;
   boxWods = rememberBoxWods(w.boxWods);
+  dailyWods = rememberDailyWods(w.dailyWods);
   weekCompetition = !!w.flags.find(x => x.week_start === from)?.competition;
   renderSessions();
   renderWeek();
@@ -94,7 +96,7 @@ function renderSessions() {
     ? sessions
         .map(
           s =>
-            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><div class="session-title-line"><span class="sessiondate">${fmt(s.session_date)}</span><h3>${esc(s.wod_name)}</h3>${s.box_name ? `<span class="tracked-tag">${esc(s.box_name)}</span>` : ""}</div><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div>${(() => {
+            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><div class="session-title-line"><span class="sessiondate">${fmt(s.session_date)}</span><h3>${esc(s.wod_name)}</h3>${s.box_name ? `<span class="tracked-tag">${esc(s.box_name)}</span>` : ""}${s.daily_wod_id ? `<span class="tracked-tag">WOD du jour</span>` : ""}</div><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div>${(() => {
               const weeklyContent =
                 weeklyWodPrograms.find(x => x.wod_id === s.wod_id && x.week_start === mondayOf(s.session_date))
                   ?.content || "";
@@ -247,18 +249,18 @@ function renderWeek() {
   const nav = `<div class="weeknav"><button class="smallbtn" id="prevweek" aria-label="Semaine précédente" title="Semaine précédente">‹</button><div class="weekdate-label"><button type="button" class="week-current" id="thisweek" title="Revenir à la semaine en cours">Semaine du</button><input id="weekdate" type="date" value="${dateInput}" max="${now}" aria-label="Semaine du"></div><button class="smallbtn" id="nextweek" aria-label="Semaine suivante" title="Semaine suivante">›</button></div>`;
   if (future && (!p || isFallbackProgram(p))) {
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>${weekProgramSection(null, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="card empty">Cette semaine est dans le futur. La saisie d’entraînements n’est pas autorisée.</div>${weekProgramSection(null, week, folded, from)}${weekDailySection(from, folded)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
   } else if (!p || isFallbackProgram(p)) {
     // Semaine sans programme : les séances sont enregistrées « hors programme ».
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(null, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance">＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(null, week, folded, from)}${weekDailySection(from, folded)}${weekBoxSection(week, folded)}${weekMovementsSection(week, [], folded)}`;
   } else {
     const ws = visibleWods(p.id),
       countFor = w => week.filter(x => x.wod_id === w.id).length,
       done = ws.filter(w => countFor(w) > 0);
     const programMovements = movementsByProgram[p.id] || [];
     $("#weekboard").innerHTML =
-      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><div class="weekstat weekstat-program"><strong>${done.length}/${ws.length}</strong><span>Nombre de séances de la programmation</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance" ${future ? "disabled" : ""}>＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(p, week, folded, from)}${weekBoxSection(week, folded)}${weekMovementsSection(week, programMovements, folded)}`;
+      `<div class="weekbar card">${nav}</div><div class="weekstats card"><div class="weekstat weekstat-sessions"><strong>${week.length}</strong><span>Nombre de séances</span></div><div class="weekstat weekstat-program"><strong>${done.length}/${ws.length}</strong><span>Nombre de séances de la programmation</span></div><button id="addsession" class="primary addsession-compact" aria-label="Ajouter une séance" title="Ajouter une séance" ${future ? "disabled" : ""}>＋</button><label class="competition-toggle"><span>Comp</span><input type="checkbox" id="weekcompetition" ${weekCompetition ? "checked" : ""}></label></div>${weekProgramSection(p, week, folded, from)}${weekDailySection(from, folded)}${weekBoxSection(week, folded)}${weekMovementsSection(week, programMovements, folded)}`;
   }
   $("#weekboard")
     .querySelectorAll("[data-session-fold]")
@@ -283,6 +285,7 @@ function renderWeek() {
   $("#weekboard")
     .querySelectorAll("[data-ai-week]")
     .forEach(b => (b.onclick = () => openAiDialog("week", p.id, b.dataset.aiWeek, from)));
+  bindDailySection($("#weekboard"));
   $("#weekboard")
     .querySelectorAll("[data-log-boxwod]")
     .forEach(b => (b.onclick = () => openSession(null, "box:" + b.dataset.logBoxwod)));

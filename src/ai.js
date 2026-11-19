@@ -225,6 +225,148 @@ export async function callOpenAI(env, prompt) {
   return out.error ? out : {wod: out.result, model: out.model};
 }
 
+// ----- WOD du jour (page Séances) : un entraînement hors programme, généré pour aujourd'hui ou demain -----
+export const DAILY_PROMPT_VERSION = "wod-du-jour-v1";
+export const DAILY_WOD_LIMIT = 10; // WOD du jour par utilisateur et par 24 h (en plus de la limite générale)
+export const DAILY_PLACES = {
+  box: "En box (matériel CrossFit complet)",
+  maison: "À la maison",
+  exterieur: "En extérieur",
+  sans_materiel: "Sans matériel (poids du corps)",
+};
+export const DAILY_ENERGY = {en_forme: "En forme", normal: "Normale", fatigue: "Fatigué"};
+export const DAILY_CHRONO_MODES = ["fortime", "amrap", "emom", "tabata"];
+
+export function dailyOptionsInput(b) {
+  const duration = Number(b.duration_minutes);
+  if (!Number.isInteger(duration) || duration < 15 || duration > 120)
+    return {error: "La durée doit être comprise entre 15 et 120 minutes."};
+  const place = String(b.place || ""),
+    energy = String(b.energy || "");
+  if (!DAILY_PLACES[place]) return {error: "Lieu invalide."};
+  if (!DAILY_ENERGY[energy]) return {error: "Forme du jour invalide."};
+  return {duration_minutes: duration, place, energy, instructions: text(b.instructions, 300)};
+}
+
+const DAILY_SYSTEM = `Tu es un coach CrossFit expérimenté. Tu écris le WOD du jour d'un athlète qui s'entraîne au jour le jour, hors programme : une séance sûre, complète et motivante.
+
+Règles :
+- Respecte la durée totale (tolérance ±5 min) en incluant les transitions.
+- Commence toujours par un échauffement court. Le cœur de la séance est un metcon ; ajoute un bloc force ou technique seulement si la durée le permet (45 min et plus). Termine par un retour au calme si la durée le permet.
+- Choisis le format du metcon (AMRAP, EMOM, For Time, Tabata, intervalles…) en variant par rapport aux séances récentes.
+- Adapte le volume et l'intensité à la forme du jour : séance plus légère et plus technique si l'athlète est fatigué.
+- Utilise uniquement le matériel disponible pour le lieu du jour. Utilise de préférence les noms de mouvements du catalogue fourni, à l'identique.
+- Adapte mouvements et charges au niveau et aux records. Exprime les charges en kg (ou en % du 1RM quand un record est connu), les distances en mètres.
+- Respecte les contraintes de l'athlète ; propose une alternative pour tout mouvement qui ne convient pas.
+- Assure la variété avec les séances récentes : évite de solliciter lourdement le même groupe musculaire que la veille.
+- Le champ "chrono" décrit le minuteur du metcon : mode "fortime" (minutes = time cap, ou null sans cap), "amrap" (minutes = durée), "emom" (intervalle_s = durée d'un intervalle en secondes, tours = nombre d'intervalles), "tabata" (travail_s, repos_s, tours). Mets null dans les champs qui ne concernent pas le mode, et mode "aucun" si le metcon ne se chronomètre pas ainsi.
+- Sois concis : le texte final doit tenir sur un écran de téléphone.
+- Rédige en français.`;
+
+export function buildDailyPrompt(c) {
+  const p = c.profile || {},
+    o = c.options;
+  const prs = c.records.map(r => {
+    const unit = r.measurement_method === "reps" ? " rép." : r.measurement_method === "distance" ? " m" : " kg";
+    return `${r.name} : ${r.value}${unit}${r.rep_count ? " (" + r.rep_count + " RM)" : ""}`;
+  });
+  return [
+    "## Athlète",
+    "Niveau : " + (AI_LEVELS[p.level] || "non précisé"),
+    "Objectifs : " + (p.goals || "non précisés"),
+    "Matériel habituel : " + (p.equipment || "box CrossFit complète"),
+    "Contraintes : " + (p.constraints || "aucune"),
+    "Records : " + (prs.length ? prs.join(" ; ") : "aucun enregistré"),
+    "",
+    "## Séances réalisées ces deux dernières semaines",
+    ...(c.sessions.length
+      ? c.sessions.map(s => `- ${s.date} · ${s.name}${s.comment ? " : " + text(s.comment, 150) : ""}`)
+      : ["Aucune."]),
+    "",
+    "## WOD du jour déjà proposés récemment",
+    ...(c.recent.length ? c.recent.map(x => `- ${x.date} · ${x.title}`) : ["Aucun."]),
+    "",
+    "## WOD demandé",
+    "Date : " + c.dateLabel,
+    "Durée totale : " + o.duration_minutes + " min",
+    "Lieu : " + DAILY_PLACES[o.place],
+    "Forme du jour : " + DAILY_ENERGY[o.energy],
+    "Envie particulière : " + (o.instructions || "aucune"),
+    "",
+    "## Catalogue des mouvements",
+    c.catalog
+      .map(m => m.name + (FAMILY[m.measurement_method] ? " (" + FAMILY[m.measurement_method] + ")" : ""))
+      .join(", ") || "vide",
+  ].join("\n");
+}
+
+export const DAILY_WOD_SCHEMA = {
+  ...WOD_SCHEMA,
+  required: [...WOD_SCHEMA.required, "chrono"],
+  properties: {
+    ...WOD_SCHEMA.properties,
+    chrono: {
+      type: "object",
+      additionalProperties: false,
+      required: ["mode", "minutes", "intervalle_s", "tours", "travail_s", "repos_s"],
+      properties: {
+        mode: {type: "string", enum: [...DAILY_CHRONO_MODES, "aucun"]},
+        minutes: nullable("integer"),
+        intervalle_s: nullable("integer"),
+        tours: nullable("integer"),
+        travail_s: nullable("integer"),
+        repos_s: nullable("integer"),
+      },
+    },
+  },
+};
+
+export async function callOpenAIDaily(env, prompt) {
+  const out = await openAIJson(env, {
+    instructions: DAILY_SYSTEM,
+    input: prompt,
+    name: "wod_du_jour",
+    schema: DAILY_WOD_SCHEMA,
+    check: wod => Array.isArray(wod?.blocs) && wod.blocs.length > 0,
+    refusal: "L'IA a refusé de générer cette séance.",
+  });
+  return out.error ? out : {wod: out.result, model: out.model};
+}
+
+// Réglages du chrono proposés par l'IA, bornés (le téléphone les ramène ensuite aux valeurs de ses listes).
+export function dailyChrono(c) {
+  if (!c || !DAILY_CHRONO_MODES.includes(c.mode)) return null;
+  const n = (v, min, max) => (Number.isInteger(v) && v >= min && v <= max ? v : null);
+  return {
+    mode: c.mode,
+    minutes: n(c.minutes, 1, 90),
+    every_seconds: n(c.intervalle_s, 10, 600),
+    rounds: n(c.tours, 1, 99),
+    work_seconds: n(c.travail_s, 1, 900),
+    rest_seconds: n(c.repos_s, 0, 900),
+  };
+}
+
+// Mouvements du catalogue cités dans le WOD (comparaison des noms sans accents ni casse) : cochés par défaut dans la
+// séance enregistrée ensuite.
+export function dailyMovementIds(wod, catalog) {
+  const key = v =>
+    String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const byName = new Map(catalog.map(m => [key(m.name), m.id]));
+  const ids = new Set();
+  for (const b of wod.blocs || [])
+    for (const m of b.mouvements || []) {
+      const id = byName.get(key(m.nom));
+      if (id) ids.add(id);
+    }
+  return [...ids].slice(0, 40);
+}
+
 // Mise en texte du WOD pour le champ « Programmation hebdomadaire » (2 000 caractères au plus).
 export function wodToText(wod, max = 2000) {
   const render = withScaling => {

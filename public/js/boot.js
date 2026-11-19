@@ -5,7 +5,19 @@ FFOffline.init({
   send: sendApi,
   describeSession: b => {
     // WOD de box : nom, contenu, box, type de score et catégorie, pour l’affichage hors ligne.
-    const boxWod = b.box_wod_id ? boxWodsById.get(b.box_wod_id) : null;
+    const boxWod = b.box_wod_id ? boxWodsById.get(b.box_wod_id) : null,
+      dailyWod = b.daily_wod_id ? dailyWodsById.get(b.daily_wod_id) : null;
+    // WOD du jour : nom et contenu, pour l’affichage hors ligne.
+    if (dailyWod && !boxWod)
+      return {
+        program_name: "Hors programme",
+        wod_name: dailyWod.title,
+        planned_comment: dailyWod.content || "",
+        daily_wod_date: dailyWod.wod_date,
+        ...(activities.find(x => x.id === b.activity_id)
+          ? {activity_name: activities.find(x => x.id === b.activity_id).name}
+          : {}),
+      };
     if (boxWod)
       return {
         program_name: "Hors programme",

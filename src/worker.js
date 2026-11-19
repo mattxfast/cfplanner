@@ -7,6 +7,13 @@ import {
   buildPrompt,
   callOpenAI,
   wodToText,
+  DAILY_PROMPT_VERSION,
+  DAILY_WOD_LIMIT,
+  buildDailyPrompt,
+  callOpenAIDaily,
+  dailyChrono,
+  dailyMovementIds,
+  dailyOptionsInput,
 } from "./ai.js";
 import {
   MEAL_DAILY_LIMIT,
@@ -427,6 +434,22 @@ async function ensureV2Schema(env) {
         env.DB.prepare("CREATE INDEX IF NOT EXISTS meal_analyses_user_date ON meal_analyses(user_id,created_at)"),
       ]);
     });
+    await runMigration("v27-daily-wods", async () => {
+      // WOD du jour (page Séances) : entraînement hors programme généré par IA pour aujourd'hui ou demain, gardé pour
+      // lancer le chrono et enregistrer la séance plus tard ; la séance enregistrée y est rattachée.
+      await env.DB.batch([
+        env.DB.prepare(
+          "CREATE TABLE IF NOT EXISTS daily_wods (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, wod_date TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL, chrono TEXT, movement_ids TEXT NOT NULL DEFAULT '[]', options TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        ),
+        env.DB.prepare("CREATE INDEX IF NOT EXISTS daily_wods_user_date ON daily_wods(user_id,wod_date)"),
+      ]);
+      const columns = await env.DB.prepare("PRAGMA table_info(training_sessions)").all();
+      if (!columns.results.some(column => column.name === "daily_wod_id"))
+        await env.DB.prepare("ALTER TABLE training_sessions ADD COLUMN daily_wod_id TEXT").run();
+      await env.DB.prepare(
+        "CREATE INDEX IF NOT EXISTS training_sessions_daily_wod ON training_sessions(daily_wod_id)"
+      ).run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -717,7 +740,7 @@ const boxRole = (e, userId, boxId, role) =>
     .first();
 // Séances : WOD du programme, « Autres » ou WOD d'une box (avec score et catégorie).
 const SESSION_SELECT =
-  "SELECT s.*,a.name AS activity_name,COALESCE(bw.name,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END) AS wod_name,COALESCE(bw.content,w.planned_comment) AS planned_comment,p.name AS program_name,bw.box_id,bw.wod_date AS box_wod_date,bw.score_type,bx.name AS box_name,bc.name AS score_category_name FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id LEFT JOIN activities a ON a.id=s.activity_id LEFT JOIN box_wods bw ON bw.id=s.box_wod_id LEFT JOIN boxes bx ON bx.id=bw.box_id LEFT JOIN box_categories bc ON bc.id=s.score_category_id WHERE s.user_id=?";
+  "SELECT s.*,a.name AS activity_name,COALESCE(bw.name,dw.title,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END) AS wod_name,COALESCE(bw.content,dw.content,w.planned_comment) AS planned_comment,p.name AS program_name,bw.box_id,bw.wod_date AS box_wod_date,bw.score_type,bx.name AS box_name,bc.name AS score_category_name,dw.wod_date AS daily_wod_date FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id JOIN programs p ON p.id=s.program_id LEFT JOIN activities a ON a.id=s.activity_id LEFT JOIN box_wods bw ON bw.id=s.box_wod_id LEFT JOIN boxes bx ON bx.id=bw.box_id LEFT JOIN box_categories bc ON bc.id=s.score_category_id LEFT JOIN daily_wods dw ON dw.id=s.daily_wod_id AND dw.user_id=s.user_id WHERE s.user_id=?";
 // Séance sur un WOD de box : l'utilisateur doit être membre validé de la box (sauf s'il modifie une séance
 // déjà enregistrée sur ce WOD). Le score dépend du type choisi par le gestionnaire.
 async function sessionBoxWod(e, userId, b, sessionId = null) {
@@ -750,6 +773,22 @@ async function sessionBoxWod(e, userId, b, sessionId = null) {
   if (!category) return {error: "Choisis une catégorie (RX, Scaled…).", status: 400};
   return {wod, value: v, category: category.id};
 }
+// Séance sur un WOD du jour : il doit appartenir à l'utilisateur (séance « hors programme », WOD « Autres »).
+async function sessionDailyWod(e, userId, b) {
+  if (!b.daily_wod_id || b.box_wod_id) return {id: null};
+  const row = await e.DB.prepare("SELECT id,wod_date FROM daily_wods WHERE id=? AND user_id=?")
+    .bind(String(b.daily_wod_id), userId)
+    .first();
+  return row ? {id: row.id} : {error: "WOD du jour introuvable.", status: 404};
+}
+const dailyWodOut = x => ({
+  id: x.id,
+  wod_date: x.wod_date,
+  title: x.title,
+  content: x.content,
+  chrono: x.chrono ? JSON.parse(x.chrono) : null,
+  movement_ids: JSON.parse(x.movement_ids || "[]"),
+});
 // WOD de box : nom facultatif (« WOD du JJ/MM/AAAA » par défaut), date, contenu et type de score.
 const SCORE_TYPES = ["time", "reps", "load", "none"];
 const frenchDate = d => d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4);
@@ -2471,6 +2510,108 @@ async function api(r, e, p) {
     ]);
     return json({ok: true, content, wod: out.wod});
   }
+  // WOD du jour : génération par IA (aujourd'hui ou demain, heure de Paris), remplacement (« Autre WOD ») tant
+  // qu'aucune séance n'y est rattachée, suppression.
+  if (p === "/api/daily-wods" && r.method === "POST") {
+    if (!e.OPENAI_API_KEY)
+      return json({error: "La génération par IA n'est pas encore configurée (clé OpenAI manquante)."}, 503);
+    const b = await r.json(),
+      date = String(b.wod_date || ""),
+      options = dailyOptionsInput(b),
+      now = localToday();
+    if (options.error) return json({error: options.error}, 400);
+    if (!validDate(date) || date < now || date > addDays(now, 1))
+      return json({error: "Le WOD du jour se génère pour aujourd'hui ou demain."}, 400);
+    const replaceId = b.replace_id ? String(b.replace_id) : null;
+    if (replaceId) {
+      const old = await e.DB.prepare("SELECT id FROM daily_wods WHERE id=? AND user_id=?")
+        .bind(replaceId, u.id)
+        .first();
+      if (!old) return json({error: "WOD du jour introuvable."}, 404);
+      if (await e.DB.prepare("SELECT 1 FROM training_sessions WHERE daily_wod_id=? LIMIT 1").bind(replaceId).first())
+        return json({error: "Une séance est déjà enregistrée sur ce WOD."}, 409);
+    }
+    const used = await e.DB.prepare(
+      "SELECT COUNT(*) AS n,SUM(prompt_version=?) AS daily FROM ai_generations WHERE user_id=? AND created_at>datetime('now','-1 day')"
+    )
+      .bind(DAILY_PROMPT_VERSION, u.id)
+      .first();
+    if ((used?.n || 0) >= AI_DAILY_LIMIT)
+      return json({error: "Limite de " + AI_DAILY_LIMIT + " générations par 24 h atteinte. Réessaie demain."}, 429);
+    if ((used?.daily || 0) >= DAILY_WOD_LIMIT)
+      return json({error: "Limite de " + DAILY_WOD_LIMIT + " WOD du jour par 24 h atteinte. Réessaie demain."}, 429);
+    const [profile, records, catalog, done, recent] = await Promise.all([
+      e.DB.prepare("SELECT level,goals,equipment,constraints FROM ai_profiles WHERE user_id=?").bind(u.id).first(),
+      e.DB.prepare(
+        "SELECT mc.name,mc.measurement_method,MAX(pr.value) AS value,pr.rep_count FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? GROUP BY pr.movement_id,pr.rep_count ORDER BY mc.sort_order,pr.rep_count LIMIT 40"
+      )
+        .bind(u.id)
+        .all(),
+      e.DB.prepare(
+        "SELECT id,name,measurement_method FROM movement_catalog ORDER BY sort_order,name COLLATE NOCASE"
+      ).all(),
+      e.DB.prepare(
+        "SELECT s.session_date,COALESCE(bw.name,dw.title,CASE WHEN w.name='__AUTRES__' THEN 'Autres' ELSE w.name END) AS name,COALESCE(NULLIF(s.actual_comment,''),bw.content,dw.content,'') AS comment FROM training_sessions s JOIN program_wods w ON w.id=s.wod_id LEFT JOIN box_wods bw ON bw.id=s.box_wod_id LEFT JOIN daily_wods dw ON dw.id=s.daily_wod_id AND dw.user_id=s.user_id WHERE s.user_id=? AND s.session_date BETWEEN ? AND ? ORDER BY s.session_date LIMIT 20"
+      )
+        .bind(u.id, addDays(date, -14), date)
+        .all(),
+      e.DB.prepare(
+        "SELECT wod_date,title FROM daily_wods WHERE user_id=? AND wod_date BETWEEN ? AND ? ORDER BY wod_date LIMIT 14"
+      )
+        .bind(u.id, addDays(date, -14), date)
+        .all(),
+    ]);
+    const prompt = buildDailyPrompt({
+      profile,
+      options,
+      records: records.results,
+      catalog: catalog.results,
+      dateLabel: frenchDate(date),
+      sessions: done.results.map(x => ({date: frenchDate(x.session_date), name: x.name, comment: x.comment})),
+      recent: recent.results.map(x => ({date: frenchDate(x.wod_date), title: x.title})),
+    });
+    const out = await callOpenAIDaily(e, prompt);
+    if (out.error) return json({error: out.error}, 502);
+    const row = {
+      id: replaceId || uid(),
+      wod_date: date,
+      title: String(out.wod.titre || "WOD du jour")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 120),
+      content: wodToText(out.wod),
+      chrono: JSON.stringify(dailyChrono(out.wod.chrono)),
+      movement_ids: JSON.stringify(dailyMovementIds(out.wod, catalog.results)),
+    };
+    await e.DB.batch([
+      e.DB.prepare(
+        "INSERT INTO daily_wods(id,user_id,wod_date,title,content,chrono,movement_ids,options) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET wod_date=excluded.wod_date,title=excluded.title,content=excluded.content,chrono=excluded.chrono,movement_ids=excluded.movement_ids,options=excluded.options,created_at=CURRENT_TIMESTAMP WHERE daily_wods.user_id=excluded.user_id"
+      ).bind(row.id, u.id, row.wod_date, row.title, row.content, row.chrono, row.movement_ids, JSON.stringify(options)),
+      e.DB.prepare(
+        "INSERT INTO ai_generations(id,user_id,wod_id,week_start,options,result,prompt_version,model) VALUES(?,?,NULL,?,?,?,?,?)"
+      ).bind(
+        uid(),
+        u.id,
+        mondayOfDate(date),
+        JSON.stringify(options),
+        JSON.stringify(out.wod),
+        DAILY_PROMPT_VERSION,
+        out.model
+      ),
+    ]);
+    return json({ok: true, wod: dailyWodOut(row)});
+  }
+  m = p.match(/^\/api\/daily-wods\/([\w-]+)$/);
+  if (m && r.method === "DELETE") {
+    if (
+      await e.DB.prepare("SELECT 1 FROM training_sessions WHERE daily_wod_id=? AND user_id=? LIMIT 1")
+        .bind(m[1], u.id)
+        .first()
+    )
+      return json({error: "Une séance est enregistrée sur ce WOD : supprime-la d'abord."}, 409);
+    await e.DB.prepare("DELETE FROM daily_wods WHERE id=? AND user_id=?").bind(m[1], u.id).run();
+    return json({ok: true});
+  }
   m = p.match(/^\/api\/wods\/([\w-]+)\/weekly-programming$/);
   if (m && r.method === "PUT") {
     const b = await r.json(),
@@ -2594,7 +2735,7 @@ async function api(r, e, p) {
       from = q.get("from"),
       to = q.get("to");
     if (!validDate(from) || !validDate(to) || from > to) return json({error: "Période invalide."}, 400);
-    const [s, f, pl, c, cc, bw] = await Promise.all([
+    const [s, f, pl, c, cc, bw, dw] = await Promise.all([
       e.DB.prepare(
         SESSION_SELECT + " AND s.session_date>=? AND s.session_date<=? ORDER BY s.session_date DESC,s.created_at DESC"
       )
@@ -2621,6 +2762,11 @@ async function api(r, e, p) {
         .bind(u.id, from, to)
         .all(),
       daysBetween(from, to) <= 92 ? memberBoxWods(e, u.id, from, to) : [],
+      e.DB.prepare(
+        "SELECT id,wod_date,title,content,chrono,movement_ids FROM daily_wods WHERE user_id=? AND wod_date>=? AND wod_date<=? ORDER BY wod_date,created_at LIMIT 60"
+      )
+        .bind(u.id, from, to)
+        .all(),
     ]);
     return json({
       sessions: s.results,
@@ -2629,6 +2775,7 @@ async function api(r, e, p) {
       checks: c.results,
       catalogChecks: cc.results,
       boxWods: bw,
+      dailyWods: dw.results.map(dailyWodOut),
     });
   }
   if (r.method === "GET" && p === "/api/sessions") {
@@ -2659,7 +2806,9 @@ async function api(r, e, p) {
     // WOD de box : la séance est rattachée au programme technique « Hors programme » (WOD « Autres »).
     const box = await sessionBoxWod(e, u.id, b);
     if (box.error) return json({error: box.error}, box.status);
-    if (box.wod) {
+    const daily = await sessionDailyWod(e, u.id, b);
+    if (daily.error) return json({error: daily.error}, daily.status);
+    if (box.wod || daily.id) {
       b.program_id = "none";
       b.wod_id = "other";
     }
@@ -2725,7 +2874,7 @@ async function api(r, e, p) {
       );
     await e.DB.batch([
       e.DB.prepare(
-        "INSERT INTO training_sessions(id,program_id,wod_id,user_id,session_date,actual_comment,activity_id,duration_minutes,started_at,logged_at,box_wod_id,score_value,score_category_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        "INSERT INTO training_sessions(id,program_id,wod_id,user_id,session_date,actual_comment,activity_id,duration_minutes,started_at,logged_at,box_wod_id,score_value,score_category_id,daily_wod_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
       ).bind(
         id,
         pid,
@@ -2741,7 +2890,8 @@ async function api(r, e, p) {
         new Date().toISOString(),
         box.wod?.id || null,
         box.value ?? null,
-        box.category ?? null
+        box.category ?? null,
+        daily.id
       ),
       ...checks,
     ]);
@@ -2752,7 +2902,9 @@ async function api(r, e, p) {
     const b = await r.json(),
       box = await sessionBoxWod(e, u.id, b, m[1]);
     if (box.error) return json({error: box.error}, box.status);
-    if (box.wod) {
+    const daily = await sessionDailyWod(e, u.id, b);
+    if (daily.error) return json({error: daily.error}, daily.status);
+    if (box.wod || daily.id) {
       b.program_id = "none";
       b.wod_id = "other";
     }
@@ -2817,7 +2969,7 @@ async function api(r, e, p) {
     );
     await e.DB.batch([
       e.DB.prepare(
-        "UPDATE training_sessions SET program_id=?,wod_id=?,session_date=?,actual_comment=?,activity_id=?,duration_minutes=?,started_at=?,logged_at=?,box_wod_id=?,score_value=?,score_category_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?"
+        "UPDATE training_sessions SET program_id=?,wod_id=?,session_date=?,actual_comment=?,activity_id=?,duration_minutes=?,started_at=?,logged_at=?,box_wod_id=?,score_value=?,score_category_id=?,daily_wod_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?"
       ).bind(
         b.program_id,
         wid,
@@ -2832,6 +2984,7 @@ async function api(r, e, p) {
         box.wod?.id || null,
         box.value ?? null,
         box.category ?? null,
+        daily.id,
         m[1],
         u.id
       ),

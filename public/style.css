@@ -3891,6 +3891,91 @@ button:disabled {
   gap: 8px;
 }
 
+/* WOD du jour (page Séances) : carte avec le WOD dépliable et ses actions ; fenêtre de génération. */
+.weekheading .weekheading-action {
+  margin-left: auto;
+}
+.weekwod.daily-wod {
+  display: block;
+}
+.daily-wod details {
+  margin-top: 8px;
+}
+.daily-wod summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-strong);
+}
+.daily-wod details p {
+  white-space: pre-line;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.daily-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.daily-actions .smallbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.daily-actions .smallbtn:disabled {
+  opacity: 0.5;
+}
+.daily-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.daily-empty .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.daily-choice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.daily-choice legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* Texte du WOD du jour sous le chrono lancé depuis la page Séances. */
+.timer-wod {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 12px;
+}
+.timer-wod-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.timer-wod-head b {
+  font: 700 15px Manrope;
+}
+.timer-wod p {
+  margin: 8px 0 0;
+  white-space: pre-line;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
 #programform input:disabled {
   opacity: 0.65;
   background: var(--content-bg);

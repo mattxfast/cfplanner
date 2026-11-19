@@ -423,6 +423,39 @@ function timerStopRepeat() {
 }
 ["pointerup", "pointercancel", "blur"].forEach(type => window.addEventListener(type, timerStopRepeat));
 
+// Chrono préréglé depuis un WOD du jour (page Séances) : réglages proposés par l’IA ramenés aux valeurs les plus
+// proches des listes, texte du WOD affiché sous le chrono, puis départ (décompte de 10 s).
+const timerNearest = (values, v) =>
+  values.reduce((best, x) => (Math.abs(x - v) < Math.abs(best - v) ? x : best), values[0]);
+const timerClamp = (v, min, max) => Math.min(max, Math.max(min, Math.round(v)));
+function timerPreset(chrono, wod) {
+  const s = chrono ? timer.settings[chrono.mode] : null;
+  if (s) {
+    if (chrono.mode === "fortime") s.cap = timerClamp(chrono.minutes || 0, 0, 90);
+    if (chrono.mode === "amrap") s.duration = timerNearest(TIMER_DURATIONS, (chrono.minutes || 12) * 60);
+    if (chrono.mode === "emom") {
+      s.every = timerNearest(TIMER_DURATIONS, chrono.every_seconds || 60);
+      s.rounds = timerClamp(chrono.rounds || ((chrono.minutes || 10) * 60) / s.every, 1, 99);
+    }
+    if (chrono.mode === "tabata") {
+      s.work = timerNearest(TIMER_INTERVALS, chrono.work_seconds || 20);
+      s.rest = timerNearest([0, ...TIMER_INTERVALS], chrono.rest_seconds ?? 10);
+      s.rounds = timerClamp(chrono.rounds || 8, 1, 99);
+    }
+    timer.mode = chrono.mode;
+    timerSaveSettings();
+  }
+  timerStop("idle");
+  $("#timerwodtitle").textContent = wod?.title || "";
+  $("#timerwodcontent").textContent = wod ? dailyBody(wod) : "";
+  $("#timerwod").hidden = !wod;
+  switchView("timer");
+  timerRenderSettings();
+  // Sans réglage reconnu (metcon qui ne se chronomètre pas ainsi) : le chrono s’ouvre sans démarrer.
+  if (s) timerStart();
+}
+$("#timerwodclose").onclick = () => ($("#timerwod").hidden = true);
+
 timerLoadSettings();
 $("#timerstart").onclick = () => (timer.state === "done" ? (timerStop("idle"), timerStart()) : timerStart());
 $("#timerreset").onclick = () => timerStop("idle");
