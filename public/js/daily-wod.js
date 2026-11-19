@@ -100,8 +100,8 @@ async function openDailyDialog(replaceId = null) {
     .map(d => `<option value="${d}">${esc(dailyDayLabel(d) + " (" + wodDay(d) + ")")}</option>`)
     .join("");
   f.wod_date.value = replaced && days.includes(replaced.wod_date) ? replaced.wod_date : today();
-  f.duration_minutes.value = String(last.duration_minutes || 45);
-  if (!f.duration_minutes.value) f.duration_minutes.value = "45";
+  // Durée : toujours 1 h par défaut (le lieu et la forme reprennent le dernier choix).
+  f.duration_minutes.value = "60";
   for (const k of ["place", "energy"]) {
     const input = form.querySelector(`input[name="${k}"][value="${last[k]}"]`);
     if (input) input.checked = true;
