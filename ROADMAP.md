@@ -14,7 +14,7 @@ Prochain numéro libre : **29**
 ## Fiabilité et exploitation
 
 - [ ] **1.** Sauvegardes automatiques de la base D1 (copie hebdomadaire dans R2, en plus du Time Travel de 30 jours). *Reporté à plus tard.*
-- [ ] **2.** Supprimer l'ancien Worker `fitfactory` (page « déménagé ») et l'ancienne base D1 `fitfactory`. *Après validation de Matt.*
+- [x] **2.** Supprimer l'ancien Worker `fitfactory` (page « déménagé ») et l'ancienne base D1 `fitfactory`. *Après validation de Matt.* — fait le 19/11/2026
 - [ ] **3.** Envoi des e-mails « mot de passe oublié » : compte Resend, secret `RESEND_API_KEY`, variable `MAIL_FROM` (voir README, Configuration).
 
 ## Déploiement
