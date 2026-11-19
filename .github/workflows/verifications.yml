@@ -23,6 +23,12 @@ jobs:
         run: cp src/worker.js /tmp/worker.mjs && node --check /tmp/worker.mjs
       - name: Formatage (Prettier)
         run: npx -y prettier@3.3.3 --check src public tests
+      # Téléchargement unique de wrangler : les fichiers de test, lancés en parallèle, le téléchargeraient sinon en même
+      # temps sur une machine neuve (l'un des téléchargements échoue alors).
+      - name: Préparer wrangler
+        run: npx -y wrangler@4 --version
+        env:
+          WRANGLER_SEND_METRICS: "false"
       - name: Tests d'intégration
         run: node --test tests/*.test.mjs
         env:
