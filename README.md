@@ -7,7 +7,7 @@ myFitFactory (anciennement FitFactory, et avant CFPlanner) est une application w
 ### Navigation
 - À l'ouverture et après chaque connexion, tout le monde (utilisateur, gestionnaire ou administrateur) arrive sur la page **Séances**.
 - En-tête compact : logo et nom de l'app, raccourcis athlète (retour direct aux séances, en surbrillance dans l'espace utilisateur ; affiché pour les gestionnaires et administrateurs) / gestionnaire / administration, et une pastille ronde aux initiales de l'utilisateur qui ouvre « Mon compte » (le nom de l'utilisateur n'est plus affiché dans l'en-tête, quelle que soit la largeur d'écran). La déconnexion se fait en bas de « Mon compte ».
-- Barre d'onglets fixée en bas de l'écran, toujours visible pendant le défilement, avec des icônes : kettlebell (Séances), planning (Programmes & WOD) éclair (PR) et chronomètre (Chrono).
+- Barre d'onglets fixée en bas de l'écran, toujours visible pendant le défilement, avec des icônes : kettlebell (Séances), planning (Programmes & WOD), éclair (PR), pomme (Alimentation) et chronomètre (Chrono).
 - Chrono (`public/js/timer.js`) : For Time (avec temps limite facultatif), AMRAP, EMOM et Tabata / intervalles (sans texte d'explication ; durée totale affichée seulement pour EMOM et Tabata, le grand chrono suffisant pour For Time et AMRAP) ; réglages mémorisés sur l'appareil (durées en liste déroulante, nombre de tours par boutons −/＋ avec appui maintenu pour défiler) — durées AMRAP / EMOM : 15 s, 20 s, 30 s, 45 s, toutes les 15 s jusqu'à 3 min, 3 min 30, 4 min puis chaque minute ; For Time : chaque minute ; Tabata : chaque seconde jusqu'à 30 s, puis par 5 s jusqu'à 1 min, 10 s jusqu'à 3 min, 15 s jusqu'à 8 min, 30 s jusqu'à 10 min et chaque minute jusqu'à 15 min — décompte de 10 s, bips 3-2-1 puis « Go » à chaque changement de phase, double bip très aigu à mi-temps (bips en onde carrée, aigus et forts) (vibration sur Android ; sur iPhone, bips audibles même en mode silencieux à partir d'iOS 17), compteur « +1 tour » pour l'AMRAP, temps limite en grand pour le For Time (rien sans temps limite) et numéro du tour en grand pour l'EMOM et le Tabata, pause/reprise, écran maintenu allumé pendant le chrono (Screen Wake Lock, iOS 18.4+ pour l'app installée). Affichage jaune pendant le travail, vert pendant le repos.
 
 ### Séances
@@ -63,6 +63,15 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - **Suivre** un programme (`PUT /api/program-follow` avec `program_id`, `start`, `end`) : on ne suit qu'un programme à la fois (suivre un autre programme remplace le précédent), et il ne doit chevaucher aucun de ses propres programmes en cours ou à venir (l'inverse est aussi refusé). Au moment de suivre, on choisit ses propres dates (par défaut : à partir de la semaine en cours, pour la même durée que chez l'auteur) ; elles se modifient ensuite avec « Modifier mes dates ». La programmation semaine par semaine de l'auteur est décalée : sa semaine 1 devient la semaine 1 de l'utilisateur. Le programme suivi apparaît en lecture seule (le programme et ses rubriques WOD et Focus mouvement se plient et se déplient), toujours à jour (modifications de l'auteur en direct) ; pendant les dates de l'utilisateur, c'est le programme de la semaine dans **Séances** (WOD, planification, séances). Une séance « Autres » est alors enregistrée « Hors programme ».
 - **Arrêter de suivre** (`DELETE /api/program-follow`) : les séances déjà enregistrées restent dans l'historique et l'export. Si l'auteur repasse son programme en privé, ceux qui le suivent déjà le gardent.
 - L'auteur ne peut plus supprimer un programme ou un WOD réalisé par un utilisateur qui le suit.
+
+### Alimentation
+- Onglet **Alimentation** (`public/js/nutrition.js`) : bilan d'une journée (‹ ›, choix de la date, « Aujourd'hui » ramène au jour en cours ; pas de jour futur) : calories, protéines, glucides et lipides (grammes et part de l'énergie, avec une barre de répartition), fibres, dont sucres, dont acides gras saturés et sel.
+- Rubrique **Repas** : repas du jour par heure, avec calories et macronutriments ; ＋ ouvre le détail (valeurs par aliment, fibres, sucres, AG saturés et sel du repas, remarque de l'IA, fiabilité de l'estimation). Modification et suppression.
+- Rubrique **7 derniers jours** : total de chaque jour jusqu'au jour affiché ; un toucher affiche la journée.
+- Saisie d'un repas (＋ du bilan) : date, heure, nom (proposé par l'IA), photo et/ou aliments avec leur quantité, précision libre (cuisson, sauce…). « Analyser avec l'IA » estime les valeurs de chaque aliment ; les aliments reconnus remplacent la saisie, pour les corriger et relancer l'analyse. Toute saisie modifiée après l'analyse (aliments, photo, précision) oblige à relancer l'analyse avant d'enregistrer ; la date, l'heure et le nom se modifient librement.
+- La photo est réduite sur le téléphone (1 024 px, JPEG), envoyée à l'API OpenAI le temps de l'analyse et **jamais conservée** (ni en base, ni dans le journal).
+- L'analyse (`POST /api/meal-analysis` : `photo` en data URL, `items` [{`name`, `quantity`}], `note`) demande le réseau et n'enregistre rien ; `GET /api/meal-analysis` indique si elle est activée et le nombre d'analyses restantes. Limite de 50 analyses par utilisateur et par 24 h. Chaque analyse est journalisée (`meal_analyses` : aliments et précision saisis, JSON renvoyé, version du prompt `repas-v1`, modèle). Format JSON imposé (structured outputs, `src/nutrition.js`).
+- Repas : `GET /api/meals?from=…&to=…` (93 jours au plus), `POST /api/meals` (avec `client_id`, rejouable hors ligne), `PUT` et `DELETE /api/meals/:id`. Les totaux du repas sont toujours recalculés par le serveur à partir des aliments. Un repas déjà analysé s'enregistre, se modifie ou se supprime hors ligne.
 
 ### Records personnels (PR)
 Les mouvements du catalogue sont répartis en quatre familles :
@@ -160,6 +169,7 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 - V23 ajoute la table `box_wod_movements` (mouvements du catalogue travaillés dans un WOD de box).
 - V24 ajoute la colonne `users.box_prompt_dismissed` (fenêtre d'accueil des box à ne plus proposer).
 - V25 ajoute les tables `ai_profiles` (profil d'athlète pour la génération par IA) et `ai_generations` (journal des générations, indexé par utilisateur et date).
+- V26 ajoute les tables `meals` (repas : aliments et valeurs en JSON, totaux en colonnes, index par utilisateur, date et heure) et `meal_analyses` (journal des analyses de repas par IA, sans la photo).
 - V20 supprime le thème « Automatique (selon le téléphone) » : un compte réglé ainsi suit le thème par défaut, un thème par défaut « auto » devient « Sombre ».
 - V21 ajoute l'index `reminder_settings_hour` (heure du rappel, dernier envoi) pour les passages de la tâche des rappels.
 - V22 ajoute les index `programs_user` (programmes d'un utilisateur) et `box_members_role_status` (demandes en attente), pour une box de plusieurs centaines de membres.
@@ -186,7 +196,7 @@ Génération de WOD par IA (facultatif) : créer une clé d'API sur [platform.op
 npx wrangler secret put OPENAI_API_KEY
 ```
 
-Le modèle utilisé par défaut est `gpt-5-mini` ; pour en changer, ajouter `OPENAI_MODEL = "…"` dans la section `[vars]` de `wrangler.toml`. `OPENAI_API_URL` ne sert qu'aux tests (faux service local). Sans clé, la génération est simplement indisponible.
+Le modèle utilisé par défaut est `gpt-5-mini` ; pour en changer, ajouter `OPENAI_MODEL = "…"` dans la section `[vars]` de `wrangler.toml`. `OPENAI_API_URL` ne sert qu'aux tests (faux service local). La même clé sert à l'analyse des repas (onglet Alimentation). Sans clé, la génération et l'analyse sont simplement indisponibles.
 
 Pour un autre environnement, configurez `ADMIN_EMAIL` avec l'adresse du compte administrateur de cet environnement. La variable n'est pas un secret. Les mots de passe, jetons et clés privées ne doivent jamais être enregistrés dans le dépôt.
 
@@ -223,6 +233,7 @@ Le Worker conserve notamment les routes de statistiques et d'export (`/api/stats
 ## Sécurité et limites connues
 
 - Application personnelle ; ne pas y stocker de données médicales ou hautement sensibles.
+- Les valeurs nutritionnelles sont des estimations de l'IA, indicatives.
 - Mots de passe hachés avec PBKDF2-SHA256 (100 000 itérations).
 - Sessions de 30 jours, cookie HttpOnly, Secure et SameSite=Lax.
 - Pas encore de récupération de mot de passe, de validation d'adresse e-mail ni de protection anti-abus dédiée.

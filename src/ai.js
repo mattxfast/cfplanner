@@ -170,16 +170,17 @@ export const WOD_SCHEMA = {
   },
 };
 
-// Appel de l'API Responses d'OpenAI avec un format JSON imposé (structured outputs).
-export async function callOpenAI(env, prompt) {
+// Appel de l'API Responses d'OpenAI avec un format JSON imposé (structured outputs). Partagé avec l'analyse des
+// repas (src/nutrition.js) : input est un texte ou une liste de messages (texte et image).
+export async function openAIJson(env, {instructions, input, name, schema, check, refusal}) {
   const model = String(env.OPENAI_MODEL || AI_DEFAULT_MODEL),
     body = {
       model,
-      instructions: SYSTEM,
-      input: prompt,
+      instructions,
+      input,
       store: false,
       max_output_tokens: 6000,
-      text: {format: {type: "json_schema", name: "wod", strict: true, schema: WOD_SCHEMA}},
+      text: {format: {type: "json_schema", name, strict: true, schema}},
     };
   // Modèles « à raisonnement » : effort réduit pour une réponse plus rapide et moins chère.
   if (/^(gpt-5|o\d)/.test(model)) body.reasoning = {effort: "low"};
@@ -201,16 +202,27 @@ export async function callOpenAI(env, prompt) {
     return {error: "Le service d'IA a renvoyé une erreur (" + res.status + ")."};
   }
   const parts = (data?.output || []).filter(x => x.type === "message").flatMap(x => x.content || []);
-  if (parts.some(x => x.type === "refusal")) return {error: "L'IA a refusé de générer cette séance."};
+  if (parts.some(x => x.type === "refusal")) return {error: refusal};
   const out = parts.find(x => x.type === "output_text")?.text;
   try {
-    const wod = JSON.parse(out);
-    if (!Array.isArray(wod?.blocs) || !wod.blocs.length) throw Error();
-    return {wod, model: String(data.model || model)};
+    const result = JSON.parse(out);
+    if (!check(result)) throw Error();
+    return {result, model: String(data.model || model)};
   } catch {
     console.error("OpenAI réponse illisible", data?.status, JSON.stringify(data?.incomplete_details || ""));
     return {error: "La réponse de l'IA est incomplète. Réessaie."};
   }
+}
+export async function callOpenAI(env, prompt) {
+  const out = await openAIJson(env, {
+    instructions: SYSTEM,
+    input: prompt,
+    name: "wod",
+    schema: WOD_SCHEMA,
+    check: wod => Array.isArray(wod?.blocs) && wod.blocs.length > 0,
+    refusal: "L'IA a refusé de générer cette séance.",
+  });
+  return out.error ? out : {wod: out.result, model: out.model};
 }
 
 // Mise en texte du WOD pour le champ « Programmation hebdomadaire » (2 000 caractères au plus).

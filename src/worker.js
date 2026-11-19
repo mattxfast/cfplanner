@@ -8,6 +8,14 @@ import {
   callOpenAI,
   wodToText,
 } from "./ai.js";
+import {
+  MEAL_DAILY_LIMIT,
+  MEAL_PROMPT_VERSION,
+  NUTRIENTS,
+  analyzeMeal,
+  mealAnalysisInput,
+  mealInput,
+} from "./nutrition.js";
 const SESSION_DAYS = 30,
   enc = new TextEncoder();
 const json = (d, s = 200, h = {}) =>
@@ -403,6 +411,20 @@ async function ensureV2Schema(env) {
           "CREATE TABLE IF NOT EXISTS ai_generations (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, wod_id TEXT REFERENCES program_wods(id) ON DELETE SET NULL, week_start TEXT NOT NULL, options TEXT NOT NULL, result TEXT NOT NULL, prompt_version TEXT NOT NULL, model TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
         ),
         env.DB.prepare("CREATE INDEX IF NOT EXISTS ai_generations_user_date ON ai_generations(user_id,created_at)"),
+      ]);
+    });
+    await runMigration("v26-meals", async () => {
+      // Suivi de l'alimentation : repas (aliments et valeurs en JSON, totaux en colonnes) et journal des analyses par
+      // IA (quota, traçabilité ; la photo n'est jamais conservée).
+      await env.DB.batch([
+        env.DB.prepare(
+          "CREATE TABLE IF NOT EXISTS meals (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, meal_date TEXT NOT NULL, meal_time TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', items TEXT NOT NULL DEFAULT '[]', kcal REAL NOT NULL DEFAULT 0, protein_g REAL NOT NULL DEFAULT 0, carbs_g REAL NOT NULL DEFAULT 0, sugars_g REAL NOT NULL DEFAULT 0, fat_g REAL NOT NULL DEFAULT 0, sat_fat_g REAL NOT NULL DEFAULT 0, fiber_g REAL NOT NULL DEFAULT 0, salt_g REAL NOT NULL DEFAULT 0, confidence TEXT NOT NULL DEFAULT '', remarks TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        ),
+        env.DB.prepare("CREATE INDEX IF NOT EXISTS meals_user_date ON meals(user_id,meal_date,meal_time)"),
+        env.DB.prepare(
+          "CREATE TABLE IF NOT EXISTS meal_analyses (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, request TEXT NOT NULL, result TEXT NOT NULL, prompt_version TEXT NOT NULL, model TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        ),
+        env.DB.prepare("CREATE INDEX IF NOT EXISTS meal_analyses_user_date ON meal_analyses(user_id,created_at)"),
       ]);
     });
   })().catch(err => {
@@ -1742,6 +1764,107 @@ async function api(r, e, p) {
       return json({ok: true});
     }
     return json({error: "Route inconnue."}, 404);
+  }
+  // Suivi de l'alimentation : analyse d'un repas par IA (jamais enregistrée seule), puis repas enregistrés.
+  if (r.method === "GET" && p === "/api/meal-analysis") {
+    const used = await e.DB.prepare(
+      "SELECT COUNT(*) AS n FROM meal_analyses WHERE user_id=? AND created_at>datetime('now','-1 day')"
+    )
+      .bind(u.id)
+      .first();
+    return json({enabled: !!e.OPENAI_API_KEY, remaining: Math.max(0, MEAL_DAILY_LIMIT - (used?.n || 0))});
+  }
+  if (r.method === "POST" && p === "/api/meal-analysis") {
+    if (!e.OPENAI_API_KEY)
+      return json({error: "L'analyse par IA n'est pas encore configurée (clé OpenAI manquante)."}, 503);
+    const a = mealAnalysisInput(await r.json());
+    if (a.error) return json({error: a.error}, 400);
+    const used = await e.DB.prepare(
+      "SELECT COUNT(*) AS n FROM meal_analyses WHERE user_id=? AND created_at>datetime('now','-1 day')"
+    )
+      .bind(u.id)
+      .first();
+    if ((used?.n || 0) >= MEAL_DAILY_LIMIT)
+      return json({error: "Limite de " + MEAL_DAILY_LIMIT + " analyses par 24 h atteinte. Réessaie demain."}, 429);
+    const out = await analyzeMeal(e, a);
+    if (out.error) return json({error: out.error}, 502);
+    // Journal : aliments et précision saisis, sans la photo.
+    await e.DB.prepare("INSERT INTO meal_analyses(id,user_id,request,result,prompt_version,model) VALUES(?,?,?,?,?,?)")
+      .bind(
+        uid(),
+        u.id,
+        JSON.stringify({items: a.items, note: a.note, photo: !!a.photo}),
+        JSON.stringify(out.raw),
+        MEAL_PROMPT_VERSION,
+        out.model
+      )
+      .run();
+    return json({analysis: out.analysis});
+  }
+  if (r.method === "GET" && p === "/api/meals") {
+    const q = new URL(r.url).searchParams,
+      from = q.get("from") || "",
+      to = q.get("to") || "";
+    if (!validDate(from) || !validDate(to) || from > to || daysBetween(from, to) > 92)
+      return json({error: "Période invalide (93 jours au plus)."}, 400);
+    const x = await e.DB.prepare(
+      "SELECT id,meal_date,meal_time,title,note,items," +
+        Object.keys(NUTRIENTS).join(",") +
+        ",confidence,remarks FROM meals WHERE user_id=? AND meal_date BETWEEN ? AND ? ORDER BY meal_date,meal_time,created_at"
+    )
+      .bind(u.id, from, to)
+      .all();
+    return json({meals: x.results.map(row => ({...row, items: JSON.parse(row.items || "[]")}))});
+  }
+  if (
+    (r.method === "POST" && p === "/api/meals") ||
+    (r.method === "PUT" && (m = p.match(/^\/api\/meals\/([\w-]+)$/)))
+  ) {
+    const b = await r.json(),
+      v = mealInput(b);
+    if (v.error) return json({error: v.error}, 400);
+    if (v.meal_date > addDays(localToday(), 1)) return json({error: "La date du repas est dans le futur."}, 400);
+    const values = [
+      v.meal_date,
+      v.meal_time,
+      v.title,
+      v.note,
+      JSON.stringify(v.items),
+      ...Object.keys(NUTRIENTS).map(k => v.totals[k]),
+      v.confidence,
+      v.remarks,
+    ];
+    if (r.method === "POST") {
+      // Création rejouable hors ligne : un identifiant déjà enregistré ne crée pas de doublon.
+      // Un identifiant déjà pris par un autre compte n'est pas réutilisé.
+      const cid = clientId(b.client_id),
+        taken = cid ? await e.DB.prepare("SELECT user_id FROM meals WHERE id=?").bind(cid).first() : null;
+      if (taken?.user_id === u.id) return json({ok: true, id: cid});
+      const id = cid && !taken ? cid : uid();
+      await e.DB.prepare(
+        "INSERT INTO meals(id,user_id,meal_date,meal_time,title,note,items," +
+          Object.keys(NUTRIENTS).join(",") +
+          ",confidence,remarks) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+      )
+        .bind(id, u.id, ...values)
+        .run();
+      return json({ok: true, id});
+    }
+    const res = await e.DB.prepare(
+      "UPDATE meals SET meal_date=?,meal_time=?,title=?,note=?,items=?," +
+        Object.keys(NUTRIENTS)
+          .map(k => k + "=?")
+          .join(",") +
+        ",confidence=?,remarks=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?"
+    )
+      .bind(...values, m[1], u.id)
+      .run();
+    if (!res.meta.changes) return json({error: "Repas introuvable."}, 404);
+    return json({ok: true});
+  }
+  if (r.method === "DELETE" && (m = p.match(/^\/api\/meals\/([\w-]+)$/))) {
+    await e.DB.prepare("DELETE FROM meals WHERE id=? AND user_id=?").bind(m[1], u.id).run();
+    return json({ok: true});
   }
   if (r.method === "GET" && p === "/api/prs") {
     const x = await e.DB.prepare(

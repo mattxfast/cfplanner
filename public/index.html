@@ -168,6 +168,13 @@
             </svg></button
           ><button class="navtab" data-view="prs" aria-label="PR" title="PR">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 4.5 14h7l-1 7.5 9-11.5h-7z" /></svg></button
+          ><button class="navtab" data-view="nutrition" aria-label="Alimentation" title="Alimentation">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 7.6c-1.7-1.3-4.7-1.4-6.3.7-1.9 2.5-1 7 1.4 10 1.3 1.6 2.8 2.5 4.9 1.5 2.1 1 3.6.1 4.9-1.5 2.4-3 3.3-7.5 1.4-10-1.6-2.1-4.6-2-6.3-.7Z"
+              />
+              <path d="M12 7.6c0-2 .9-3.6 2.8-4.1" />
+            </svg></button
           ><button class="navtab" data-view="timer" aria-label="Chrono" title="Chrono">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="13.5" r="7.5" />
@@ -242,6 +249,9 @@
         </section>
         <section id="view-prs" hidden>
           <div id="prcards" class="pr-grid"></div>
+        </section>
+        <section id="view-nutrition" hidden>
+          <div id="nutritionboard"></div>
         </section>
         <section id="view-timer" hidden>
           <div class="page-banner"><h2>Chrono</h2></div>
@@ -690,6 +700,51 @@
         </form>
       </dialog>
 
+      <dialog id="mealdialog" class="modal">
+        <form id="mealform" method="dialog">
+          <div class="sectionhead">
+            <h2 id="mealdialogtitle">Nouveau repas</h2>
+            <button type="button" class="iconbtn" id="closemeal">×</button>
+          </div>
+          <div class="meal-when">
+            <label>Date<input name="meal_date" type="date" required /></label>
+            <label>Heure<input name="meal_time" type="time" required /></label>
+          </div>
+          <label>Nom du repas<input name="title" maxlength="100" placeholder="Proposé par l’IA" /></label>
+          <label class="meal-photo-pick"
+            >Photo du repas (facultatif)<input name="photo" type="file" accept="image/*"
+          /></label>
+          <div id="mealphoto" class="meal-photo" hidden>
+            <img alt="Photo du repas" /><button
+              type="button"
+              class="smallbtn delete"
+              id="mealphotoremove"
+              aria-label="Retirer la photo"
+              title="Retirer la photo"
+            >
+              ×
+            </button>
+          </div>
+          <fieldset class="meal-items">
+            <legend>Aliments et quantités</legend>
+            <div id="mealitems"></div>
+            <button type="button" class="smallbtn" id="addmealitem">＋ Ajouter un aliment</button>
+          </fieldset>
+          <label
+            >Précision (facultatif)<input
+              name="note"
+              maxlength="300"
+              placeholder="Ex. : cuit à l’huile d’olive, sauce à part"
+          /></label>
+          <p class="hint">La photo sert uniquement à l’analyse par l’IA : elle n’est pas conservée.</p>
+          <button type="button" class="primary" id="mealanalyze">Analyser avec l’IA</button>
+          <p class="hint" id="mealprogress" hidden></p>
+          <div id="mealresult" class="meal-result" hidden></div>
+          <button class="primary" id="mealsave" hidden>Enregistrer le repas</button>
+          <div class="error" id="mealerror"></div>
+        </form>
+      </dialog>
+
       <dialog id="movementpickerdialog" class="modal">
         <form id="movementpickerform" method="dialog">
           <div class="sectionhead">
@@ -837,6 +892,7 @@
     <script src="/js/admin.js"></script>
     <script src="/js/boxes.js"></script>
     <script src="/js/prs.js"></script>
+    <script src="/js/nutrition.js"></script>
     <script src="/js/timer.js"></script>
     <script src="/js/account.js"></script>
     <script src="/js/ui.js"></script>

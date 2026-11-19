@@ -207,6 +207,23 @@ const FFOffline = (() => {
         }
     } else if ((m = path.match(/^\/manage\/boxes\/([\w-]+)$/))) {
       patchManagedBox(data, m[1], op, body);
+    } else if ((m = path.match(/^\/meals\?from=([\d-]+)&to=([\d-]+)$/))) {
+      // Repas (déjà analysés) enregistrés, modifiés ou supprimés hors ligne.
+      const range = {from: m[1], to: m[2]};
+      let id = null;
+      if (op.method === "POST" && op.path === "/meals") id = body.client_id;
+      else if ((m = op.path.match(/^\/meals\/([\w-]+)$/))) id = m[1];
+      if (id) {
+        const previous = (data.meals || []).find(x => x.id === id);
+        data.meals = (data.meals || []).filter(x => x.id !== id);
+        if (op.method !== "DELETE" && inRange(range, body.meal_date))
+          data.meals.push({...(previous || {}), ...body, id, pending: 1});
+        data.meals.sort(
+          (a, b) =>
+            String(a.meal_date).localeCompare(String(b.meal_date)) ||
+            String(a.meal_time).localeCompare(String(b.meal_time))
+        );
+      }
     } else if (path === "/prs") {
       if (op.method === "POST" && op.path === "/prs") {
         data.records = (data.records || []).filter(r => r.id !== body.client_id);

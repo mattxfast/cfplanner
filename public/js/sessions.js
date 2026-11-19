@@ -38,6 +38,7 @@ async function load() {
     renderPrs();
     renderPrograms();
     renderWeek();
+    if (!$("#view-nutrition").hidden) loadNutrition();
     if (isAdmin) loadAdmin();
   } catch (e) {
     toast(e.message);
@@ -64,7 +65,9 @@ const inManagerSpace = () => !$("#view-box").hidden,
   inAdminSpace = () => !$("#view-admin").hidden;
 function switchView(v) {
   document.querySelectorAll(".navtab[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === v));
-  ["sessions", "programs", "prs", "timer", "account", "admin", "box"].forEach(x => ($("#view-" + x).hidden = x !== v));
+  ["sessions", "programs", "prs", "nutrition", "timer", "account", "admin", "box"].forEach(
+    x => ($("#view-" + x).hidden = x !== v)
+  );
   // Espace gestionnaire : menu du bas propre (WOD, membres, infos de la box) à la place de celui de l’utilisateur.
   // Espace d’administration : menu du bas propre (utilisateurs, box et mouvements, autres paramétrages).
   $("#managernav").hidden = v !== "box";
@@ -73,6 +76,7 @@ function switchView(v) {
   if (v === "admin") showAdminPage();
   if (user) renderUserbar();
   if (v === "box") loadManagedBox();
+  if (v === "nutrition") loadNutrition();
 }
 document.querySelectorAll(".navtab[data-view]").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
 function renderSessions() {
