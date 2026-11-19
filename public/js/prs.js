@@ -152,7 +152,7 @@ function renderPrCategory(method, items) {
     '" aria-label="Ajouter un PR ' +
     prCategoryLabel(method) +
     '" title="Ajouter un PR">＋</button></div><div class="admin-group-body"><div class="pr-category-body">' +
-    (content || '<p class="muted">Aucun PR.</p>') +
+    (content || '<div class="admin-row section-empty"><span>Pas de PR enregistré</span></div>') +
     "</div></div></section>"
   );
 }

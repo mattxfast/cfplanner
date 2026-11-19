@@ -3062,6 +3062,10 @@ button:disabled {
 #view-prs .pr-category-body .pr-card {
   margin: 0;
 }
+/* Rubrique sans PR : le message occupe toute la largeur de la grille. */
+#view-prs .pr-category-body .section-empty {
+  grid-column: 1 / -1;
+}
 @media (max-width: 760px) {
   #view-prs .pr-category-body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3529,7 +3533,8 @@ button:disabled {
 #view-sessions .weekwod.section-empty,
 #view-programs .program-section .movement-row,
 #view-admin .admin-row,
-#view-box .admin-row {
+#view-box .admin-row,
+#view-prs .admin-row.section-empty {
   box-sizing: border-box;
   min-height: var(--list-row-height) !important;
   padding: 6px 10px;
@@ -4376,7 +4381,8 @@ button:active:not(:disabled) {
 #view-sessions [data-session-fold] .weekwod.section-empty,
 #view-sessions .weekwod.section-empty,
 #view-programs .program-section .movement-row.section-empty,
-#view-box .admin-row.section-empty {
+#view-box .admin-row.section-empty,
+#view-prs .admin-row.section-empty {
   /* Texte centré, bulle deux fois plus haute qu'une ligne de rubrique (une ligne de texte de 20 px). */
   justify-content: center;
   text-align: center;
@@ -4385,7 +4391,8 @@ button:active:not(:disabled) {
   color: var(--muted);
 }
 /* Le libellé unique d'une ligne d'administration est aussi un conteneur flex : on le centre lui aussi. */
-#view-box .admin-row.section-empty > span {
+#view-box .admin-row.section-empty > span,
+#view-prs .admin-row.section-empty > span {
   justify-content: center;
 }
 /* Rejoindre une box : boutons « Plus tard » / « Je ne suis dans aucune box », bulle cliquable sans box. */
