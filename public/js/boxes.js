@@ -183,13 +183,7 @@ async function joinBox(boxId, button) {
   button.disabled = true;
   try {
     // Prénom et nom obligatoires pour une demande : enregistrés d’abord s’ils ont changé.
-    if (first !== user.first_name || last !== user.last_name) {
-      await api("/profile", {method: "PUT", body: JSON.stringify({first_name: first, last_name: last})});
-      user = {...user, first_name: first, last_name: last};
-      renderUserbar();
-      $("#profileform").elements.first_name.value = first;
-      $("#profileform").elements.last_name.value = last;
-    }
+    await saveJoinBoxNames();
     await api("/boxes/" + boxId + "/requests", {method: "POST", body: JSON.stringify({role: "member"})});
     $("#joinboxdialog").close();
     await loadBoxes();
@@ -200,9 +194,30 @@ async function joinBox(boxId, button) {
     button.disabled = false;
   }
 }
-$("#closejoinbox").onclick = $("#joinboxskip").onclick = () => $("#joinboxdialog").close();
-$("#joinboxnone").onclick = async () => {
+// Prénom et nom saisis dans la fenêtre : enregistrés dans le profil dès qu’ils sont complets et modifiés, y compris
+// quand on ferme la fenêtre sans choisir de box (« Plus tard », « Je ne suis dans aucune box », ×).
+async function saveJoinBoxNames() {
+  const f = $("#joinboxform").elements,
+    first = f.first_name.value.trim(),
+    last = f.last_name.value.trim();
+  if (!first || !last || (first === user.first_name && last === user.last_name)) return;
+  await api("/profile", {method: "PUT", body: JSON.stringify({first_name: first, last_name: last})});
+  user = {...user, first_name: first, last_name: last};
+  renderUserbar();
+  $("#profileform").elements.first_name.value = first;
+  $("#profileform").elements.last_name.value = last;
+}
+async function closeJoinBox() {
   $("#joinboxdialog").close();
+  try {
+    await saveJoinBoxNames();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+$("#closejoinbox").onclick = $("#joinboxskip").onclick = closeJoinBox;
+$("#joinboxnone").onclick = async () => {
+  await closeJoinBox();
   try {
     await api("/preferences", {method: "PUT", body: JSON.stringify({box_prompt_dismissed: true})});
     if (preferences) preferences.box_prompt_dismissed = 1;
