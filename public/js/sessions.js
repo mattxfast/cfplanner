@@ -97,18 +97,13 @@ function renderSessions() {
     ? sessions
         .map(
           s =>
-            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><div class="session-title-line"><span class="sessiondate">${fmt(s.session_date)}</span><h3>${esc(s.wod_name)}</h3>${s.box_name ? `<span class="tracked-tag">${esc(s.box_name)}</span>` : ""}${s.daily_wod_id ? `<span class="tracked-tag">WOD du jour</span>` : ""}</div><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div>${(() => {
-              const weeklyContent =
-                weeklyWodPrograms.find(x => x.wod_id === s.wod_id && x.week_start === mondayOf(s.session_date))
-                  ?.content || "";
-              const plannedContent = weeklyContent || s.planned_comment;
-              return plannedContent
-                ? `<p><b>${weeklyContent ? "Prévu cette semaine :" : "Prévu :"}</b> ${esc(plannedContent)}</p>`
-                : "";
-            })()}${s.score_value !== null && s.score_value !== undefined && s.score_type ? `<p><b>Score :</b> ${esc(formatScore(s.score_type, s.score_value))}${s.score_category_name ? " · " + esc(s.score_category_name) : ""}</p>` : ""}${s.actual_comment ? `<p><b>Réalisé :</b> ${esc(s.actual_comment)}</p>` : ""}</div></article>`
+            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><button type="button" class="session-title-line session-open" data-session-open="${s.id}" aria-label="Voir le détail de la séance"><span class="sessiondate">${fmt(s.session_date)}</span><h3>${esc(s.wod_name)}</h3>${s.box_name ? `<span class="tracked-tag">${esc(s.box_name)}</span>` : ""}${s.daily_wod_id ? `<span class="tracked-tag">WOD du jour</span>` : ""}</button><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div></div></article>`
         )
         .join("")
     : sectionEmpty("Pas de séance enregistrée cette semaine");
+  $("#sessionlist")
+    .querySelectorAll("[data-session-open]")
+    .forEach(b => (b.onclick = () => openSessionDetail(b.dataset.sessionOpen)));
   $("#sessionlist")
     .querySelectorAll("[data-leaderboard]")
     .forEach(b => (b.onclick = () => openLeaderboard(b.dataset.leaderboard)));
@@ -126,6 +121,55 @@ function renderSessions() {
           }
         })
     );
+}
+// Détail d’une séance de l’historique, en fenêtre : contenu prévu, score, réalisé et mouvements travaillés.
+function openSessionDetail(id) {
+  const s = sessions.find(x => x.id === id);
+  if (!s) return;
+  const weeklyContent =
+      weeklyWodPrograms.find(x => x.wod_id === s.wod_id && x.week_start === mondayOf(s.session_date))?.content || "",
+    daily = s.daily_wod_id ? dailyWodsById.get(s.daily_wod_id) : null,
+    planned = weeklyContent || (daily ? dailyBody(daily) : "") || s.planned_comment,
+    movements = [
+      ...movementChecks
+        .filter(c => c.session_id === s.id)
+        .map(
+          c =>
+            Object.values(movementsByProgram)
+              .flat()
+              .find(m => m.id === c.movement_id)?.name
+        ),
+      ...catalogChecks
+        .filter(c => c.session_id === s.id)
+        .map(c => movementCatalog.find(m => m.id === c.catalog_movement_id)?.name),
+    ].filter(Boolean),
+    hasScore = s.score_value !== null && s.score_value !== undefined && s.score_type,
+    part = (label, text) => `<p><b>${label}</b> ${esc(text)}</p>`;
+  $("#sessiondetailtitle").textContent = s.wod_name;
+  $("#sessiondetailmeta").textContent = [
+    fmt(s.session_date),
+    s.box_name,
+    s.daily_wod_id ? "WOD du jour" : "",
+    s.program_name && !s.box_name && !s.daily_wod_id ? s.program_name : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  $("#sessiondetailbody").innerHTML =
+    (planned ? part(weeklyContent ? "Prévu cette semaine :" : "Prévu :", planned) : "") +
+      (hasScore
+        ? part(
+            "Score :",
+            formatScore(s.score_type, s.score_value) + (s.score_category_name ? " · " + s.score_category_name : "")
+          )
+        : "") +
+      (s.actual_comment ? part("Réalisé :", s.actual_comment) : "") +
+      (movements.length ? part("Mouvements travaillés :", [...new Set(movements)].join(", ")) : "") ||
+    `<p class="muted">Pas de détail pour cette séance.</p>`;
+  $("#sessiondetailedit").onclick = () => {
+    $("#sessiondetaildialog").close();
+    openSession(s);
+  };
+  $("#sessiondetaildialog").showModal();
 }
 // Programme technique « Hors programme » (programme par défaut sans WOD visible ni mouvement) : jamais affiché comme un programme.
 function isFallbackProgram(p) {

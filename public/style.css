@@ -1217,6 +1217,22 @@ header {
   margin: 0;
   white-space: nowrap;
 }
+/* Ligne d’une séance de l’historique : elle ouvre le détail en fenêtre. */
+.session-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.session-detail-body p {
+  margin: 0 0 10px;
+  white-space: pre-line;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
 
 /* Rubriques plus contrastées et bouton d’ajout près du compteur */
 .weekheading,
