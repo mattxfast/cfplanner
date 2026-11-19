@@ -3937,6 +3937,34 @@ button:disabled {
 .weekheading .weekheading-action + span {
   margin-left: 0;
 }
+/* Ligne d’un WOD du jour : toute la partie texte ouvre le détail. */
+.daily-open {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.daily-detail-body {
+  white-space: pre-line;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.daily-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.daily-detail-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .daily-empty {
   display: flex;
   align-items: center;
