@@ -4,6 +4,8 @@ myFitFactory (anciennement FitFactory, et avant CFPlanner) est une application w
 
 ## Fonctionnalités
 
+Idées et évolutions envisagées : liste numérotée dans [`ROADMAP.md`](ROADMAP.md).
+
 ### Navigation
 - À l'ouverture et après chaque connexion, tout le monde (utilisateur, gestionnaire ou administrateur) arrive sur la page **Séances**.
 - En-tête compact : logo et nom de l'app, raccourcis athlète (retour direct aux séances, en surbrillance dans l'espace utilisateur ; affiché pour les gestionnaires et administrateurs) / gestionnaire / administration, et une pastille ronde aux initiales de l'utilisateur qui ouvre « Mon compte » (le nom de l'utilisateur n'est plus affiché dans l'en-tête, quelle que soit la largeur d'écran). La déconnexion se fait en bas de « Mon compte ».

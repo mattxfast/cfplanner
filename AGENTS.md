@@ -35,7 +35,8 @@ Les agents poussent **directement sur `main`**. Il n'y a pas de relecture de pul
    - relire le diff complet (`git diff`) avant de committer.
 5. **Un commit par fonctionnalité ou correctif**, avec un message clair en français décrivant le changement. Un retour arrière doit pouvoir se faire par un simple `git revert`.
 6. **Mettre à jour le `README.md`** dès qu'une fonctionnalité, une route ou une migration change.
-7. Un push sur `main` peut partir en production : ne pousse que du code vérifié et complet.
+7. **Tenir à jour `ROADMAP.md`**, la liste numérotée des idées partagée avec Matt : cocher une idée réalisée (date et commit), ajouter toute nouvelle idée proposée avec le numéro suivant, ne jamais renuméroter. Quand Matt dit « fais l'idée N », c'est le numéro de cette liste.
+8. Un push sur `main` peut partir en production : ne pousse que du code vérifié et complet.
 
 ## Base de données et migrations
 
