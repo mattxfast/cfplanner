@@ -1,5 +1,6 @@
 // Outils de test : démarre le Worker en local (wrangler dev) sur une base D1 vide et temporaire.
 import {spawn, execFileSync} from "node:child_process";
+import {createServer} from "node:net";
 import {mkdtempSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join, dirname} from "node:path";
@@ -8,8 +9,22 @@ import {fileURLToPath} from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const ADMIN_EMAIL = "admin@test.local";
 
+// Port libre attribué par le système : les fichiers de test tournent en parallèle, chacun avec son Worker (un port
+// tiré au hasard entrait parfois en collision avec celui d'un autre fichier).
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.on("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const {port} = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+
 // vars : variables supplémentaires du Worker (ex. clé et adresse d’un faux service OpenAI).
-export async function startWorker(port = 8790 + Math.floor(Math.random() * 100), vars = {}) {
+export async function startWorker(port, vars = {}) {
+  port ??= await freePort();
+  const inspectorPort = await freePort();
   const dir = mkdtempSync(join(tmpdir(), "fitfactory-test-"));
   const wrangler = ["-y", "wrangler@4"];
   execFileSync("npx", [...wrangler, "d1", "migrations", "apply", "myfitfactory", "--local", "--persist-to", dir], {
@@ -30,7 +45,7 @@ export async function startWorker(port = 8790 + Math.floor(Math.random() * 100),
       "--ip",
       "127.0.0.1",
       "--inspector-port",
-      String(port + 1000),
+      String(inspectorPort),
       "--var",
       `ADMIN_EMAIL:${ADMIN_EMAIL}`,
       ...Object.entries(vars).flatMap(([k, v]) => ["--var", `${k}:${v}`]),
