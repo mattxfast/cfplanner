@@ -11,7 +11,6 @@ export const AI_LEVELS = {
   competiteur: "Compétiteur",
 };
 export const AI_BLOCKS = ["echauffement", "technique", "force", "metcon", "retour_au_calme"];
-export const AI_METCON_FORMATS = ["AMRAP", "EMOM", "For Time", "Intervalles", "Chipper"];
 export const AI_MAX_MOVEMENTS = 5;
 const BLOCK_LABELS = {
   echauffement: "Échauffement",
@@ -53,14 +52,11 @@ export function aiOptionsInput(b) {
     force = blocks.force ? ids(b.force_movements) : [];
   if (technique.length > AI_MAX_MOVEMENTS || force.length > AI_MAX_MOVEMENTS)
     return {error: "5 mouvements au plus pour la technique et pour la force."};
-  const format = blocks.metcon ? String(b.metcon_format || "") : "";
-  if (format && !AI_METCON_FORMATS.includes(format)) return {error: "Format de metcon invalide."};
   return {
     duration_minutes: duration,
     blocks,
     technique_movements: technique,
     force_movements: force,
-    metcon_format: format,
     instructions: text(b.instructions, 300),
   };
 }
@@ -71,6 +67,7 @@ Règles :
 - Respecte strictement les blocs demandés : ne génère que les blocs activés, dans l'ordre échauffement, technique, force, metcon, retour au calme.
 - Respecte la durée totale (tolérance ±5 min) en incluant les transitions.
 - Les blocs technique et force comportent de 1 à 5 mouvements. Si des mouvements sont imposés, utilise exactement ceux-là ; sinon choisis-en 1 à 3 selon la durée disponible.
+- Choisis toi-même le format du metcon (AMRAP, EMOM, For Time, intervalles, chipper…) en variant par rapport à la programmation récente.
 - Utilise de préférence les noms de mouvements du catalogue fourni, à l'identique.
 - Adapte mouvements et charges au niveau, aux records et au matériel disponible. Exprime les charges en kg (ou en % du 1RM quand un record est connu), les distances en mètres.
 - Respecte les contraintes de l'athlète ; propose une alternative pour tout mouvement qui ne convient pas.
@@ -119,7 +116,7 @@ export function buildPrompt(c) {
     "Échauffement : " + yes("echauffement"),
     "Travail technique : " + yes("technique", imposed(o.technique_movements)),
     "Force : " + yes("force", imposed(o.force_movements)),
-    "Metcon : " + yes("metcon", o.metcon_format ? " — format : " + o.metcon_format : " — format au choix du coach"),
+    "Metcon : " + yes("metcon", " — format au choix du coach"),
     "Retour au calme : " + yes("retour_au_calme"),
     "Consigne particulière : " + (o.instructions || "aucune"),
     "",

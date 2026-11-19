@@ -37,7 +37,6 @@ function syncAiForm() {
     mode = $("#aiform").dataset.mode;
   for (const kind of ["technique", "force"])
     $(`[data-ai-movements="${kind}"]`).hidden = mode !== "wod" || !f[kind].checked;
-  $("[data-ai-metcon]").hidden = !f.metcon.checked;
 }
 async function openAiDialog(mode, pid, wodId = null) {
   const form = $("#aiform"),
@@ -105,7 +104,6 @@ function aiRequest(f) {
     blocks: aiBlocks(f),
     technique_movements: $("#aiform").dataset.mode === "wod" && f.technique.checked ? picked("technique") : [],
     force_movements: $("#aiform").dataset.mode === "wod" && f.force.checked ? picked("force") : [],
-    metcon_format: f.metcon.checked ? f.metcon_format.value : "",
     instructions: f.instructions.value.trim(),
   };
 }
