@@ -18,8 +18,6 @@ function rememberDailyWods(list, from = null) {
   for (const w of list || []) dailyWodsById.set(w.id, {...dailyWodsById.get(w.id), ...w});
   return list || [];
 }
-const CHRONO_ICON =
-  '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.5-1.5"/></svg>';
 const dailyDayLabel = d =>
   d === today() ? "Aujourd’hui" : d === addDays(today(), 1) ? "Demain" : wodDay(d).replace(/^\w/, c => c.toUpperCase());
 // Texte du WOD sans sa première ligne (le titre, déjà affiché au-dessus).
@@ -43,7 +41,7 @@ function weekDailySection(from, folded) {
       // Même forme que les cartes « WOD de la programmation » et « WOD de la box » : texte à gauche, boutons
       // à droite.
       // Une ligne « WOD du JJ/MM/AAAA » (titre de l’IA dessous) ; un toucher sur la ligne ouvre le détail.
-      return `<article class="weekwod card ${n ? "done" : ""}"><button type="button" class="daily-open" data-daily-open="${w.id}" aria-label="Voir le détail du WOD du ${fmt(w.wod_date)}"><b>WOD du ${fmt(w.wod_date)}</b><small class="muted box-wod-meta">${esc(w.title)}</small></button><div class="weekcount"><button type="button" class="smallbtn" data-daily-chrono="${w.id}" aria-label="Lancer le chrono" title="Lancer le chrono">${CHRONO_ICON}</button><button type="button" class="smallbtn" data-daily-log="${w.id}" ${future ? "disabled" : ""} aria-label="${future ? "Prévu pour demain" : "Enregistrer la séance"}" title="${future ? "Prévu pour demain" : "Enregistrer la séance"}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${n ? "" : `<button type="button" class="smallbtn delete" data-daily-del="${w.id}" aria-label="Supprimer ce WOD" title="Supprimer ce WOD"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>`}</div></article>`;
+      return `<article class="weekwod card ${n ? "done" : ""}"><button type="button" class="daily-open" data-daily-open="${w.id}" aria-label="Voir le détail du WOD du ${fmt(w.wod_date)}"><b>WOD du ${fmt(w.wod_date)}</b><small class="muted box-wod-meta">${esc(w.title)}</small></button><div class="weekcount"><button type="button" class="smallbtn" data-daily-log="${w.id}" ${future ? "disabled" : ""} aria-label="${future ? "Prévu pour demain" : "Enregistrer la séance"}" title="${future ? "Prévu pour demain" : "Enregistrer la séance"}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>${n ? "" : `<button type="button" class="smallbtn delete" data-daily-del="${w.id}" aria-label="Supprimer ce WOD" title="Supprimer ce WOD"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>`}</div></article>`;
     })
     .join("");
   return `<section class="session-fold ${folded.has("daily") ? "collapsed" : ""}" data-session-fold="daily"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier le WOD du jour" aria-expanded="${!folded.has("daily")}">${folded.has("daily") ? "＋" : "−"}</button><h2>WOD du jour</h2>${canGenerate ? `<button type="button" class="smallbtn weekheading-action" id="dailynew" aria-label="Générer mon WOD du jour" title="Générer mon WOD du jour">${AI_ICON}</button>` : ""}<span>${done}/${list.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
@@ -64,13 +62,11 @@ function openDailyDetail(id) {
   $("#dailydetailmeta").textContent =
     w.title + " · " + dailyDayLabel(w.wod_date) + (done ? " · séance enregistrée" : "");
   $("#dailydetailbody").textContent = dailyBody(w);
-  $("#dailydetailactions").innerHTML =
-    `<button type="button" class="smallbtn" data-daily-chrono="${w.id}">${CHRONO_ICON}<span>Chrono</span></button>` +
-    (done
-      ? ""
-      : `<button type="button" class="primary" data-daily-log="${w.id}" ${future ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>${future ? "Prévu pour demain" : "Enregistrer la séance"}</span></button>`);
+  $("#dailydetailactions").innerHTML = done
+    ? ""
+    : `<button type="button" class="primary" data-daily-log="${w.id}" ${future ? "disabled" : ""}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>${future ? "Prévu pour demain" : "Enregistrer la séance"}</span></button>`;
   bindDailySection($("#dailydetailactions"));
-  // La fenêtre se ferme avant d’ouvrir le chrono ou le formulaire de séance.
+  // La fenêtre se ferme avant d’ouvrir le formulaire de séance.
   $("#dailydetailactions")
     .querySelectorAll("button")
     .forEach(b => {
@@ -85,13 +81,6 @@ function openDailyDetail(id) {
 function bindDailySection(root) {
   root.querySelectorAll("[data-daily-open]").forEach(b => (b.onclick = () => openDailyDetail(b.dataset.dailyOpen)));
   root.querySelectorAll("#dailynew, [data-daily-new]").forEach(b => (b.onclick = () => openDailyDialog()));
-  root.querySelectorAll("[data-daily-chrono]").forEach(
-    b =>
-      (b.onclick = () => {
-        const w = dailyWodsById.get(b.dataset.dailyChrono);
-        if (w) timerPreset(w.chrono, w);
-      })
-  );
   root
     .querySelectorAll("[data-daily-log]")
     .forEach(b => (b.onclick = () => openSession(null, "daily:" + b.dataset.dailyLog)));
