@@ -29,6 +29,7 @@ async function load() {
     prRecords = pr.records;
     setBoxes(bx);
     setPreferences(prefs);
+    maybeWelcomeBox();
     renderUserbar();
     $("#profileform").elements.first_name.value = user.first_name || "";
     $("#profileform").elements.last_name.value = user.last_name || "";
@@ -204,11 +205,19 @@ function weekProgramSection(p, week, folded, from) {
 const sectionEmpty = text => `<article class="weekwod card section-empty"><span>${esc(text)}</span></article>`;
 // Rubrique « WOD de la box » de la semaine (membres d’une box) : WOD du gestionnaire, séances, classement.
 function weekBoxSection(week, folded) {
-  // Comme « WOD de la programmation » sans programme : pas de rubrique sans WOD de la box cette semaine.
-  // Rubrique toujours affichée (« Pas de WOD de la box cette semaine » si vide).
+  // Rubrique toujours affichée. ＋ du titre : rejoindre une box. Sans box : bulle « Rejoindre une box » (ou demande en
+  // attente) ; membre sans WOD cette semaine : « Pas de WOD de la box cette semaine ».
+  const pending = boxMemberships.filter(m => m.role === "member" && m.status === "pending"),
+    empty = memberBoxIds().length
+      ? sectionEmpty("Pas de WOD de la box cette semaine")
+      : pending.length
+        ? sectionEmpty(
+            "Demande envoyée à " + pending.map(m => boxName(m.box_id)).join(", ") + ", en attente de validation"
+          )
+        : `<button type="button" class="weekwod card section-empty join-box-empty" data-join-box>Rejoindre une box</button>`;
   const severalBoxes = memberBoxIds().length > 1,
     done = boxWods.filter(w => week.some(x => x.box_wod_id === w.id));
-  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span></div><div class="session-fold-body"><div class="weekwodlist">${
+  return `<section class="weekother session-fold ${folded.has("box") ? "collapsed" : ""}" data-session-fold="box"><div class="weekheading"><button class="smallbtn section-collapse" aria-label="Replier les WOD de la box" aria-expanded="${!folded.has("box")}">${folded.has("box") ? "＋" : "−"}</button><h2>WOD de la box</h2><span>${done.length}/${boxWods.length}</span><button type="button" class="primary addsession-compact addwod week-join-box" data-join-box aria-label="Rejoindre une box" title="Rejoindre une box">＋</button></div><div class="session-fold-body"><div class="weekwodlist">${
     boxWods.length
       ? boxWods
           .map(w => {
@@ -216,7 +225,7 @@ function weekBoxSection(week, folded) {
             return `<article class="weekwod card ${n ? "done" : ""}"><div><b>${esc(boxWodLabel(w))}</b><small class="muted box-wod-meta">${esc(wodDay(w.wod_date))}${severalBoxes ? " · " + esc(w.box_name) : ""}</small>${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div><div class="weekcount"><strong>${n}×</strong>${w.wod_date <= today() ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div></article>`;
           })
           .join("")
-      : sectionEmpty("Pas de WOD de la box cette semaine")
+      : empty
   }</div></div></section>`;
 }
 function renderWeek() {
@@ -268,6 +277,9 @@ function renderWeek() {
   $("#weekboard")
     .querySelectorAll("[data-log-boxwod]")
     .forEach(b => (b.onclick = () => openSession(null, "box:" + b.dataset.logBoxwod)));
+  $("#weekboard")
+    .querySelectorAll("[data-join-box]")
+    .forEach(b => (b.onclick = () => openJoinBox()));
   $("#weekboard")
     .querySelectorAll("[data-leaderboard]")
     .forEach(b => (b.onclick = () => openLeaderboard(b.dataset.leaderboard)));

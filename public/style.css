@@ -4273,3 +4273,21 @@ button:active:not(:disabled) {
 #view-box .admin-row.section-empty > span {
   justify-content: center;
 }
+/* Rejoindre une box : boutons « Plus tard » / « Je ne suis dans aucune box », bulle cliquable sans box. */
+.join-box-later {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+.join-box-later[hidden] {
+  display: none;
+}
+#view-sessions .weekwod.join-box-empty {
+  width: 100%;
+  font: inherit;
+  font-weight: 600;
+  color: var(--action-ink);
+  cursor: pointer;
+}

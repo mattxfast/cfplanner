@@ -378,6 +378,12 @@ async function ensureV2Schema(env) {
         "CREATE TABLE IF NOT EXISTS box_wod_movements (box_wod_id TEXT NOT NULL REFERENCES box_wods(id) ON DELETE CASCADE, catalog_movement_id TEXT NOT NULL REFERENCES movement_catalog(id) ON DELETE CASCADE, PRIMARY KEY(box_wod_id,catalog_movement_id))"
       ).run();
     });
+    await runMigration("v24-box-prompt", async () => {
+      // « Je ne suis dans aucune box » : la fenêtre d'accueil pour rejoindre une box n'est plus proposée.
+      const columns = await env.DB.prepare("PRAGMA table_info(users)").all();
+      if (!columns.results.some(column => column.name === "box_prompt_dismissed"))
+        await env.DB.prepare("ALTER TABLE users ADD COLUMN box_prompt_dismissed INTEGER NOT NULL DEFAULT 0").run();
+    });
   })().catch(err => {
     schemaReady = null;
     throw err;
@@ -1406,9 +1412,10 @@ async function api(r, e, p) {
   // Préférences du compte : thème (null = thème par défaut de l'administrateur) et rappels.
   if (r.method === "GET" && p === "/api/preferences") {
     const st = await userReminders(e, u.id),
-      row = await e.DB.prepare("SELECT theme FROM users WHERE id=?").bind(u.id).first();
+      row = await e.DB.prepare("SELECT theme,box_prompt_dismissed FROM users WHERE id=?").bind(u.id).first();
     return json({
       theme: THEMES.includes(row?.theme) ? row.theme : null,
+      box_prompt_dismissed: row?.box_prompt_dismissed ? 1 : 0,
       default_theme: st.defaults.theme,
       reminders: {enabled: st.enabled, days: st.days, hour: st.hour},
       choices: {themes: THEMES, days: REMINDER_DAYS, hours: REMINDER_HOURS},
@@ -1424,6 +1431,10 @@ async function api(r, e, p) {
       const error = await saveReminderSettings(e, u.id, b.reminders);
       if (error) return json({error}, 400);
     }
+    if (b.box_prompt_dismissed !== undefined)
+      await e.DB.prepare("UPDATE users SET box_prompt_dismissed=? WHERE id=?")
+        .bind(b.box_prompt_dismissed ? 1 : 0, u.id)
+        .run();
     return json({ok: true});
   }
   if (r.method === "GET" && p === "/api/boxes") {

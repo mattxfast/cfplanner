@@ -133,6 +133,98 @@ function requestBox(role) {
 $("#boxjoin").onclick = () => requestBox("member");
 $("#boxmanagerrequest").onclick = () => requestBox("manager");
 
+// ----- Rejoindre une box en un toucher : fenêtre d’accueil (1re connexion) et ＋ de la rubrique « WOD de la box » -----
+let boxWelcomeShown = false;
+function openJoinBox(welcome = false) {
+  const f = $("#joinboxform").elements;
+  $("#joinboxform").reset();
+  f.first_name.value = user?.first_name || "";
+  f.last_name.value = user?.last_name || "";
+  $("#joinboxtitle").textContent = welcome ? "Bienvenue !" : "Rejoindre une box";
+  $("#joinboxintro").textContent = welcome
+    ? "Tu t’entraînes dans une box ? Rejoins-la pour enregistrer ses WOD et voir les classements. Ta demande sera validée par un gestionnaire de la box."
+    : "Ta demande sera validée par un gestionnaire de la box.";
+  $("#joinboxlater").hidden = !welcome;
+  $("#joinboxerror").textContent = "";
+  renderJoinBoxList();
+  $("#joinboxdialog").showModal();
+}
+function renderJoinBoxList() {
+  const q = $("#joinboxform").elements.q.value.trim().toLowerCase(),
+    list = boxes.filter(b => !q || (b.name + " " + (b.city || "")).toLowerCase().includes(q));
+  $("#joinboxlist").innerHTML =
+    list
+      .map(b => {
+        const m = boxMemberships.find(x => x.box_id === b.id && x.role === "member");
+        return `<div class="program-search-result"><div><b>${esc(b.name)}</b>${b.city ? `<small>${esc(b.city)}</small>` : ""}</div>${
+          m
+            ? `<span class="tracked-tag">${m.status === "approved" ? "Membre" : "En attente"}</span>`
+            : `<button type="button" class="smallbtn" data-join-box-id="${b.id}">Rejoindre</button>`
+        }</div>`;
+      })
+      .join("") ||
+    `<p class="muted">${boxes.length ? "Aucune box ne correspond à ta recherche." : "Aucune box n’est encore inscrite."}</p>`;
+  $("#joinboxlist")
+    .querySelectorAll("[data-join-box-id]")
+    .forEach(b => (b.onclick = () => joinBox(b.dataset.joinBoxId, b)));
+}
+$("#joinboxform").elements.q.oninput = renderJoinBoxList;
+$("#joinboxform").onsubmit = e => e.preventDefault();
+async function joinBox(boxId, button) {
+  const f = $("#joinboxform").elements,
+    first = f.first_name.value.trim(),
+    last = f.last_name.value.trim();
+  $("#joinboxerror").textContent = "";
+  if (!first || !last) {
+    $("#joinboxerror").textContent = "Indique ton prénom et ton nom : ils sont montrés au gestionnaire de la box.";
+    (first ? f.last_name : f.first_name).focus();
+    return;
+  }
+  button.disabled = true;
+  try {
+    // Prénom et nom obligatoires pour une demande : enregistrés d’abord s’ils ont changé.
+    if (first !== user.first_name || last !== user.last_name) {
+      await api("/profile", {method: "PUT", body: JSON.stringify({first_name: first, last_name: last})});
+      user = {...user, first_name: first, last_name: last};
+      renderUserbar();
+      $("#profileform").elements.first_name.value = first;
+      $("#profileform").elements.last_name.value = last;
+    }
+    await api("/boxes/" + boxId + "/requests", {method: "POST", body: JSON.stringify({role: "member"})});
+    $("#joinboxdialog").close();
+    await loadBoxes();
+    renderWeek();
+    toast("Demande envoyée à " + boxName(boxId) + " : elle doit maintenant être validée.");
+  } catch (e) {
+    $("#joinboxerror").textContent = e.message;
+    button.disabled = false;
+  }
+}
+$("#closejoinbox").onclick = $("#joinboxskip").onclick = () => $("#joinboxdialog").close();
+$("#joinboxnone").onclick = async () => {
+  $("#joinboxdialog").close();
+  try {
+    await api("/preferences", {method: "PUT", body: JSON.stringify({box_prompt_dismissed: true})});
+    if (preferences) preferences.box_prompt_dismissed = 1;
+  } catch (e) {
+    toast(e.message);
+  }
+};
+// Fenêtre d’accueil : une fois par ouverture de l’application, tant que l’utilisateur n’a demandé aucune box et
+// n’a pas répondu « Je ne suis dans aucune box ».
+function maybeWelcomeBox() {
+  if (
+    boxWelcomeShown ||
+    !boxes.length ||
+    preferences?.box_prompt_dismissed ||
+    boxMemberships.some(m => m.role === "member") ||
+    document.querySelector("dialog[open]")
+  )
+    return;
+  boxWelcomeShown = true;
+  openJoinBox(true);
+}
+
 // ----- Espace gestionnaire (icône en haut) : pages WOD, membres et infos de la box, avec leur menu du bas -----
 let boxPage = "wods";
 function renderBoxNav() {

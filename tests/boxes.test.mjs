@@ -542,3 +542,13 @@ test("séance « Autres » dans un programme avec mouvements : tous les mouvemen
   const week = (await gina.get(`/week-data?from=${start}&to=${addDays(start, 6)}`)).data;
   assert.ok(week.catalogChecks.some(c => c.session_id === created.data.id && c.catalog_movement_id === other));
 });
+
+test("fenêtre d'accueil des box : « Je ne suis dans aucune box » enregistré sur le compte", async () => {
+  const hugo = client(worker.base);
+  await hugo.post("/register", {email: "hugo@test.local", password: PASSWORD});
+  assert.equal((await hugo.get("/preferences")).data.box_prompt_dismissed, 0);
+  assert.equal((await hugo.put("/preferences", {box_prompt_dismissed: true})).status, 200);
+  const other = client(worker.base);
+  await other.post("/login", {email: "hugo@test.local", password: PASSWORD});
+  assert.equal((await other.get("/preferences")).data.box_prompt_dismissed, 1);
+});
