@@ -20,7 +20,7 @@ Prochain numéro libre : **29**
 ## Déploiement
 
 - [ ] **4.** Branche `dev` déployée sur une adresse de test, pour valider avant la production. *Prévu plus tard.*
-- [ ] **5.** Contrôle automatique sur GitHub (GitHub Action : `node --check`, Prettier, tests) à chaque push.
+- [x] **5.** Contrôle automatique sur GitHub (GitHub Action : `node --check`, Prettier, tests) à chaque push. — fait le 19/11/2026 (`.github/workflows/verifications.yml`)
 - [ ] **6.** Nom de domaine propre (par exemple `myfitfactory.fr`) au lieu de `workers.dev`.
 
 ## Code

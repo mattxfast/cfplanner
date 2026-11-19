@@ -1,0 +1,29 @@
+# Vérifications automatiques à chaque push (et pull request) sur main : les mêmes contrôles qu'AGENTS.md.
+# Un échec n'empêche pas le déploiement Cloudflare (Workers Builds), mais il est signalé sur le commit dans GitHub.
+name: Vérifications
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verifications:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntaxe des scripts du navigateur
+        run: for f in public/js/*.js public/offline.js public/sw.js; do node --check "$f"; done
+      - name: Syntaxe du Worker
+        run: cp src/worker.js /tmp/worker.mjs && node --check /tmp/worker.mjs
+      - name: Formatage (Prettier)
+        run: npx -y prettier@3.3.3 --check src public tests
+      - name: Tests d'intégration
+        run: node --test tests/*.test.mjs
+        env:
+          WRANGLER_SEND_METRICS: "false"

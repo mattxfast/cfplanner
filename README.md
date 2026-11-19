@@ -187,6 +187,10 @@ Les évolutions applicatives V2 et V3 sont versionnées dans le Worker :
 
 Le Worker consulte `app_migrations` et n'exécute que les versions qui ne sont pas marquées comme terminées. Les migrations applicatives sont additives : elles ne réinitialisent pas les comptes ni les données existantes. Toute nouvelle évolution de schéma doit recevoir une nouvelle version de migration ; ne pas modifier rétroactivement une migration déjà appliquée.
 
+### Vérifications automatiques (GitHub Actions)
+
+`.github/workflows/verifications.yml` lance à chaque push et pull request sur `main` les contrôles d'AGENTS.md : syntaxe des scripts (`node --check`), du Worker, formatage Prettier et tests d'intégration (`node --test`). Le résultat apparaît sur le commit dans GitHub (onglet **Actions**) ; un échec ne bloque pas le déploiement Cloudflare, il signale qu'une correction est à faire.
+
 ### Configuration
 
 `wrangler.toml` déclare le Worker `myfitfactory` (adresse `myfitfactory.mattxfast.workers.dev` ; l'ancienne adresse `fitfactory.mattxfast.workers.dev` affiche une page « déménagé »), le binding D1, la variable `ADMIN_EMAIL` et active les logs Cloudflare (`[observability]` : consultables dans le tableau de bord, Workers & Pages → `myfitfactory` → Logs, ou via `npx wrangler tail myfitfactory`). La base D1 s'appelle `myfitfactory` (hébergée en Europe de l'Ouest ; copie de `fitfactory`, elle-même copie de `cfplanner` : une base D1 ne se renomme pas). Le cookie de session s'appelle `fitfactory_session` et la préférence de thème `fitfactory-theme` ; les anciens noms (`cfplanner_session`, `cfplanner-theme`) sont encore acceptés et remplacés automatiquement, sans déconnexion. Cette adresse identifie l'administrateur principal et le propriétaire du référentiel commun des activités (les autres administrateurs gèrent ce même référentiel).
