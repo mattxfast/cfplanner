@@ -262,13 +262,6 @@ function weekProgramSection(p, week, folded, from) {
 }
 // Rubrique vide : un message au style d’un contenu de rubrique (toutes les rubriques restent affichées).
 const sectionEmpty = text => `<article class="weekwod card section-empty"><span>${esc(text)}</span></article>`;
-// Titre d’un WOD de box dans la semaine : toujours « WOD du JJ/MM/AAAA », puis son type (s’il n’est pas « WOD ») et son
-// nom s’il en a un autre que le nom par défaut.
-function boxWodWeekTitle(w) {
-  const type = w.type_name && w.type_name !== "WOD" ? w.type_name : "",
-    name = w.name && w.name !== defaultWodName(w.wod_date, w.type_name) ? w.name : "";
-  return ["WOD du " + fmt(w.wod_date), type, name].filter(Boolean).join(" · ");
-}
 // Rubrique « WOD de la box » de la semaine (membres d’une box) : WOD du gestionnaire, séances, classement.
 function weekBoxSection(week, folded) {
   // Rubrique toujours affichée. Sans box : bulle « Rejoindre une box » (ou demande en attente) ; membre sans WOD cette
@@ -288,7 +281,7 @@ function weekBoxSection(week, folded) {
       ? boxWods
           .map(w => {
             const n = week.filter(x => x.box_wod_id === w.id).length;
-            return `<article class="weekwod card ${n ? "done" : ""}"><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div><div class="weekwod-text"><b>${esc(boxWodWeekTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div></article>`;
+            return `<article class="weekwod card ${n ? "done" : ""}"><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div><div class="weekwod-text"><b>${esc(managerWodTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div></article>`;
           })
           .join("")
       : empty
