@@ -2633,7 +2633,7 @@ async function api(r, e, p) {
     });
     const out = await callOpenAI(e, prompt);
     if (out.error) return json({error: out.error}, 502);
-    const content = wodToText(out.wod);
+    const content = wodToText(out.wod, 2000, false);
     await e.DB.batch([
       e.DB.prepare(
         "INSERT INTO weekly_wod_programming(wod_id,user_id,week_start,content,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(wod_id,week_start) DO UPDATE SET content=excluded.content,updated_at=CURRENT_TIMESTAMP"

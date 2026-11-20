@@ -127,7 +127,9 @@ test("IA : contrôles d'accès et de saisie", async () => {
 test("IA : génération d'un WOD pour une semaine", async () => {
   const res = await alice.post(`/wods/${wodId}/generate`, options({instructions: "Focus jambes"}));
   assert.equal(res.status, 200, JSON.stringify(res.data));
-  assert.match(res.data.content, /^Squat et sprint \(~60 min\)/);
+  // pas de titre en tête : le contenu commence par le premier bloc
+  assert.match(res.data.content, /^ÉCHAUFFEMENT · 10 MIN\n/);
+  assert.doesNotMatch(res.data.content, /Squat et sprint/);
   assert.match(res.data.content, /- 5 Back squat @ 75% 1RM/);
   const call = requests.at(-1);
   assert.equal(call.auth, "Bearer cle-de-test");

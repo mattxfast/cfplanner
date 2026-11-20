@@ -415,15 +415,19 @@ export function dailyMovementIds(wod, catalog) {
   return [...ids].slice(0, 40);
 }
 
-// Mise en texte du WOD pour le champ « Programmation hebdomadaire » (2 000 caractères au plus).
-export function wodToText(wod, max = 2000) {
+// Mise en texte du WOD (2 000 caractères au plus). withTitle : première ligne « titre (~durée) », gardée pour le WOD du
+// jour (elle lui sert de titre) ; pas pour un WOD de programme, qui a déjà son nom.
+export function wodToText(wod, max = 2000, withTitle = true) {
   const render = withScaling => {
-    const out = [text(wod.titre, 120) + (wod.duree_estimee_min ? " (~" + wod.duree_estimee_min + " min)" : "")];
+    const out = withTitle
+      ? [text(wod.titre, 120) + (wod.duree_estimee_min ? " (~" + wod.duree_estimee_min + " min)" : "")]
+      : [];
     for (const b of wod.blocs) {
       const head = [BLOCK_LABELS[b.type] || b.type, b.format, b.duree_min ? b.duree_min + " min" : ""]
         .filter(Boolean)
         .join(" · ");
-      out.push("", head.toUpperCase() + (b.time_cap_min ? " (cap " + b.time_cap_min + " min)" : ""));
+      if (out.length) out.push("");
+      out.push(head.toUpperCase() + (b.time_cap_min ? " (cap " + b.time_cap_min + " min)" : ""));
       if (b.description) out.push(text(b.description, 400));
       for (const m of b.mouvements || []) {
         let line = "- " + [m.reps, m.nom].filter(Boolean).join(" ");
