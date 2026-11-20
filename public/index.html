@@ -598,18 +598,25 @@
             <h2 id="programtitle">Nouveau programme</h2>
             <button type="button" class="iconbtn" id="closeprogram">×</button>
           </div>
-          <label>Nom du programme<input name="name" placeholder="Ex. Force & haltéro" required maxlength="100" /></label
-          ><label class="checkbox-label" id="programdefaultfield" hidden
-            ><input type="checkbox" name="is_default" /> Programme par défaut (du 01/01/1970 au 31/12/2100)</label
-          >
-          <div class="two">
-            <label>Début<input name="start" type="date" required /></label
-            ><label>Fin<input name="end" type="date" required /></label>
-          </div>
-          <label class="checkbox-label" id="programpublicfield"
-            ><input type="checkbox" name="is_public" /> Programme public (les autres utilisateurs peuvent le trouver et
-            le suivre)</label
-          >
+          <section class="form-block">
+            <h3>Programme</h3>
+            <label
+              >Nom du programme<input name="name" placeholder="Ex. Force & haltéro" required maxlength="100" /></label
+            ><label class="checkbox-label" id="programdefaultfield" hidden
+              ><input type="checkbox" name="is_default" /> Programme par défaut (du 01/01/1970 au 31/12/2100)</label
+            >
+            <div class="two">
+              <label>Début<input name="start" type="date" required /></label
+              ><label>Fin<input name="end" type="date" required /></label>
+            </div>
+          </section>
+          <section class="form-block">
+            <h3>Partage</h3>
+            <label class="checkbox-label" id="programpublicfield"
+              ><input type="checkbox" name="is_public" /> Programme public (les autres utilisateurs peuvent le trouver
+              et le suivre)</label
+            >
+          </section>
           <button class="primary" id="programsubmit">Créer le programme</button>
           <div class="error" id="programerror"></div>
         </form>
@@ -886,7 +893,10 @@
             <button type="button" class="iconbtn" id="closemovementpicker">×</button>
           </div>
           <input type="hidden" name="program_id" />
-          <div id="movementpickerlist" class="movement-picker-list"></div>
+          <section class="form-block">
+            <h3>Mouvements du catalogue</h3>
+            <div id="movementpickerlist" class="movement-picker-list"></div>
+          </section>
           <button class="primary">Enregistrer la sélection</button>
           <div class="error" id="movementpickererror"></div>
         </form>
