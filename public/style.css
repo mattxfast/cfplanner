@@ -4568,8 +4568,13 @@ button:active:not(:disabled) {
   display: grid;
   gap: var(--content-item-gap);
 }
+/* WOD de l'espace gestionnaire : boutons en haut à droite, contenu sous eux jusqu'au bout de la ligne. */
 #view-box .box-wod-row {
-  align-items: flex-start;
+  display: flow-root;
+}
+#view-box .box-wod-row > .admin-row-actions {
+  float: right;
+  margin-left: 12px;
 }
 /* Type de score d’un WOD de box (espace gestionnaire) : toujours sur sa propre ligne, sous le titre. */
 .box-wod-score {
@@ -4578,7 +4583,7 @@ button:active:not(:disabled) {
 }
 .box-wod-content {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-top: 4px;

@@ -313,7 +313,7 @@ function boxWodsGroup(d) {
     d.wods
       .map(
         w =>
-          `<div class="admin-row box-wod-row"><span><b>${esc(managerWodTitle(w))}</b><span class="box-wod-score"><span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span></span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
+          `<div class="admin-row box-wod-row"><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span><b>${esc(managerWodTitle(w))}</b><span class="box-wod-score"><span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span></span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</div>`
       )
       .join("") || boxEmpty("Pas de WOD cette semaine")
   }</div></div>`;
