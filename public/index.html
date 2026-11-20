@@ -654,17 +654,24 @@
             <h2 id="wodtitle">Ajouter un WOD au programme</h2>
             <button type="button" class="iconbtn" id="closewod">×</button>
           </div>
-          <input type="hidden" name="program_id" /><input type="hidden" name="wod_id" /><label
-            >Nom du WOD<input name="name" placeholder="WOD 1 — Force" required maxlength="100" /></label
-          ><label
-            >Contenu prévu / consignes<textarea
-              name="planned_comment"
-              rows="4"
-              placeholder="Décris librement le contenu prévu…"
-            ></textarea></label
-          ><label class="checkbox-label"
-            ><input type="checkbox" name="is_tracked" /> Entraînement suivi (programmation semaine par semaine)</label
-          >
+          <input type="hidden" name="program_id" /><input type="hidden" name="wod_id" />
+          <section class="form-block">
+            <h3>WOD</h3>
+            <label>Nom du WOD<input name="name" placeholder="WOD 1 — Force" required maxlength="100" /></label
+            ><label
+              >Contenu prévu / consignes<textarea
+                name="planned_comment"
+                rows="4"
+                placeholder="Décris librement le contenu prévu…"
+              ></textarea>
+            </label>
+          </section>
+          <section class="form-block">
+            <h3>Programmation</h3>
+            <label class="checkbox-label"
+              ><input type="checkbox" name="is_tracked" /> Entraînement suivi (programmation semaine par semaine)</label
+            >
+          </section>
           <!-- Activité et durée masquées pour l’instant : renseignées par défaut (activité par défaut, sa durée). -->
           <div class="two" hidden>
             <label>Activité<select name="activity_id" required></select></label
