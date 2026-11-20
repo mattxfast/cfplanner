@@ -2739,7 +2739,12 @@ button:disabled {
 /* Le titre a au moins la hauteur des boutons : la description (aperçu limité en lignes, qui ne contourne pas les
    boutons) commence ainsi sous eux et va jusqu'au bout de la ligne. */
 #view-sessions .weekwod > .weekwod-text > b {
-  min-height: 33px; /* + marge de la description (5 px) = hauteur des boutons (30 px) + 8 px, comme dans Programmes */
+  /* Comme dans Programmes : titre centré sur la hauteur des boutons (30 px), description 8 px dessous
+     (3 px de marge intérieure, les marges extérieures se confondant, + sa marge de 5 px). */
+  display: flex;
+  align-items: center;
+  min-height: 33px;
+  padding-bottom: 3px;
 }
 #view-sessions .weekwod > b {
   align-self: center;
