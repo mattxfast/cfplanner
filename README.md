@@ -97,7 +97,7 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - **Polyvalence** (10 %) : mouvements différents cochés sur 8 semaines (objectif 12) et familles couvertes (Lift, Force, Gym, Engine).
 - **Progression** (10 %) : PR battus (1 point) et premiers PR (½ point) des 90 derniers jours (5 points = 100).
 
-Un pilier sans données est « à compléter » (avec la marche à suivre) et sort du calcul ; le score global, moyenne pondérée des piliers renseignés, demande au moins 2 piliers. Le profil d'athlète (Mon compte → Profil : poids de corps, sexe, date de naissance, facultatifs, validés par le serveur : 25 à 300 kg, au moins 10 ans ; migration V28, colonnes `users.body_weight_kg`, `birth_date`, `sex`) sert uniquement à ce score, visible de l'athlète seul.
+Un pilier sans données est « à compléter » (avec la marche à suivre) et sort du calcul ; le score global, moyenne pondérée des piliers renseignés, demande au moins 2 piliers. Sous le détail, un lien discret « Comment est-il calculé ? » ouvre une fenêtre qui explique le calcul pilier par pilier. Le profil d'athlète (Mon compte → Profil : poids de corps, sexe, date de naissance, facultatifs, validés par le serveur : 25 à 300 kg, au moins 10 ans ; migration V28, colonnes `users.body_weight_kg`, `birth_date`, `sex`) sert uniquement à ce score, visible de l'athlète seul.
 
 Les mouvements du catalogue sont répartis en quatre familles :
 

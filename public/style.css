@@ -3159,6 +3159,27 @@ button:disabled {
   font-size: 12px;
   color: var(--muted);
 }
+/* Lien discret vers l’explication du calcul, et fenêtre d’explication. */
+.fitness-how {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.fitness-how-body h3 {
+  margin: 14px 0 4px;
+  font: 700 14px Manrope;
+}
+.fitness-how-body p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
 .fitness-profile {
   display: flex;
   align-items: center;

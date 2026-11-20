@@ -970,6 +970,57 @@
         <p id="dailydetailbody" class="daily-detail-body"></p>
         <div id="dailydetailactions" class="daily-detail-actions"></div>
       </dialog>
+      <dialog id="fitnesshowdialog" class="modal">
+        <div class="sectionhead">
+          <h2>Calcul du score de forme</h2>
+          <button type="button" class="iconbtn" id="closefitnesshow">×</button>
+        </div>
+        <div class="fitness-how-body">
+          <p>
+            Ton score sur 100 est la moyenne pondérée de 7 piliers, chacun noté de 0 à 100. Pour la force,
+            l’haltérophilie et la gym, les repères CrossFit donnent <b>25</b> au niveau débutant,
+            <b>50</b> intermédiaire, <b>75</b> avancé et <b>100</b> élite.
+          </p>
+          <h3>Régularité · 20 %</h3>
+          <p>
+            Tes séances des 8 dernières semaines : 80 points à 4 séances par semaine en moyenne, plus 20 points selon le
+            nombre de semaines où tu t’es entraîné.
+          </p>
+          <h3>Force · 15 % et Haltérophilie · 15 %</h3>
+          <p>
+            Ta meilleure charge sur chaque mouvement de référence (squats, deadlift, bench, presses, thruster ; snatch,
+            clean, jerk, overhead squat), rapportée à ton poids de corps. Un PR sur plusieurs répétitions est converti
+            en charge maximale sur une répétition (formule d’Epley). Les repères dépendent de ton sexe ; après 35 ans,
+            chaque année compte pour +1 % (30 % au plus), et avant 18 ans pour +1,5 %.
+          </p>
+          <h3>Gym · 15 %</h3>
+          <p>
+            Tes PR en répétitions : pull-ups, butterfly, chest to bar, toes to bar, HSPU, muscle-ups, double unders,
+            push-ups, pistols.
+          </p>
+          <h3>Conditionnement · 15 %</h3>
+          <p>
+            Ta place dans ta catégorie aux classements des WOD de ta box (8 dernières semaines, au moins 3
+            participants). Premier : 100, dernier : 0 ; une catégorie après la première (RX) compte 15 % de moins.
+          </p>
+          <h3>Polyvalence · 10 %</h3>
+          <p>
+            Le nombre de mouvements différents cochés dans tes séances sur 8 semaines (70 points à 12 mouvements) et les
+            familles travaillées : Lift, Force, Gym, Engine (30 points).
+          </p>
+          <h3>Progression · 10 %</h3>
+          <p>
+            Tes PR des 90 derniers jours : 1 point par PR battu, ½ point par premier PR sur un mouvement ; 5 points
+            donnent 100.
+          </p>
+          <h3>Pilier « à compléter »</h3>
+          <p>
+            Sans données (pas de PR, pas de poids de corps, pas de WOD de box classé), un pilier n’entre pas dans le
+            calcul : il ne fait pas baisser ton score. Niveaux : moins de 20 Débutant, 20 En progression, 40
+            Intermédiaire, 60 Avancé, 80 Élite.
+          </p>
+        </div>
+      </dialog>
       <dialog id="leaderboarddialog" class="modal">
         <div class="sectionhead">
           <h2 id="leaderboardtitle">Classement</h2>

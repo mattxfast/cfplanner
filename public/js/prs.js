@@ -214,7 +214,7 @@ function renderFitness() {
     missing = d.profile_missing?.length
       ? `<div class="fitness-profile"><span>Pour un score juste, complète ton profil : ${esc(d.profile_missing.join(", "))}.</span><button type="button" class="smallbtn" data-fitness-profile>Compléter</button></div>`
       : "";
-  return `<section class="admin-group pr-category-group fitness-group ${collapsed ? "collapsed" : ""}" data-pr-category="${key}"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="${key}" aria-expanded="${!collapsed}"><span class="admin-collapse-indicator">${collapsed ? "＋" : "−"}</span><span>SCORE DE FORME</span><span class="fitness-total">${total}<small>/100</small></span></div><div class="admin-group-body"><div class="pr-category-body"><div class="fitness-panel card"><div class="fitness-summary">${fitnessRadar(d.pillars)}<div class="fitness-headline"><strong>${total}<small>/100</small></strong><span class="fitness-level">${esc(d.level || "Score à construire")}</span><p>${d.complete ? "Calculé sur tes 7 piliers." : "Calculé sur les piliers renseignés ; les autres sont à compléter."}</p></div></div>${missing}<div class="fitness-pillars">${pillars}</div><p class="fitness-note">Repères CrossFit par niveau (débutant 25, intermédiaire 50, avancé 75, élite 100), selon ton sexe, ton âge et ton poids de corps. Score personnel, visible de toi seul.</p></div></div></div></section>`;
+  return `<section class="admin-group pr-category-group fitness-group ${collapsed ? "collapsed" : ""}" data-pr-category="${key}"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="${key}" aria-expanded="${!collapsed}"><span class="admin-collapse-indicator">${collapsed ? "＋" : "−"}</span><span>SCORE DE FORME</span><span class="fitness-total">${total}<small>/100</small></span></div><div class="admin-group-body"><div class="pr-category-body"><div class="fitness-panel card"><div class="fitness-summary">${fitnessRadar(d.pillars)}<div class="fitness-headline"><strong>${total}<small>/100</small></strong><span class="fitness-level">${esc(d.level || "Score à construire")}</span><p>${d.complete ? "Calculé sur tes 7 piliers." : "Calculé sur les piliers renseignés ; les autres sont à compléter."}</p></div></div>${missing}<div class="fitness-pillars">${pillars}</div><p class="fitness-note">Score personnel, visible de toi seul. <button type="button" class="fitness-how" data-fitness-how>Comment est-il calculé ?</button></p></div></div></div></section>`;
 }
 function renderPrs() {
   const groups = new Map();
@@ -284,6 +284,7 @@ function renderPrs() {
   });
   body.querySelectorAll("[data-add-pr]").forEach(b => (b.onclick = () => openPrForm(null, b.dataset.addPr)));
   body.querySelectorAll("[data-fitness-profile]").forEach(b => (b.onclick = () => switchView("account")));
+  body.querySelectorAll("[data-fitness-how]").forEach(b => (b.onclick = () => $("#fitnesshowdialog").showModal()));
   body
     .querySelectorAll("[data-pr-key]")
     .forEach(button => (button.onclick = () => openPrHistory(button.dataset.prKey)));
@@ -424,3 +425,4 @@ $("#toggle-catalog-reorder").onclick = () => {
   if (renderAdmin.last) renderAdmin(...renderAdmin.last);
 };
 $("#closeprhistory").onclick = () => $("#prhistorydialog").close();
+$("#closefitnesshow").onclick = () => $("#fitnesshowdialog").close();
