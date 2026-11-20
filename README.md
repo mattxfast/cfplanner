@@ -88,7 +88,7 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 
 ### Records personnels (PR)
 
-**Score de forme** (rubrique « SCORE DE FORME » en tête de la page, repliable ; `GET /api/fitness-score`, calcul dans `src/fitness.js`, version `forme-v1`) : un score de 0 à 100 et un niveau (Débutant, En progression, Intermédiaire, Avancé, Élite), un radar et le détail de 7 piliers notés de 0 à 100 :
+**Score de forme** (rubrique « SCORE DE FORME » en tête de la page, repliable ; `GET /api/fitness-score`, calcul dans `src/fitness.js`, version `forme-v1`) : un score de 0 à 100 et un niveau (Débutant, En progression, Intermédiaire, Avancé, Élite), un grand radar centré (noms complets des piliers) et, replié par défaut sous « Détail des 7 piliers », le détail des 7 piliers notés de 0 à 100 :
 
 - **Régularité** (20 %) : séances des 8 dernières semaines (objectif 4 par semaine, 80 points) et semaines actives (20 points).
 - **Force** (15 %) et **Haltérophilie** (15 %) : meilleur 1RM de chaque mouvement de référence (squats, deadlift, bench, presses, thruster ; snatch, clean, jerk, OHS), estimé par la formule d'Epley pour un PR à plusieurs répétitions, rapporté au poids de corps et comparé à des repères par niveau (débutant 25, intermédiaire 50, avancé 75, élite 100), propres au sexe (moyenne hommes / femmes si non précisé) ; ajustement d'âge (+1 % par an après 35 ans, 30 % au plus ; +1,5 % par an avant 18 ans).
