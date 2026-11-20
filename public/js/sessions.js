@@ -345,7 +345,7 @@ function renderWeek() {
     );
   $("#weekboard")
     .querySelectorAll("[data-wod-open]")
-    .forEach(b => (b.onclick = () => openProgramWodDetail(b.dataset.wodOpen, from)));
+    .forEach(b => (b.onclick = e => (blurAfterTap(b, e), openProgramWodDetail(b.dataset.wodOpen, from))));
   $("#weekboard")
     .querySelectorAll("[data-log-wod]")
     .forEach(b => (b.onclick = () => openWodChoice(b.dataset.logWod)));
@@ -358,7 +358,7 @@ function renderWeek() {
     .forEach(b => (b.onclick = () => openSession(null, "box:" + b.dataset.logBoxwod)));
   $("#weekboard")
     .querySelectorAll("[data-boxwod-open]")
-    .forEach(b => (b.onclick = () => openBoxWodDetail(b.dataset.boxwodOpen)));
+    .forEach(b => (b.onclick = e => (blurAfterTap(b, e), openBoxWodDetail(b.dataset.boxwodOpen))));
   $("#weekboard")
     .querySelectorAll("[data-join-box]")
     .forEach(b => (b.onclick = () => openJoinBox()));
@@ -396,6 +396,11 @@ function renderWeek() {
         toast(err.message);
       }
     };
+}
+// Ligne touchée (ou cliquée) : on lui retire le focus avant d’ouvrir la fenêtre, sinon le navigateur le lui rend à la
+// fermeture et un cadre de focus reste affiché. Ouverte au clavier (Entrée, Espace : e.detail = 0), elle le garde.
+function blurAfterTap(el, e) {
+  if (e.detail) el.blur();
 }
 // WOD de la programmation en fenêtre (même fenêtre que le WOD du jour) : contenu complet de la semaine.
 function openProgramWodDetail(wodId, week) {

@@ -79,7 +79,9 @@ function openDailyDetail(id) {
   dialog.showModal();
 }
 function bindDailySection(root) {
-  root.querySelectorAll("[data-daily-open]").forEach(b => (b.onclick = () => openDailyDetail(b.dataset.dailyOpen)));
+  root
+    .querySelectorAll("[data-daily-open]")
+    .forEach(b => (b.onclick = e => (blurAfterTap(b, e), openDailyDetail(b.dataset.dailyOpen))));
   root.querySelectorAll("#dailynew, [data-daily-new]").forEach(b => (b.onclick = () => openDailyDialog()));
   root
     .querySelectorAll("[data-daily-log]")
