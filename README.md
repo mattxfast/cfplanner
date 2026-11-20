@@ -87,6 +87,18 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Repas : `GET /api/meals?from=…&to=…` (93 jours au plus), `POST /api/meals` (avec `client_id`, rejouable hors ligne), `PUT` et `DELETE /api/meals/:id`. Les totaux du repas sont toujours recalculés par le serveur à partir des aliments. Un repas déjà analysé s'enregistre, se modifie ou se supprime hors ligne.
 
 ### Records personnels (PR)
+
+**Score de forme** (rubrique « SCORE DE FORME » en tête de la page, repliable ; `GET /api/fitness-score`, calcul dans `src/fitness.js`, version `forme-v1`) : un score de 0 à 100 et un niveau (Débutant, En progression, Intermédiaire, Avancé, Élite), un radar et le détail de 7 piliers notés de 0 à 100 :
+
+- **Régularité** (20 %) : séances des 8 dernières semaines (objectif 4 par semaine, 80 points) et semaines actives (20 points).
+- **Force** (15 %) et **Haltérophilie** (15 %) : meilleur 1RM de chaque mouvement de référence (squats, deadlift, bench, presses, thruster ; snatch, clean, jerk, OHS), estimé par la formule d'Epley pour un PR à plusieurs répétitions, rapporté au poids de corps et comparé à des repères par niveau (débutant 25, intermédiaire 50, avancé 75, élite 100), propres au sexe (moyenne hommes / femmes si non précisé) ; ajustement d'âge (+1 % par an après 35 ans, 30 % au plus ; +1,5 % par an avant 18 ans).
+- **Gym** (15 %) : PR en répétitions (pull-ups, butterfly, C2B, T2B, HSPU, muscle-ups, DU, push-ups, pistols) comparés aux mêmes niveaux.
+- **Conditionnement** (15 %) : place dans sa catégorie aux classements des WOD de box des 8 dernières semaines (au moins 3 participants ; −15 % par catégorie après la première, RX).
+- **Polyvalence** (10 %) : mouvements différents cochés sur 8 semaines (objectif 12) et familles couvertes (Lift, Force, Gym, Engine).
+- **Progression** (10 %) : PR battus (1 point) et premiers PR (½ point) des 90 derniers jours (5 points = 100).
+
+Un pilier sans données est « à compléter » (avec la marche à suivre) et sort du calcul ; le score global, moyenne pondérée des piliers renseignés, demande au moins 2 piliers. Le profil d'athlète (Mon compte → Profil : poids de corps, sexe, date de naissance, facultatifs, validés par le serveur : 25 à 300 kg, au moins 10 ans ; migration V28, colonnes `users.body_weight_kg`, `birth_date`, `sex`) sert uniquement à ce score, visible de l'athlète seul.
+
 Les mouvements du catalogue sont répartis en quatre familles :
 
 | Catégorie | Type de mesure | Exemple de saisie |

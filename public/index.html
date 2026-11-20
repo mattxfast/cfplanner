@@ -463,8 +463,30 @@
               <form id="profileform" class="profile-card">
                 <label>Prénom<input name="first_name" maxlength="80" autocomplete="given-name" required /></label
                 ><label>Nom<input name="last_name" maxlength="80" autocomplete="family-name" required /></label
-                ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label
-                ><button class="primary">Enregistrer mes informations</button>
+                ><label>Adresse e-mail<input id="profileemail" type="email" disabled /></label>
+                <div class="two">
+                  <label
+                    >Poids de corps (kg)<input
+                      name="body_weight_kg"
+                      type="number"
+                      min="25"
+                      max="300"
+                      step="0.1"
+                      inputmode="decimal" /></label
+                  ><label
+                    >Sexe<select name="sex">
+                      <option value="">Non précisé</option>
+                      <option value="F">Femme</option>
+                      <option value="M">Homme</option>
+                    </select></label
+                  >
+                </div>
+                <label>Date de naissance<input name="birth_date" type="date" autocomplete="bday" /></label>
+                <p class="hint">
+                  Facultatif : poids, sexe et date de naissance servent uniquement au calcul de ton score de forme (page
+                  PR). Ils ne sont visibles de personne d’autre.
+                </p>
+                <button class="primary">Enregistrer mes informations</button>
                 <div id="profileerror" class="error"></div>
               </form>
             </div>

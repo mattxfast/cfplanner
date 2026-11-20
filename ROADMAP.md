@@ -39,7 +39,7 @@ Prochain numéro libre : **32**
 - [ ] **15.** WOD du jour : mode « Mon coach » (WOD proposé chaque matin, semaine équilibrée, notification possible).
 - [ ] **16.** WOD du jour : privilégier les mouvements peu travaillés ces dernières semaines.
 - [ ] **18.** Affichage dynamique sur un écran dans la box (WOD du jour, scores, anniversaires, mot du jour, événements) : voir le détail plus bas.
-- [ ] **31.** Score de fitness de l'athlète (0–100) : régularité, force (PR rapportés au poids de corps), gym, engine, polyvalence, progression ; radar par pilier et score global, calculé à partir des données déjà saisies (profil à compléter : poids, sexe, année de naissance, facultatifs). *Proposé le 20/11/2026, à décider.*
+- [x] **31.** Score de fitness de l'athlète (0–100) : régularité, force (PR rapportés au poids de corps), gym, engine, polyvalence, progression ; radar par pilier et score global, calculé à partir des données déjà saisies (profil à compléter : poids, sexe, année de naissance, facultatifs). — fait le 20/11/2026 (page PR)
 
 ## Look and feel
 

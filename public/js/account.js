@@ -1,6 +1,16 @@
 // FitFactory — mon compte : profil et thème clair/sombre.
 // Scripts classiques chargés dans l’ordre par index.html (portée globale partagée) ; boot.js démarre l’application en dernier.
 
+// Profil : prénom, nom et profil d’athlète (poids, sexe, date de naissance : score de forme).
+function fillProfileForm() {
+  const f = $("#profileform").elements;
+  f.first_name.value = user.first_name || "";
+  f.last_name.value = user.last_name || "";
+  f.body_weight_kg.value = user.body_weight_kg ?? "";
+  f.birth_date.value = user.birth_date || "";
+  f.birth_date.max = addDays(today(), -3650);
+  f.sex.value = user.sex || "";
+}
 $("#profileform").onsubmit = async e => {
   e.preventDefault();
   const f = new FormData(e.target);
@@ -8,10 +18,17 @@ $("#profileform").onsubmit = async e => {
   try {
     const d = await api("/profile", {
       method: "PUT",
-      body: JSON.stringify({first_name: f.get("first_name"), last_name: f.get("last_name")}),
+      body: JSON.stringify({
+        first_name: f.get("first_name"),
+        last_name: f.get("last_name"),
+        body_weight_kg: f.get("body_weight_kg"),
+        birth_date: f.get("birth_date"),
+        sex: f.get("sex"),
+      }),
     });
-    user = d.user;
+    if (d?.user) user = d.user;
     renderUserbar();
+    loadFitness();
     toast("Profil mis à jour.");
   } catch (x) {
     $("#profileerror").textContent = x.message;

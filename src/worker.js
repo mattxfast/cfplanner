@@ -23,6 +23,7 @@ import {
   mealAnalysisInput,
   mealInput,
 } from "./nutrition.js";
+import {athleteProfileInput, computeFitness} from "./fitness.js";
 const SESSION_DAYS = 30,
   enc = new TextEncoder();
 const json = (d, s = 200, h = {}) =>
@@ -78,7 +79,7 @@ async function me(r, e) {
   const t = sessionToken(r);
   if (!t) return null;
   return await e.DB.prepare(
-    "SELECT u.id,u.email,u.first_name,u.last_name,u.is_admin FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>? AND u.is_active=1"
+    "SELECT u.id,u.email,u.first_name,u.last_name,u.is_admin,u.body_weight_kg,u.birth_date,u.sex FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at>? AND u.is_active=1"
   )
     .bind(await sha(t), Math.floor(Date.now() / 1000))
     .first();
@@ -449,6 +450,14 @@ async function ensureV2Schema(env) {
       await env.DB.prepare(
         "CREATE INDEX IF NOT EXISTS training_sessions_daily_wod ON training_sessions(daily_wod_id)"
       ).run();
+    });
+    await runMigration("v28-athlete-profile", async () => {
+      // Score de forme : poids de corps, date de naissance et sexe de l'athlète (facultatifs).
+      const columns = await env.DB.prepare("PRAGMA table_info(users)").all(),
+        has = name => columns.results.some(column => column.name === name);
+      if (!has("body_weight_kg")) await env.DB.prepare("ALTER TABLE users ADD COLUMN body_weight_kg REAL").run();
+      if (!has("birth_date")) await env.DB.prepare("ALTER TABLE users ADD COLUMN birth_date TEXT").run();
+      if (!has("sex")) await env.DB.prepare("ALTER TABLE users ADD COLUMN sex TEXT NOT NULL DEFAULT ''").run();
     });
   })().catch(err => {
     schemaReady = null;
@@ -1053,7 +1062,17 @@ async function api(r, e, p) {
   if (r.method === "GET" && p === "/api/me") {
     const u = await me(r, e);
     return json({
-      user: u ? {id: u.id, email: u.email, first_name: u.first_name, last_name: u.last_name} : null,
+      user: u
+        ? {
+            id: u.id,
+            email: u.email,
+            first_name: u.first_name,
+            last_name: u.last_name,
+            body_weight_kg: u.body_weight_kg ?? null,
+            birth_date: u.birth_date ?? null,
+            sex: u.sex || "",
+          }
+        : null,
       is_admin: isAdminUser(e, u),
     });
   }
@@ -1973,8 +1992,82 @@ async function api(r, e, p) {
         .trim()
         .slice(0, 80);
     if (!first || !last) return json({error: "Prénom et nom sont obligatoires."}, 400);
-    await e.DB.prepare("UPDATE users SET first_name=?,last_name=? WHERE id=?").bind(first, last, u.id).run();
-    return json({ok: true, user: {...u, first_name: first, last_name: last}});
+    // Profil d'athlète (score de forme) : seulement les champs envoyés, chacun validé.
+    const athlete = athleteProfileInput(b);
+    if (athlete.error) return json({error: athlete.error}, 400);
+    if (athlete.birth_date && athlete.birth_date > addDays(localToday(), -365 * 10))
+      return json({error: "Date de naissance invalide."}, 400);
+    const next = {
+      body_weight_kg: "body_weight_kg" in athlete ? athlete.body_weight_kg : (u.body_weight_kg ?? null),
+      birth_date: "birth_date" in athlete ? athlete.birth_date : (u.birth_date ?? null),
+      sex: "sex" in athlete ? athlete.sex : u.sex || "",
+    };
+    await e.DB.prepare("UPDATE users SET first_name=?,last_name=?,body_weight_kg=?,birth_date=?,sex=? WHERE id=?")
+      .bind(first, last, next.body_weight_kg, next.birth_date, next.sex, u.id)
+      .run();
+    return json({
+      ok: true,
+      user: {id: u.id, email: u.email, first_name: first, last_name: last, ...next},
+    });
+  }
+  // Score de forme (page PR) : 7 piliers calculés à partir du profil, des PR, des séances et des classements de box.
+  if (r.method === "GET" && p === "/api/fitness-score") {
+    const today = localToday(),
+      from = addDays(today, -55);
+    const [records, sessionsRows, names, catalog, boxRows] = await Promise.all([
+      e.DB.prepare(
+        "SELECT pr.movement_id,pr.value,pr.rep_count,pr.record_date,pr.created_at,mc.name,mc.measurement_method FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? ORDER BY pr.record_date LIMIT 2000"
+      )
+        .bind(u.id)
+        .all(),
+      e.DB.prepare("SELECT session_date FROM training_sessions WHERE user_id=? AND session_date BETWEEN ? AND ?")
+        .bind(u.id, from, today)
+        .all(),
+      e.DB.prepare(
+        "SELECT mc.name FROM session_catalog_movement_checks c JOIN training_sessions s ON s.id=c.session_id JOIN movement_catalog mc ON mc.id=c.catalog_movement_id WHERE s.user_id=? AND s.session_date BETWEEN ? AND ? UNION ALL SELECT pm.name FROM session_movement_checks c JOIN training_sessions s ON s.id=c.session_id JOIN program_movements pm ON pm.id=c.movement_id WHERE s.user_id=? AND s.session_date BETWEEN ? AND ?"
+      )
+        .bind(u.id, from, today, u.id, from, today)
+        .all(),
+      e.DB.prepare("SELECT name,measurement_method FROM movement_catalog").all(),
+      // Mes scores de box des 8 dernières semaines (20 WOD au plus) et ceux des autres membres sur ces WOD.
+      e.DB.prepare(
+        "SELECT s.box_wod_id,s.user_id,s.score_category_id,s.score_value,w.score_type,w.box_id,(SELECT COUNT(*) FROM box_categories c2 WHERE c2.box_id=w.box_id AND (c2.sort_order<c.sort_order OR (c2.sort_order=c.sort_order AND c2.name<c.name))) AS category_index FROM training_sessions s JOIN box_wods w ON w.id=s.box_wod_id JOIN box_categories c ON c.id=s.score_category_id JOIN box_members m ON m.box_id=w.box_id AND m.user_id=s.user_id AND m.role='member' AND m.status='approved' WHERE s.score_value IS NOT NULL AND s.box_wod_id IN (SELECT box_wod_id FROM training_sessions WHERE user_id=? AND box_wod_id IS NOT NULL AND score_value IS NOT NULL AND session_date BETWEEN ? AND ? ORDER BY session_date DESC LIMIT 20) LIMIT 5000"
+      )
+        .bind(u.id, from, today)
+        .all(),
+    ]);
+    // Classement : meilleur score de chacun par WOD et par catégorie, puis ma place dans ma catégorie.
+    const best = new Map();
+    for (const x of boxRows.results) {
+      const k = x.box_wod_id + "|" + x.score_category_id + "|" + x.user_id,
+        prev = best.get(k),
+        better = x.score_type === "time" ? (a, b) => a < b : (a, b) => a > b;
+      if (!prev || better(x.score_value, prev.score_value)) best.set(k, x);
+    }
+    const boxResults = [];
+    for (const mine of [...best.values()].filter(x => x.user_id === u.id)) {
+      const group = [...best.values()].filter(
+          x => x.box_wod_id === mine.box_wod_id && x.score_category_id === mine.score_category_id
+        ),
+        isBetter = x =>
+          mine.score_type === "time" ? x.score_value < mine.score_value : x.score_value > mine.score_value;
+      boxResults.push({
+        rank: 1 + group.filter(isBetter).length,
+        total: group.length,
+        categoryIndex: mine.category_index,
+      });
+    }
+    return json(
+      computeFitness({
+        today,
+        profile: {body_weight_kg: u.body_weight_kg, birth_date: u.birth_date, sex: u.sex},
+        records: records.results,
+        sessionDates: sessionsRows.results.map(x => x.session_date),
+        movementNames: names.results.map(x => x.name),
+        catalog: catalog.results,
+        boxResults,
+      })
+    );
   }
   if (r.method === "GET" && p === "/api/weekly-flags") {
     const q = new URL(r.url).searchParams,

@@ -156,6 +156,66 @@ function renderPrCategory(method, items) {
     "</div></div></section>"
   );
 }
+// Score de forme (rubrique en tête de la page PR) : calculé par le serveur (GET /api/fitness-score), gardé hors ligne.
+let fitnessData = null;
+async function loadFitness() {
+  try {
+    fitnessData = await api("/fitness-score");
+  } catch {
+    return;
+  }
+  renderPrs();
+}
+// Radar : un axe par pilier (0 au centre, 100 au bord) ; un pilier à compléter compte pour 0.
+function fitnessRadar(pillars) {
+  const n = pillars.length,
+    R = 78,
+    point = (i, v) => {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+      return [(Math.cos(a) * R * v) / 100, (Math.sin(a) * R * v) / 100];
+    },
+    poly = values =>
+      values
+        .map((v, i) =>
+          point(i, v)
+            .map(x => x.toFixed(1))
+            .join(",")
+        )
+        .join(" ");
+  const grid = [25, 50, 75, 100]
+      .map(v => `<polygon class="fitness-radar-grid" points="${poly(pillars.map(() => v))}"/>`)
+      .join(""),
+    axes = pillars
+      .map((_, i) => {
+        const [x, y] = point(i, 100);
+        return `<line class="fitness-radar-grid" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+      })
+      .join(""),
+    labels = pillars
+      .map((p, i) => {
+        const [x, y] = point(i, 122);
+        return `<text class="fitness-radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${esc(p.label.slice(0, 5) + (p.label.length > 5 ? "." : ""))}</text>`;
+      })
+      .join("");
+  return `<svg class="fitness-radar" viewBox="-112 -108 224 216" role="img" aria-label="Radar des piliers du score de forme">${grid}${axes}<polygon class="fitness-radar-value" points="${poly(pillars.map(p => p.score ?? 0))}"/>${labels}</svg>`;
+}
+function renderFitness() {
+  const d = fitnessData,
+    key = "records:fitness",
+    collapsed = !!window.cfPrCategorySections[key];
+  if (!d) return "";
+  const total = d.score === null ? "—" : d.score,
+    pillars = d.pillars
+      .map(
+        p =>
+          `<div class="fitness-pillar ${p.score === null ? "missing" : ""}"><div class="fitness-pillar-head"><b>${esc(p.label)}</b><span>${p.score === null ? "à compléter" : p.score}</span></div><div class="fitness-bar"><span style="width:${p.score ?? 0}%"></span></div><small>${esc(p.score === null ? p.hint || "" : p.detail || "")}</small></div>`
+      )
+      .join(""),
+    missing = d.profile_missing?.length
+      ? `<div class="fitness-profile"><span>Pour un score juste, complète ton profil : ${esc(d.profile_missing.join(", "))}.</span><button type="button" class="smallbtn" data-fitness-profile>Compléter</button></div>`
+      : "";
+  return `<section class="admin-group pr-category-group fitness-group ${collapsed ? "collapsed" : ""}" data-pr-category="${key}"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="${key}" aria-expanded="${!collapsed}"><span class="admin-collapse-indicator">${collapsed ? "＋" : "−"}</span><span>SCORE DE FORME</span><span class="fitness-total">${total}<small>/100</small></span></div><div class="admin-group-body"><div class="pr-category-body"><div class="fitness-panel card"><div class="fitness-summary">${fitnessRadar(d.pillars)}<div class="fitness-headline"><strong>${total}<small>/100</small></strong><span class="fitness-level">${esc(d.level || "Score à construire")}</span><p>${d.complete ? "Calculé sur tes 7 piliers." : "Calculé sur les piliers renseignés ; les autres sont à compléter."}</p></div></div>${missing}<div class="fitness-pillars">${pillars}</div><p class="fitness-note">Repères CrossFit par niveau (débutant 25, intermédiaire 50, avancé 75, élite 100), selon ton sexe, ton âge et ton poids de corps. Score personnel, visible de toi seul.</p></div></div></div></section>`;
+}
 function renderPrs() {
   const groups = new Map();
   for (const r of prRecords) {
@@ -191,7 +251,8 @@ function renderPrs() {
       movementCatalog.some(m => m.measurement_method === method) || items.some(x => x.measurement_method === method)
   );
   $("#prcards").innerHTML = families.length
-    ? families
+    ? renderFitness() +
+      families
         .map(method =>
           renderPrCategory(
             method,
@@ -222,6 +283,7 @@ function renderPrs() {
     };
   });
   body.querySelectorAll("[data-add-pr]").forEach(b => (b.onclick = () => openPrForm(null, b.dataset.addPr)));
+  body.querySelectorAll("[data-fitness-profile]").forEach(b => (b.onclick = () => switchView("account")));
   body
     .querySelectorAll("[data-pr-key]")
     .forEach(button => (button.onclick = () => openPrHistory(button.dataset.prKey)));

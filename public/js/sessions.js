@@ -32,11 +32,11 @@ async function load() {
     setPreferences(prefs);
     maybeWelcomeBox();
     renderUserbar();
-    $("#profileform").elements.first_name.value = user.first_name || "";
-    $("#profileform").elements.last_name.value = user.last_name || "";
+    fillProfileForm();
     $("#profileemail").value = user.email || "";
     renderSessions();
     renderPrs();
+    loadFitness();
     renderPrograms();
     renderWeek();
     if (!$("#view-nutrition").hidden) loadNutrition();
@@ -62,6 +62,7 @@ async function loadSessions() {
 async function loadPrs() {
   prRecords = (await api("/prs")).records;
   renderPrs();
+  loadFitness();
 }
 const inManagerSpace = () => !$("#view-box").hidden,
   inAdminSpace = () => !$("#view-admin").hidden;
