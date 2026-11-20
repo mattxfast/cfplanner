@@ -40,7 +40,8 @@ function syncAiForm() {
   for (const kind of ["technique", "force"])
     $(`[data-ai-movements="${kind}"]`).hidden = mode === "program" || !f[kind].checked;
 }
-async function openAiDialog(mode, pid, wodId = null, week = null) {
+// origin : page où revenir après la génération (Séances pour le ✨ de la semaine, Programmes sinon).
+async function openAiDialog(mode, pid, wodId = null, week = null, origin = mode === "week" ? "sessions" : "programs") {
   const form = $("#aiform"),
     f = form.elements,
     p = programs.find(x => x.id === pid);
@@ -48,6 +49,7 @@ async function openAiDialog(mode, pid, wodId = null, week = null) {
   form.reset();
   form.dataset.mode = mode;
   form.dataset.week = week || "";
+  form.dataset.origin = origin;
   f.program_id.value = pid;
   f.wod_id.value = wodId || "";
   form.querySelectorAll("[data-ai-mode]").forEach(el => (el.hidden = !el.dataset.aiMode.split(" ").includes(mode)));
@@ -70,7 +72,9 @@ async function openAiDialog(mode, pid, wodId = null, week = null) {
     $("#aiintro").textContent =
       mode === "wod"
         ? "L’IA écrit le contenu de ce WOD pour chaque semaine du programme (" + plural + "), avec une progression."
-        : "L’IA écrit le contenu de ce WOD pour la semaine du " +
+        : "L’IA écrit le contenu de ce WOD pour la semaine " +
+          (weeks.includes(week) ? "S" + (weeks.indexOf(week) + 1) + " " : "") +
+          "du " +
           fmt(week) +
           (weeklyWodContent(wodId, week).trim() ? " (le contenu déjà écrit est remplacé)." : ".");
     renderAiMovements("technique");
@@ -243,7 +247,7 @@ $("#aiform").onsubmit = async e => {
   // On reste sur la page d’où la génération a été lancée (Séances ou Programmes).
   if (message !== false) {
     await load();
-    switchView(form.dataset.mode === "week" ? "sessions" : "programs");
+    switchView(form.dataset.origin);
   }
 };
 $("#closeai").onclick = () => {

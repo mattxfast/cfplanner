@@ -38,7 +38,15 @@ function renderWodWeeklyProgramming(program, wod) {
           (index + 1) +
           "</b><small>" +
           fmt(week) +
-          '</small><button type="button" class="smallbtn save-wod-week" data-wod="' +
+          '</small><button type="button" class="smallbtn" data-ai-wod-week="' +
+          wod.id +
+          '" data-program="' +
+          program.id +
+          '" data-week="' +
+          week +
+          '" aria-label="Regénérer cette semaine avec l’IA" title="Regénérer cette semaine avec l’IA">' +
+          AI_ICON +
+          '</button><button type="button" class="smallbtn save-wod-week" data-wod="' +
           wod.id +
           '" data-week="' +
           week +
@@ -144,6 +152,12 @@ function renderPrograms() {
           else set.add(key);
           renderPrograms();
         })
+    );
+  // ✨ d’une semaine : régénère ce WOD pour cette semaine seulement (on reste sur la page Programmes).
+  $("#programlist")
+    .querySelectorAll("[data-ai-wod-week]")
+    .forEach(
+      b => (b.onclick = () => openAiDialog("week", b.dataset.program, b.dataset.aiWodWeek, b.dataset.week, "programs"))
     );
   $("#programlist")
     .querySelectorAll(".save-wod-week")

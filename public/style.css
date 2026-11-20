@@ -3867,13 +3867,14 @@ button:disabled {
 .wod-week-head b {
   font-size: 13px;
 }
+/* La date pousse les boutons (✨ régénérer, Enregistrer) en fin de ligne. */
 .wod-week-head small {
+  margin-right: auto;
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
 }
 .wod-week-head .smallbtn {
-  margin-left: auto;
   white-space: nowrap;
 }
 .wod-week-row textarea {

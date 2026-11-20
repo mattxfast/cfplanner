@@ -45,10 +45,11 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 - Routes : `POST /api/daily-wods` (`wod_date`, `duration_minutes`, `place`, `energy`, `instructions`, `replace_id` facultatif) et `DELETE /api/daily-wods/:id` (refusé si une séance y est rattachée) ; `GET /api/week-data` renvoie `dailyWods` ; `POST`/`PUT /api/sessions` acceptent `daily_wod_id`. Migration V27 : table `daily_wods`, colonne `training_sessions.daily_wod_id`.
 
 ### Génération de WOD par IA
-- Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), trois boutons « étincelles » :
+- Dans ses propres programmes uniquement (ni programme suivi, ni espace gestionnaire), quatre boutons « étincelles » :
   - **Programmes, titre de la rubrique WOD** : tous les WOD sur toute la période. On choisit le nombre de WOD par semaine (1 à 7) ; les WOD manquants sont créés (« WOD 1 », « WOD 2 »…, marqués « suivi »), puis l'IA écrit le contenu de chaque WOD pour chaque semaine, l'un après l'autre, avec l'avancement affiché ;
   - **Programmes, sur un WOD** : ce WOD sur toutes les semaines du programme, dans l'ordre, avec une progression d'une semaine à l'autre ;
   - **Séances, sur un WOD de la programmation** : ce WOD pour la semaine affichée (un contenu existant est remplacé).
+  - **Programmes, sur une semaine de la programmation hebdomadaire** (✨ à côté d'« Enregistrer ») : regénère ce WOD pour cette semaine seulement (le contenu est remplacé, les autres semaines ne changent pas) ; on reste sur la page Programmes.
 - Pour les deux premiers, le contenu déjà écrit est gardé, sauf si « Remplacer le contenu déjà écrit » est coché ; le nombre de générations est annoncé avant de lancer.
 - Options de la séance : durée (15 à 180 min), blocs (échauffement, travail technique, force, metcon, retour au calme), consigne libre. Le format du metcon (AMRAP, EMOM, For Time…) est toujours choisi par l'IA. Pour un WOD (toutes les semaines ou une semaine), de 0 à 5 mouvements imposés du catalogue pour la technique et pour la force (aucun : l'IA choisit).
 - Profil d'athlète mémorisé (niveau, objectifs, matériel, contraintes ; pas de données médicales), saisi dans la même fenêtre. Le prompt inclut aussi les records (PR), les mouvements « Focus » du programme, la programmation déjà écrite des deux semaines précédentes et de la semaine, et les séances réalisées sur la même période, pour la progression et la variété.

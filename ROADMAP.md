@@ -9,7 +9,7 @@ dire « fais l'idée 7 ».
 - Nouvelle idée : l'ajouter dans la bonne rubrique avec le **numéro suivant le plus grand existant**.
 - *En italique* : la décision de Matt quand il y en a une.
 
-Prochain numéro libre : **29**
+Prochain numéro libre : **30**
 
 ## Fiabilité et exploitation
 
@@ -59,6 +59,7 @@ Prochain numéro libre : **29**
 - [x] **26.** Rappels par notification, mode hors ligne avec resynchronisation, chronomètre de WOD.
 - [x] **27.** Renommage en myFitFactory (dépôt, Worker, base D1), icône et écran de démarrage, police Saira.
 - [x] **28.** WOD du jour généré par IA, chrono préréglé, séance enregistrée plus tard (19/11/2026, `3480ad8`).
+- [x] **29.** Programmes : bouton ✨ sur chaque semaine de la programmation hebdomadaire pour regénérer ce WOD pour cette semaine seulement. — fait le 20/11/2026
 
 ## Détails des idées
 
