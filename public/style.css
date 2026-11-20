@@ -4096,6 +4096,89 @@ button {
 button:active:not(:disabled) {
   transform: scale(0.96);
 }
+/* Attente d’une réponse de l’IA (aiWaitStart / aiWaitDone dans core.js) : trois étoiles qui scintillent en
+   décalé, remplacées à la fin par une coche verte qui se dessine. Sans animation, la coche s’affiche directement. */
+.ai-wait:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-soft-ink);
+  font-size: 13px;
+  font-weight: 600;
+  animation: ff-fade-in 0.2s ease-out;
+  transition: background-color 0.25s ease;
+}
+.ai-wait.done {
+  background: var(--success-soft);
+  color: var(--green);
+}
+.ai-wait-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  overflow: visible;
+}
+.ai-wait-icon .spark {
+  fill: var(--orange);
+  stroke: var(--orange-strong);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ff-twinkle 1.4s ease-in-out infinite;
+}
+.ai-wait-icon .spark:nth-child(2) {
+  animation-delay: 0.45s;
+}
+.ai-wait-icon .spark:nth-child(3) {
+  animation-delay: 0.9s;
+}
+.ai-wait-icon .check {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 22;
+  opacity: 0;
+}
+.ai-wait.done .spark {
+  opacity: 0;
+  animation: ff-spark-out 0.25s ease-in;
+}
+.ai-wait.done .check {
+  opacity: 1;
+  animation: ff-check-draw 0.35s 0.15s ease-out backwards;
+}
+@keyframes ff-twinkle {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.1) rotate(25deg);
+    opacity: 1;
+  }
+}
+@keyframes ff-spark-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+@keyframes ff-check-draw {
+  from {
+    stroke-dashoffset: 22;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -4648,6 +4731,39 @@ button:active:not(:disabled) {
   top: 8px;
   right: 8px;
 }
+/* Analyse en cours : photo légèrement assombrie, balayée par une ligne lumineuse jaune comme un scanner. */
+.meal-photo.scanning {
+  overflow: hidden;
+  border-radius: 10px;
+}
+.meal-photo.scanning .smallbtn {
+  visibility: hidden;
+}
+.meal-photo.scanning::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.18);
+  pointer-events: none;
+}
+.meal-photo.scanning::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -45%;
+  height: 45%;
+  border-bottom: 2px solid var(--logo-bg);
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--logo-bg) 45%, transparent));
+  box-shadow: 0 4px 14px var(--logo-bg);
+  pointer-events: none;
+  animation: ff-scan 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes ff-scan {
+  to {
+    top: 100%;
+  }
+}
 .meal-items {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -4667,6 +4783,7 @@ button:active:not(:disabled) {
   border: 1px solid var(--content-border);
   border-radius: 10px;
   background: var(--content-bg);
+  animation: ff-view-in 0.25s ease-out;
 }
 .meal-result.stale .meal-detail {
   opacity: 0.45;

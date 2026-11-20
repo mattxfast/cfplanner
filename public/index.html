@@ -721,7 +721,7 @@
             /></label>
             <p class="hint">Pas de données médicales. Tes records (PR) sont pris en compte automatiquement.</p>
           </details>
-          <p class="hint" id="dailyprogress" hidden></p>
+          <p class="ai-wait" id="dailyprogress" role="status" hidden></p>
           <button class="primary" id="dailysubmit">Générer mon WOD</button>
           <div class="error" id="dailyerror"></div>
         </form>
@@ -793,7 +793,7 @@
             /></label>
             <p class="hint">Pas de données médicales. Tes records (PR) sont pris en compte automatiquement.</p>
           </details>
-          <p class="hint" id="aiprogress" hidden></p>
+          <p class="ai-wait" id="aiprogress" role="status" hidden></p>
           <button class="primary" id="aisubmit">Générer</button>
           <div class="error" id="aierror"></div>
         </form>
@@ -837,7 +837,7 @@
           /></label>
           <p class="hint">La photo sert uniquement à l’analyse par l’IA : elle n’est pas conservée.</p>
           <button type="button" class="primary" id="mealanalyze">Analyser avec l’IA</button>
-          <p class="hint" id="mealprogress" hidden></p>
+          <p class="ai-wait" id="mealprogress" role="status" hidden></p>
           <div id="mealresult" class="meal-result" hidden></div>
           <button class="primary" id="mealsave" hidden>Enregistrer le repas</button>
           <div class="error" id="mealerror"></div>

@@ -103,6 +103,21 @@ function toast(t) {
   $("#toast").classList.add("show");
   setTimeout(() => $("#toast").classList.remove("show"), 2200);
 }
+// Attente d’une réponse de l’IA (WOD, repas) : étoiles qui scintillent et message, puis coche brève à l’arrivée
+// du résultat, avant de l’afficher. L’élément est un <p class="ai-wait">, masqué par l’appelant à la fin.
+const AI_WAIT_ICON =
+  '<svg class="ai-wait-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="spark" d="M10 2.5c.5 3.9 2.1 5.5 6 6-3.9.5-5.5 2.1-6 6-.5-3.9-2.1-5.5-6-6 3.9-.5 5.5-2.1 6-6z"/><path class="spark" d="M18.5 13c.3 2 1.1 2.7 3 3-1.9.3-2.7 1-3 3-.3-2-1.1-2.7-3-3 1.9-.3 2.7-1 3-3z"/><path class="spark" d="M5 16.5c.2 1.3.7 1.8 2 2-1.3.2-1.8.7-2 2-.2-1.3-.7-1.8-2-2 1.3-.2 1.8-.7 2-2z"/><path class="check" d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+function aiWaitStart(el, text) {
+  if (!el.querySelector(".ai-wait-text")) el.innerHTML = AI_WAIT_ICON + '<span class="ai-wait-text"></span>';
+  el.classList.remove("done");
+  el.querySelector(".ai-wait-text").textContent = text;
+  el.hidden = false;
+}
+function aiWaitDone(el, text) {
+  el.classList.add("done");
+  el.querySelector(".ai-wait-text").textContent = text;
+  return new Promise(r => setTimeout(r, 700));
+}
 function esc(s) {
   return String(s ?? "").replace(
     /[&<>"']/g,

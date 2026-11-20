@@ -274,8 +274,10 @@ $("#mealanalyze").onclick = async () => {
   mealAnalyzing = true;
   $("#mealanalyze").disabled = true;
   $("#mealsave").hidden = true;
-  $("#mealprogress").hidden = false;
-  $("#mealprogress").textContent = "Analyse en cours… (jusqu’à une minute)";
+  // Le résultat précédent est masqué pendant l’analyse : le nouveau apparaît en fondu.
+  $("#mealresult").hidden = true;
+  $("#mealphoto").classList.add("scanning");
+  aiWaitStart($("#mealprogress"), "Analyse en cours… (jusqu’à une minute)");
   try {
     const d = await sendApi(
       "/meal-analysis",
@@ -288,12 +290,15 @@ $("#mealanalyze").onclick = async () => {
     // Les aliments reconnus remplacent la saisie : on peut les corriger puis relancer l’analyse.
     if (d.analysis.items.length) renderMealItems(d.analysis.items.map(x => ({name: x.name, quantity: x.quantity})));
     if (!f.title.value.trim()) f.title.value = d.analysis.title;
+    $("#mealphoto").classList.remove("scanning");
+    await aiWaitDone($("#mealprogress"), "Analyse terminée");
   } catch (x) {
     $("#mealerror").textContent = x.offline ? OFFLINE_MESSAGE : x.message;
   } finally {
     mealAnalyzing = false;
     $("#mealanalyze").disabled = false;
     $("#mealprogress").hidden = true;
+    $("#mealphoto").classList.remove("scanning");
     renderMealResult();
   }
 };

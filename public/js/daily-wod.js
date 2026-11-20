@@ -171,8 +171,7 @@ $("#dailyform").onsubmit = async e => {
   } catch {}
   dailyRunning = true;
   $("#dailysubmit").disabled = true;
-  $("#dailyprogress").hidden = false;
-  $("#dailyprogress").textContent = "Ton coach prépare le WOD… (jusqu’à une minute)";
+  aiWaitStart($("#dailyprogress"), "Ton coach prépare le WOD… (jusqu’à une minute)");
   try {
     await sendApi("/ai-profile", "PUT", {
       level: f.level.value,
@@ -182,6 +181,7 @@ $("#dailyform").onsubmit = async e => {
     });
     const d = await sendApi("/daily-wods", "POST", request, AI_TIMEOUT);
     rememberDailyWods([d.wod]);
+    await aiWaitDone($("#dailyprogress"), "WOD prêt !");
     $("#dailydialog").close();
     selectedWeekStart = mondayOf(d.wod.wod_date);
     await loadSessions();

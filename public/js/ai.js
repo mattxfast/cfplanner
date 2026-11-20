@@ -111,8 +111,7 @@ function aiRequest(f) {
 const aiGenerate = (wodId, week, request) =>
   sendApi("/wods/" + wodId + "/generate", "POST", {...request, week_start: week}, AI_TIMEOUT);
 function aiProgress(t) {
-  $("#aiprogress").hidden = false;
-  $("#aiprogress").textContent = t;
+  aiWaitStart($("#aiprogress"), t);
 }
 // Programme complet : crée les WOD manquants, puis génère chaque WOD de chaque semaine, l’un après l’autre (le
 // contenu déjà écrit sert de contexte au suivant, pour la progression et la variété).
@@ -232,6 +231,7 @@ $("#aiform").onsubmit = async e => {
       message = "WOD généré : relis-le et ajuste-le si besoin.";
     } else if (form.dataset.mode === "wod") message = await generateWodWeeks(f, request);
     else message = await generateProgram(f, request);
+    if (message && !aiCancelled) await aiWaitDone($("#aiprogress"), "C’est prêt !");
   } catch (x) {
     $("#aierror").textContent = x.offline ? OFFLINE_MESSAGE : x.message;
   } finally {
