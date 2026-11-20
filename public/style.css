@@ -4591,14 +4591,28 @@ button:active:not(:disabled) {
   white-space: pre-line;
   color: var(--muted);
 }
+/* Formulaires en blocs (séance, WOD de box) : chaque bloc (WOD, score, mouvements) dans un cadre, avec le même
+   espacement entre les blocs et entre les champs. */
+.form-block {
+  margin: 0 0 12px;
+  padding: 12px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 12px;
+}
+.form-block h3 {
+  margin: 0;
+  font: 700 14px Manrope;
+}
+.form-block label:not(.movement-check),
+#sessionform .form-block .session-time-row label {
+  margin: 10px 0 0;
+}
+/* Les champs portent leur marge du haut : la grille n'ajoute qu'un écart entre colonnes. */
+.form-block .two {
+  gap: 0 10px;
+}
 /* Séance sur un WOD de box : score (catégorie + valeur). */
-.session-score h3 {
-  margin: 14px 0 0;
-  font-size: 14px;
-}
-.session-score label {
-  margin: 8px 0 0;
-}
 .score-time {
   display: flex;
   align-items: center;
