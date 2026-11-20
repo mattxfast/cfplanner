@@ -9,7 +9,7 @@ dire « fais l'idée 7 ».
 - Nouvelle idée : l'ajouter dans la bonne rubrique avec le **numéro suivant le plus grand existant**.
 - *En italique* : la décision de Matt quand il y en a une.
 
-Prochain numéro libre : **33**
+Prochain numéro libre : **35**
 
 ## Fiabilité et exploitation
 
@@ -41,6 +41,8 @@ Prochain numéro libre : **33**
 - [ ] **18.** Affichage dynamique sur un écran dans la box (WOD du jour, scores, anniversaires, mot du jour, événements) : voir le détail plus bas.
 - [x] **31.** Score de fitness de l'athlète (0–100) : régularité, force (PR rapportés au poids de corps), gym, engine, polyvalence, progression ; radar par pilier et score global, calculé à partir des données déjà saisies (profil à compléter : poids, sexe, année de naissance, facultatifs). — fait le 20/11/2026 (page PR)
 - [x] **32.** PR Engine en « temps sur une distance » ou « distance dans un temps » (allure au km / au 500 m, historique, courbe) et pilier Engine du score de forme. — fait le 20/11/2026
+- [ ] **33.** Widget iOS (écran d'accueil / écran verrouillé) : WOD du jour, prochaine séance, séances de la semaine. Demande une vraie app iPhone (Swift, WidgetKit) en plus de l'app web, un compte Apple Developer (99 €/an) et une connexion par jeton pour l'app native. *À décider par Matt.*
+- [ ] **34.** Application Apple Watch : chrono de WOD au poignet (rounds, EMOM, Tabata) avec vibrations, WOD du jour affiché, séance enregistrée à la fin. Même prérequis que l'idée 33 (app native, compte Apple Developer) ; à faire avec ou après le widget. *À décider par Matt.*
 
 ## Look and feel
 
