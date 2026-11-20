@@ -627,14 +627,20 @@
             <h2>Trouver un programme</h2>
             <button type="button" class="iconbtn" data-close-dialog="programsearchdialog">×</button>
           </div>
-          <p class="hint">
-            Programmes publics des autres utilisateurs. Tu ne suis qu’un programme à la fois, sans chevauchement avec
-            tes propres programmes en cours ou à venir.
-          </p>
-          <label
-            >Rechercher<input name="q" type="search" maxlength="60" placeholder="Nom du programme ou de l’auteur"
-          /></label>
-          <div id="programsearchresults" class="program-search-results"></div>
+          <section class="form-block">
+            <h3>Recherche</h3>
+            <p class="hint">
+              Programmes publics des autres utilisateurs. Tu ne suis qu’un programme à la fois, sans chevauchement avec
+              tes propres programmes en cours ou à venir.
+            </p>
+            <label
+              >Rechercher<input name="q" type="search" maxlength="60" placeholder="Nom du programme ou de l’auteur"
+            /></label>
+          </section>
+          <section class="form-block">
+            <h3>Programmes publics</h3>
+            <div id="programsearchresults" class="program-search-results"></div>
+          </section>
           <div class="error" id="programsearcherror"></div>
         </form>
       </dialog>
@@ -645,12 +651,18 @@
             <h2 id="followtitle">Suivre le programme</h2>
             <button type="button" class="iconbtn" data-close-dialog="followdialog">×</button>
           </div>
-          <p class="hint" id="followinfo"></p>
-          <div class="two">
-            <label>Début<input name="start" type="date" required /></label
-            ><label>Fin<input name="end" type="date" required /></label>
-          </div>
-          <p class="hint">La semaine 1 du programme commence la semaine de ta date de début.</p>
+          <section class="form-block">
+            <h3>Programme</h3>
+            <p class="hint" id="followinfo"></p>
+          </section>
+          <section class="form-block">
+            <h3>Mes dates</h3>
+            <div class="two">
+              <label>Début<input name="start" type="date" required /></label
+              ><label>Fin<input name="end" type="date" required /></label>
+            </div>
+            <p class="hint">La semaine 1 du programme commence la semaine de ta date de début.</p>
+          </section>
           <button class="primary" id="followsubmit">Suivre ce programme</button>
           <div class="error" id="followerror"></div>
         </form>

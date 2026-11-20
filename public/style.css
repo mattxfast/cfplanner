@@ -4602,6 +4602,14 @@ button:active:not(:disabled) {
 #sessionform .form-block .session-time-row label {
   margin: 10px 0 0;
 }
+/* Textes d'aide et listes de résultats d'un bloc : même écart que les champs. */
+.form-block > p,
+.form-block > .program-search-results {
+  margin: 10px 0 0;
+}
+.program-search-results > p {
+  margin: 0;
+}
 /* Les champs portent leur marge du haut : la grille n'ajoute qu'un écart entre colonnes. */
 .form-block .two {
   gap: 0 10px;
