@@ -1412,7 +1412,7 @@ header {
   margin: 0;
   white-space: nowrap;
   font-size: 12px;
-  color: var(--muted-strong);
+  color: var(--muted);
 }
 #sessionlist .session-title-line h3 {
   margin: 0;
