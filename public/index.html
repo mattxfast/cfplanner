@@ -1095,20 +1095,76 @@
                 </select></label
               >
             </div>
-            <label id="prothertime"
-              >Autre durée<input
-                name="other_time"
-                placeholder="mm:ss ou h:mm:ss"
-                inputmode="numeric"
-                autocomplete="off"
-            /></label>
-            <label id="prtimefield"
-              >Temps réalisé<input
-                name="duration"
-                placeholder="mm:ss ou h:mm:ss"
-                inputmode="numeric"
-                autocomplete="off"
-            /></label>
+            <div id="prothertime" class="pr-time-field">
+              <span class="pr-time-legend">Autre durée</span>
+              <div class="pr-time-inputs">
+                <label
+                  >Heures<input
+                    name="other_time_h"
+                    type="number"
+                    min="0"
+                    max="99"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+                <label
+                  >Minutes<input
+                    name="other_time_min"
+                    type="number"
+                    min="0"
+                    max="999"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+                <label
+                  >Secondes<input
+                    name="other_time_sec"
+                    type="number"
+                    min="0"
+                    max="59"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+              </div>
+            </div>
+            <div id="prtimefield" class="pr-time-field">
+              <span class="pr-time-legend">Temps réalisé</span>
+              <div class="pr-time-inputs">
+                <label
+                  >Heures<input
+                    name="duration_h"
+                    type="number"
+                    min="0"
+                    max="99"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+                <label
+                  >Minutes<input
+                    name="duration_min"
+                    type="number"
+                    min="0"
+                    max="999"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+                <label
+                  >Secondes<input
+                    name="duration_sec"
+                    type="number"
+                    min="0"
+                    max="59"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="0"
+                /></label>
+              </div>
+            </div>
             <div class="two" id="prdistancefield">
               <label
                 >Distance réalisée<input

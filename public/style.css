@@ -3240,6 +3240,26 @@ button:disabled {
   font-weight: 700;
   color: var(--ink-soft);
 }
+/* PR ENGINE : temps saisi en trois cases (heures, minutes, secondes). */
+.pr-time-field {
+  margin-top: 14px;
+}
+.pr-time-legend {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.pr-time-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.pr-time-inputs label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
 /* PR ENGINE : allure (au km, ou au 500 m pour le rameur) sous la valeur. */
 .pr-pace {
   display: block;

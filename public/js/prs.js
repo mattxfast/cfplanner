@@ -38,19 +38,6 @@ function formatDistance(m) {
     ? (v / 1000).toLocaleString("fr-FR", {maximumFractionDigits: 3}) + " km"
     : v.toLocaleString("fr-FR", {maximumFractionDigits: 1}) + " m";
 }
-// « mm:ss » ou « h:mm:ss » → secondes (null si invalide).
-function parseDuration(text) {
-  const parts = String(text || "")
-    .trim()
-    .split(/[:h'’]/)
-    .map(x => x.trim());
-  if (!parts.length || parts.length > 3 || parts.some(x => !/^\d+$/.test(x))) return null;
-  const [h, m, s] =
-    parts.length === 3 ? parts.map(Number) : parts.length === 2 ? [0, ...parts.map(Number)] : [0, Number(parts[0]), 0];
-  if ((parts.length > 1 && s > 59) || (parts.length === 3 && m > 59)) return null;
-  const total = h * 3600 + m * 60 + s;
-  return total > 0 ? total : null;
-}
 function prValue(record) {
   if (isLoadBased(record.measurement_method)) return Number(record.value).toLocaleString("fr-FR") + " kg";
   if (record.measurement_method === "distance")
@@ -453,6 +440,21 @@ function syncPrForm() {
   $("#prtimefield").hidden = !onDistance;
   $("#prdistancefield").hidden = !onTime;
 }
+// Temps saisi en heures / minutes / secondes (cases séparées) → secondes ; null si vide ou invalide.
+function readTime(f, prefix) {
+  const raw = ["h", "min", "sec"].map(k => f.elements[prefix + "_" + k].value.trim());
+  if (raw.every(x => x === "")) return null;
+  const [h, m, sec] = raw.map(x => (x === "" ? 0 : Number(x)));
+  if (![h, m, sec].every(x => Number.isInteger(x) && x >= 0) || sec > 59) return null;
+  const total = h * 3600 + m * 60 + sec;
+  return total > 0 ? total : null;
+}
+function fillTime(f, prefix, seconds) {
+  const t = Math.round(Number(seconds));
+  f.elements[prefix + "_h"].value = Math.floor(t / 3600) || "";
+  f.elements[prefix + "_min"].value = Math.floor((t % 3600) / 60);
+  f.elements[prefix + "_sec"].value = t % 60;
+}
 // Valeurs du formulaire ENGINE → {fixed_kind, fixed_value, value} (ou {error}).
 function readEnginePr(f) {
   const el = f.elements,
@@ -463,14 +465,14 @@ function readEnginePr(f) {
         el.fixed_distance.value === "other"
           ? meters(el.other_distance.value, el.other_distance_unit.value)
           : Number(el.fixed_distance.value),
-      time = parseDuration(el.duration.value);
+      time = readTime(f, "duration");
     if (!(fixed > 0)) return {error: "Indique la distance."};
-    if (!time) return {error: "Indique ton temps au format mm:ss ou h:mm:ss."};
+    if (!time) return {error: "Indique ton temps en minutes et secondes (secondes de 0 à 59)."};
     return {fixed_kind: kind, fixed_value: Math.round(fixed * 10) / 10, value: time};
   }
-  const fixed = el.fixed_time.value === "other" ? parseDuration(el.other_time.value) : Number(el.fixed_time.value),
+  const fixed = el.fixed_time.value === "other" ? readTime(f, "other_time") : Number(el.fixed_time.value),
     dist = meters(el.distance.value, el.distance_unit.value);
-  if (!fixed) return {error: "Indique la durée au format mm:ss ou h:mm:ss."};
+  if (!fixed) return {error: "Indique la durée en minutes et secondes (secondes de 0 à 59)."};
   if (!(dist > 0)) return {error: "Indique la distance parcourue."};
   return {fixed_kind: kind, fixed_value: fixed, value: Math.round(dist * 10) / 10};
 }
@@ -485,12 +487,12 @@ function fillEnginePr(f, record) {
       el.other_distance.value = record.fixed_value;
       el.other_distance_unit.value = "m";
     }
-    el.duration.value = formatDuration(record.value);
+    fillTime(f, "duration", record.value);
   } else {
     if (record.fixed_kind === "time") {
       const preset = [...el.fixed_time.options].some(o => Number(o.value) === Number(record.fixed_value));
       el.fixed_time.value = preset ? String(Number(record.fixed_value)) : "other";
-      if (!preset) el.other_time.value = formatDuration(record.fixed_value);
+      if (!preset) fillTime(f, "other_time", record.fixed_value);
     }
     el.distance.value = record.value;
     el.distance_unit.value = "m";
