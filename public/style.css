@@ -4095,6 +4095,13 @@ button:disabled {
   text-align: left;
   cursor: pointer;
 }
+/* WOD de la programmation : aperçu limité à 2 lignes, texte complet dans la fenêtre. */
+.weekwod p.wod-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .daily-detail-body {
   white-space: pre-line;
   color: var(--ink-soft);

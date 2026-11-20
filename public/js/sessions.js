@@ -252,11 +252,9 @@ function weekProgramSection(p, week, folded, from) {
           .map(w => {
             const n = countFor(w);
             const planned = weeklyPlans.some(x => x.wod_id === w.id);
-            return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><div><b>${esc(w.name)}</b>${(() => {
-              const content = weeklyWodContent(w.id, from);
-              const display = content || w.planned_comment;
-              return display ? `<p>${esc(display)}</p>` : "";
-            })()}</div><div class="weekcount">${!n && own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}${n ? "" : `<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>`}${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
+            // Aperçu de 2 lignes ; un toucher sur la ligne ouvre le WOD complet en fenêtre.
+            const display = weeklyWodContent(w.id, from) || w.planned_comment;
+            return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><button type="button" class="daily-open" data-wod-open="${w.id}" aria-label="Voir le WOD ${esc(w.name)}"><b>${esc(w.name)}</b>${display ? `<p class="wod-preview">${esc(display)}</p>` : ""}</button><div class="weekcount">${!n && own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}${n ? "" : `<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>`}${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
           })
           .join("")
       : sectionEmpty("Pas de WOD pour cette programmation")
@@ -340,6 +338,9 @@ function renderWeek() {
   $("#nextweek").onclick = () => changeWeek(addDays(from, 7));
   $("#weekdate").onchange = e => changeWeek(mondayOf(e.target.value));
   $("#weekboard")
+    .querySelectorAll("[data-wod-open]")
+    .forEach(b => (b.onclick = () => openProgramWodDetail(b.dataset.wodOpen, from)));
+  $("#weekboard")
     .querySelectorAll("[data-log-wod]")
     .forEach(b => (b.onclick = () => openWodChoice(b.dataset.logWod)));
   $("#weekboard")
@@ -386,6 +387,29 @@ function renderWeek() {
         toast(err.message);
       }
     };
+}
+// WOD de la programmation en fenêtre (même fenêtre que le WOD du jour) : contenu complet de la semaine.
+function openProgramWodDetail(wodId, week) {
+  const p = programs.find(x => (wodsByProgram[x.id] || []).some(y => y.id === wodId)),
+    w = p && wodsByProgram[p.id].find(x => x.id === wodId);
+  if (!w) return;
+  const done = sessions.some(s => s.wod_id === w.id),
+    content = weeklyWodContent(w.id, week) || w.planned_comment || "";
+  $("#dailydetailtitle").textContent = w.name;
+  $("#dailydetailmeta").textContent = [p?.name, "Semaine du " + fmt(week), done ? "séance enregistrée" : ""]
+    .filter(Boolean)
+    .join(" · ");
+  $("#dailydetailbody").textContent = content || "Pas de contenu écrit pour cette semaine.";
+  $("#dailydetailactions").innerHTML = done
+    ? ""
+    : `<button type="button" class="primary" data-detail-log><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Ajouter une séance</span></button>`;
+  const log = $("#dailydetailactions").querySelector("[data-detail-log]");
+  if (log)
+    log.onclick = () => {
+      $("#dailydetaildialog").close();
+      openWodChoice(w.id);
+    };
+  $("#dailydetaildialog").showModal();
 }
 async function changeWeek(start) {
   selectedWeekStart = start;
