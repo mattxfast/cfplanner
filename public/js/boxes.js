@@ -332,10 +332,18 @@ function openBoxWod(w = null) {
           `<label class="movement-check"><input type="checkbox" name="catalog_movement_ids" value="${esc(m.id)}" ${ticked.has(m.id) ? "checked" : ""}><span>${esc(m.name)}</span></label>`
       )
       .join("") || `<p class="muted">Le catalogue de mouvements est vide.</p>`;
+  // Liste repliée à l’ouverture, comme dans le formulaire de séance : le titre indique combien sont cochés.
+  $("#boxwodmovementdetails").open = false;
+  syncBoxWodMovementCount();
   $("#boxwoddialogtitle").textContent = w ? "Modifier le WOD" : "Ajouter un WOD";
   $("#boxwoderror").textContent = "";
   $("#boxwoddialog").showModal();
 }
+function syncBoxWodMovementCount() {
+  const n = $("#boxwodmovements").querySelectorAll("input:checked").length;
+  $("#boxwodmovementcount").textContent = n ? n + (n > 1 ? " cochés" : " coché") : "aucun coché";
+}
+$("#boxwodmovements").onchange = syncBoxWodMovementCount;
 // Nom par défaut affiché : « <type> du JJ/MM/AAAA ».
 function syncBoxWodPlaceholder() {
   const f = $("#boxwodform").elements,

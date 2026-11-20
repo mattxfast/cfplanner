@@ -429,8 +429,13 @@
               ></textarea>
             </label>
             <section class="movement-editor">
-              <h3>Mouvements travaillés</h3>
-              <div id="boxwodmovements"></div>
+              <details id="boxwodmovementdetails" class="movement-fold">
+                <summary>
+                  <h3>Mouvements travaillés</h3>
+                  <span id="boxwodmovementcount"></span>
+                </summary>
+                <div id="boxwodmovements"></div>
+              </details>
             </section>
             <button class="primary">Enregistrer le WOD</button>
             <div id="boxwoderror" class="error"></div>
