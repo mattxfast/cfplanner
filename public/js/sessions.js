@@ -83,6 +83,12 @@ function switchView(v) {
 document.querySelectorAll(".navtab[data-view]").forEach(b => (b.onclick = () => switchView(b.dataset.view)));
 // Origine du WOD d’une séance, affichée dans l’historique : nom de la box, WOD du jour, programmation, ou séance libre
 // (« Autres »).
+// Nom d’une séance : un WOD de box porte le même titre que dans la rubrique « WOD de la box » (« WOD du JJ/MM/AAAA »
+// suivi de son type et de son nom).
+const sessionTitle = s =>
+  s.box_wod_id
+    ? boxWodWeekTitle({wod_date: s.box_wod_date, type_name: s.box_wod_type_name, name: s.wod_name})
+    : s.wod_name;
 function sessionSource(s) {
   if (s.box_wod_id) return s.box_name || "WOD de la box";
   if (s.daily_wod_id) return "WOD du jour";
@@ -105,7 +111,7 @@ function renderSessions() {
     ? sessions
         .map(
           s =>
-            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><button type="button" class="session-title-line session-open" data-session-open="${s.id}" aria-label="Voir le détail de la séance"><h3>${esc(s.wod_name)}</h3><span class="session-meta"><span class="sessiondate">${fmt(s.session_date)}</span><span class="tracked-tag">${esc(sessionSource(s))}</span></span></button><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div></div></article>`
+            `<article class="entry session-entry"><div class="session-history-content"><div class="session-history-heading"><button type="button" class="session-title-line session-open" data-session-open="${s.id}" aria-label="Voir le détail de la séance"><h3>${esc(sessionTitle(s))}</h3><span class="session-meta"><span class="sessiondate">${fmt(s.session_date)}</span><span class="tracked-tag">${esc(sessionSource(s))}</span></span></button><div class="entryactions">${s.box_wod_id && s.score_type && s.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${s.box_wod_id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}<button class="smallbtn" data-edit-session="${s.id}" aria-label="Modifier" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button class="smallbtn delete" data-del-session="${s.id}" aria-label="Supprimer" title="Supprimer"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button></div></div></div></article>`
         )
         .join("")
     : sectionEmpty("Pas de séance enregistrée cette semaine");
@@ -153,7 +159,7 @@ function openSessionDetail(id) {
     ].filter(Boolean),
     hasScore = s.score_value !== null && s.score_value !== undefined && s.score_type,
     part = (label, text) => `<p><b>${label}</b> ${esc(text)}</p>`;
-  $("#sessiondetailtitle").textContent = s.wod_name;
+  $("#sessiondetailtitle").textContent = sessionTitle(s);
   $("#sessiondetailmeta").textContent = [
     fmt(s.session_date),
     sessionSource(s),
