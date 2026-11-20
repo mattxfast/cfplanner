@@ -295,6 +295,15 @@ function boxGroup(key, title, actions, body) {
   const folded = boxFolded.has(key);
   return `<section class="admin-group ${folded ? "collapsed" : ""}" data-box-group="${key}"><div class="admin-group-title" role="button" tabindex="0" aria-expanded="${!folded}"><span class="admin-collapse-indicator">${folded ? "＋" : "−"}</span><span>${title}</span>${actions}</div><div class="admin-group-body"><div class="admin-data-list">${body}</div></div></section>`;
 }
+// Titre d’un WOD dans l’espace gestionnaire : jour, puis son nom entre guillemets s’il en a un (sans « WOD » devant ;
+// un autre type, Haltéro par exemple, reste indiqué), sinon le nom par défaut.
+function managerWodTitle(w) {
+  const custom = w.name && w.name !== defaultWodName(w.wod_date, w.type_name),
+    type = w.type_name && w.type_name !== "WOD" ? w.type_name : "";
+  return custom
+    ? [wodDay(w.wod_date), type, "« " + w.name + " »"].filter(Boolean).join(" · ")
+    : wodDay(w.wod_date) + " · " + boxWodLabel(w);
+}
 // WOD de la box : navigation par semaine (WOD passés et à venir), ajout, modification, suppression.
 function boxWodsGroup(d) {
   // Comme la page Séances : la semaine en bandeau principal (avec le ＋ « Nouveau WOD »), les WOD dessous.
@@ -304,7 +313,7 @@ function boxWodsGroup(d) {
     d.wods
       .map(
         w =>
-          `<div class="admin-row box-wod-row"><span><b>${esc(wodDay(w.wod_date))} · ${esc(boxWodLabel(w))}</b> <span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
+          `<div class="admin-row box-wod-row"><span><b>${esc(managerWodTitle(w))}</b><span class="box-wod-score"><span class="tracked-tag">${esc(SCORE_LABELS[w.score_type] || "")}</span></span>${w.content ? `<small class="box-wod-content">${esc(w.content)}</small>` : ""}</span><span class="admin-row-actions"><button class="smallbtn" data-edit-boxwod="${w.id}" aria-label="Modifier" title="Modifier">${BOX_ICONS.edit}</button><button class="smallbtn delete" data-del-boxwod="${w.id}" aria-label="Supprimer" title="Supprimer">${BOX_ICONS.del}</button></span></div>`
       )
       .join("") || boxEmpty("Pas de WOD cette semaine")
   }</div></div>`;

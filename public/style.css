@@ -4575,6 +4575,11 @@ button:active:not(:disabled) {
 #view-box .box-wod-row {
   align-items: flex-start;
 }
+/* Type de score d’un WOD de box (espace gestionnaire) : toujours sur sa propre ligne, sous le titre. */
+.box-wod-score {
+  display: block;
+  margin-top: 4px;
+}
 .box-wod-content {
   display: -webkit-box;
   -webkit-line-clamp: 4;
