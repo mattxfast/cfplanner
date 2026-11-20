@@ -2226,9 +2226,6 @@ button:disabled {
   #sessionform .session-time-row {
     gap: 8px;
   }
-  #sessionform .session-time-row label {
-    font-size: 12px;
-  }
   #sessionform .session-time-row input {
   }
 }
@@ -2332,7 +2329,6 @@ button:disabled {
   min-width: 0;
   width: 100%;
   max-width: none;
-  font-size: 12px;
 }
 #sessionform .session-time-row input,
 #sessionform .session-time-row select {
@@ -2349,9 +2345,6 @@ button:disabled {
 @media (max-width: 420px) {
   #sessionform .session-time-row {
     gap: 6px;
-  }
-  #sessionform .session-time-row label {
-    font-size: 11px;
   }
   #sessionform .session-time-row input {
   }
@@ -2558,6 +2551,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px; /* même taille que les autres libellés des fenêtres */
 }
 #activitydialog .admin-default input {
   width: auto;
@@ -3260,8 +3254,6 @@ button:disabled {
 }
 .pr-time-inputs label {
   margin-top: 6px;
-  font-size: 12px;
-  font-weight: 500;
   color: var(--muted);
 }
 /* PR ENGINE : allure (au km, ou au 500 m pour le rameur) sous la valeur. */
