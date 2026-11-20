@@ -252,8 +252,9 @@ function weekProgramSection(p, week, folded, from) {
           .map(w => {
             const n = countFor(w);
             const planned = weeklyPlans.some(x => x.wod_id === w.id);
-            // Aperçu de 2 lignes ; un toucher sur la ligne ouvre le WOD complet en fenêtre.
-            const display = weeklyWodContent(w.id, from) || w.planned_comment;
+            // Aperçu de 2 lignes de la description générique du WOD ; un toucher sur la ligne ouvre en fenêtre le
+            // contenu de la semaine.
+            const display = w.planned_comment;
             return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><div class="weekcount">${!n && own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}${n ? "" : `<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>`}${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div><div class="weekwod-text" role="button" tabindex="0" data-wod-open="${w.id}" aria-label="Voir le WOD ${esc(w.name)}"><b>${esc(w.name)}</b>${display ? `<p class="wod-preview">${esc(display)}</p>` : ""}</div></article>`;
           })
           .join("")
