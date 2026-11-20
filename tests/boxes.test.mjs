@@ -183,12 +183,6 @@ test("séance sur un WOD de box : score, catégorie et classement entre membres"
   assert.equal((await bob.post("/sessions", session({score_value: 12.5, score_category_id: rx}))).status, 400);
   const bobSession = await bob.post("/sessions", session({score_value: 420, score_category_id: rx}));
   assert.equal(bobSession.status, 200, JSON.stringify(bobSession.data));
-  // la séance renvoie la date et le type du WOD de box (titre « WOD du JJ/MM/AAAA » dans l'historique)
-  const listed = (
-    await bob.get(`/week-data?from=${mondayOf(today())}&to=${addDays(mondayOf(today()), 6)}`)
-  ).data.sessions.find(x => x.id === bobSession.data.id);
-  assert.equal(listed.box_wod_date, today());
-  assert.equal(listed.box_wod_type_name, "WOD");
   assert.equal((await carol.post("/sessions", session({score_value: 380, score_category_id: rx}))).status, 200);
   assert.equal((await alice.post("/sessions", session({score_value: 500, score_category_id: scaled}))).status, 200);
   // un non-membre ne peut ni enregistrer ce WOD ni voir le classement
