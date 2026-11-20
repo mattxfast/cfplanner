@@ -1744,7 +1744,6 @@ button:disabled {
 }
 #sessionlist .session-history-heading {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -1802,9 +1801,6 @@ button:disabled {
   flex: 0 0 auto;
 }
 @media (max-width: 650px) {
-  #sessionlist .session-history-heading {
-    align-items: center;
-  }
   #sessionlist .session-history-heading .entryactions {
     gap: 6px;
   }
@@ -2727,8 +2723,10 @@ button:disabled {
   margin: 0;
   flex: 1;
 }
+/* Lignes à contenu (WOD de la programmation, du jour, de la box) : boutons alignés en haut, comme dans les autres
+   pages ; les lignes d'une seule ligne de texte (Focus mouvement, rubriques vides) restent centrées. */
 #view-sessions .weekwod {
-  align-items: center;
+  align-items: flex-start;
 }
 #view-sessions .weekwod > div:first-child {
   display: flex;
@@ -2759,7 +2757,6 @@ button:disabled {
 }
 #sessionlist .session-history-heading {
   display: flex;
-  align-items: center;
   gap: 12px;
 }
 #sessionlist .session-history-heading .entryactions {
@@ -2773,9 +2770,6 @@ button:disabled {
 @media (max-width: 650px) {
   #sessionlist .session-entry {
     grid-template-columns: 1fr;
-  }
-  #sessionlist .session-history-heading {
-    align-items: center;
   }
   #sessionlist .session-history-heading .entryactions {
     flex-direction: column;
@@ -2798,7 +2792,7 @@ button:disabled {
   margin-left: 0;
 }
 #sessionlist .session-history-heading {
-  align-items: center;
+  align-items: flex-start;
 }
 #sessionlist .session-history-heading .entryactions {
   flex-direction: row;
