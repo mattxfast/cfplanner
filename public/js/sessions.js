@@ -281,7 +281,7 @@ function weekBoxSection(week, folded) {
       ? boxWods
           .map(w => {
             const n = week.filter(x => x.box_wod_id === w.id).length;
-            return `<article class="weekwod card ${n ? "done" : ""}"><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div><div class="weekwod-text"><b>${esc(managerWodTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div></article>`;
+            return `<article class="weekwod card ${n ? "done" : ""}"><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div><div class="weekwod-text" role="button" tabindex="0" data-boxwod-open="${w.id}" aria-label="Voir le détail du WOD"><b>${esc(managerWodTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="wod-preview">${esc(w.content)}</p>` : ""}</div></article>`;
           })
           .join("")
       : empty
@@ -356,6 +356,9 @@ function renderWeek() {
     .querySelectorAll("[data-log-boxwod]")
     .forEach(b => (b.onclick = () => openSession(null, "box:" + b.dataset.logBoxwod)));
   $("#weekboard")
+    .querySelectorAll("[data-boxwod-open]")
+    .forEach(b => (b.onclick = () => openBoxWodDetail(b.dataset.boxwodOpen)));
+  $("#weekboard")
     .querySelectorAll("[data-join-box]")
     .forEach(b => (b.onclick = () => openJoinBox()));
   $("#weekboard")
@@ -413,6 +416,27 @@ function openProgramWodDetail(wodId, week) {
     log.onclick = () => {
       $("#dailydetaildialog").close();
       openWodChoice(w.id);
+    };
+  $("#dailydetaildialog").showModal();
+}
+// WOD de la box en fenêtre (même fenêtre que le WOD du jour) : contenu complet et séance (le classement reste sur la
+// ligne).
+function openBoxWodDetail(id) {
+  const w = boxWods.find(x => x.id === id);
+  if (!w) return;
+  const done = sessions.some(s => s.box_wod_id === w.id);
+  $("#dailydetailtitle").textContent = managerWodTitle(w);
+  $("#dailydetailmeta").textContent = [w.box_name, done ? "séance enregistrée" : ""].filter(Boolean).join(" · ");
+  $("#dailydetailbody").textContent = w.content || "Pas de contenu écrit pour ce WOD.";
+  $("#dailydetailactions").innerHTML =
+    w.wod_date <= today() && !done
+      ? `<button type="button" class="primary" data-detail-log><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Enregistrer la séance</span></button>`
+      : "";
+  const log = $("#dailydetailactions").querySelector("[data-detail-log]");
+  if (log)
+    log.onclick = () => {
+      $("#dailydetaildialog").close();
+      openSession(null, "box:" + w.id);
     };
   $("#dailydetaildialog").showModal();
 }
