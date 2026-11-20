@@ -2723,18 +2723,18 @@ button:disabled {
   margin: 0;
   flex: 1;
 }
-/* Lignes à contenu (WOD de la programmation, du jour, de la box) : boutons alignés en haut, comme dans les autres
-   pages ; les lignes d'une seule ligne de texte (Focus mouvement, rubriques vides) restent centrées. */
+/* Lignes à contenu (WOD de la programmation, du jour, de la box), comme dans la page Programmes : boutons en haut
+   à droite, le titre à côté, la description dessous jusqu'au bout de la ligne. Les lignes d'une seule ligne de texte
+   (Focus mouvement, rubriques vides) gardent leur mise en page centrée. */
 #view-sessions .weekwod {
-  align-items: flex-start;
+  display: flow-root;
 }
-#view-sessions .weekwod > div:first-child {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 34px;
-  min-width: 0;
-  flex: 1;
+#view-sessions .weekwod > .weekcount {
+  float: right;
+  margin-left: 12px;
+}
+#view-sessions .weekwod > .weekwod-text {
+  min-height: 30px;
 }
 #view-sessions .weekwod > b {
   align-self: center;
@@ -4109,16 +4109,8 @@ button:disabled {
 .weekheading .weekheading-action + span {
   margin-left: 0;
 }
-/* Ligne d’un WOD du jour : toute la partie texte ouvre le détail, avec la mise en forme des lignes de la programmation. */
-.daily-open {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit; /* même police que les lignes de la programmation (pas celle des boutons) */
-  text-align: left;
+/* Ligne d’un WOD (programmation, WOD du jour) : toute la partie texte ouvre le détail en fenêtre. */
+.weekwod-text[role="button"] {
   cursor: pointer;
 }
 /* WOD de la programmation : aperçu limité à 2 lignes, texte complet dans la fenêtre. */

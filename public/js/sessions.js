@@ -254,7 +254,7 @@ function weekProgramSection(p, week, folded, from) {
             const planned = weeklyPlans.some(x => x.wod_id === w.id);
             // Aperçu de 2 lignes ; un toucher sur la ligne ouvre le WOD complet en fenêtre.
             const display = weeklyWodContent(w.id, from) || w.planned_comment;
-            return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><button type="button" class="daily-open" data-wod-open="${w.id}" aria-label="Voir le WOD ${esc(w.name)}"><b>${esc(w.name)}</b>${display ? `<p class="wod-preview">${esc(display)}</p>` : ""}</button><div class="weekcount">${!n && own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}${n ? "" : `<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>`}${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div></article>`;
+            return `<article class="weekwod card ${n ? "done" : planned ? "planned" : ""}"><div class="weekcount">${!n && own ? `<button type="button" class="smallbtn" data-ai-week="${w.id}" aria-label="Générer le contenu de cette semaine avec l’IA" title="Générer le contenu de cette semaine avec l’IA">${AI_ICON}</button>` : ""}${n ? "" : `<button class="smallbtn" data-log-wod="${w.id}" aria-label="Ajouter une séance" title="Ajouter une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>`}${planned && !n ? `<button class="smallbtn delete" data-unplan-wod="${w.id}" aria-label="Supprimer la planification" title="Supprimer la planification"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>` : ""}</div><div class="weekwod-text" role="button" tabindex="0" data-wod-open="${w.id}" aria-label="Voir le WOD ${esc(w.name)}"><b>${esc(w.name)}</b>${display ? `<p class="wod-preview">${esc(display)}</p>` : ""}</div></article>`;
           })
           .join("")
       : sectionEmpty("Pas de WOD pour cette programmation")
@@ -288,7 +288,7 @@ function weekBoxSection(week, folded) {
       ? boxWods
           .map(w => {
             const n = week.filter(x => x.box_wod_id === w.id).length;
-            return `<article class="weekwod card ${n ? "done" : ""}"><div><b>${esc(boxWodWeekTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div></article>`;
+            return `<article class="weekwod card ${n ? "done" : ""}"><div class="weekcount">${w.wod_date <= today() && !n ? `<button class="smallbtn" data-log-boxwod="${w.id}" aria-label="Enregistrer une séance" title="Enregistrer une séance"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>` : ""}${w.score_type !== "none" ? `<button class="smallbtn" data-leaderboard="${w.id}" aria-label="Classement" title="Classement du WOD">${TROPHY_ICON}</button>` : ""}</div><div class="weekwod-text"><b>${esc(boxWodWeekTitle(w))}</b>${severalBoxes ? `<small class="muted box-wod-meta">${esc(w.box_name)}</small>` : ""}${w.content ? `<p class="box-wod-content">${esc(w.content)}</p>` : ""}</div></article>`;
           })
           .join("")
       : empty
@@ -337,6 +337,18 @@ function renderWeek() {
   $("#thisweek").onclick = () => changeWeek(mondayOf(now));
   $("#nextweek").onclick = () => changeWeek(addDays(from, 7));
   $("#weekdate").onchange = e => changeWeek(mondayOf(e.target.value));
+  // Texte d’une ligne de WOD (rôle bouton) : ouvert aussi au clavier (Entrée, Espace).
+  $("#weekboard")
+    .querySelectorAll('.weekwod-text[role="button"]')
+    .forEach(
+      t =>
+        (t.onkeydown = e => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            t.click();
+          }
+        })
+    );
   $("#weekboard")
     .querySelectorAll("[data-wod-open]")
     .forEach(b => (b.onclick = () => openProgramWodDetail(b.dataset.wodOpen, from)));
