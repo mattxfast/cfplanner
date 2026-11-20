@@ -2736,6 +2736,11 @@ button:disabled {
 #view-sessions .weekwod > .weekwod-text {
   min-height: 30px;
 }
+/* Le titre a au moins la hauteur des boutons : la description (aperçu limité en lignes, qui ne contourne pas les
+   boutons) commence ainsi sous eux et va jusqu'au bout de la ligne. */
+#view-sessions .weekwod > .weekwod-text > b {
+  min-height: 26px; /* + marge de la description (4 à 5 px) = hauteur des boutons (30 px) */
+}
 #view-sessions .weekwod > b {
   align-self: center;
 }
