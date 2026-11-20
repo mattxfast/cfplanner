@@ -977,11 +977,11 @@
         </div>
         <div class="fitness-how-body">
           <p>
-            Ton score sur 100 est la moyenne pondérée de 7 piliers, chacun noté de 0 à 100. Pour la force,
-            l’haltérophilie et la gym, les repères CrossFit donnent <b>25</b> au niveau débutant,
+            Ton score sur 100 est la moyenne pondérée de 8 piliers, chacun noté de 0 à 100. Pour la force,
+            l’haltérophilie, la gym et l’engine, les repères CrossFit donnent <b>25</b> au niveau débutant,
             <b>50</b> intermédiaire, <b>75</b> avancé et <b>100</b> élite.
           </p>
-          <h3>Régularité · 20 %</h3>
+          <h3>Régularité · 15 %</h3>
           <p>
             Tes séances des 8 dernières semaines : 80 points à 4 séances par semaine en moyenne, plus 20 points selon le
             nombre de semaines où tu t’es entraîné.
@@ -998,7 +998,12 @@
             Tes PR en répétitions : pull-ups, butterfly, chest to bar, toes to bar, HSPU, muscle-ups, double unders,
             push-ups, pistols.
           </p>
-          <h3>Conditionnement · 15 %</h3>
+          <h3>Engine · 10 %</h3>
+          <p>
+            Tes PR de course et de rameur sur les épreuves de référence : course 1 km, 5 km, 10 km et 12 min (test de
+            Cooper), rameur 500 m, 1 km et 2 km. Les repères dépendent de ton sexe et de ton âge, comme pour la force.
+          </p>
+          <h3>Conditionnement · 10 %</h3>
           <p>
             Ta place dans ta catégorie aux classements des WOD de ta box (8 dernières semaines, au moins 3
             participants). Premier : 100, dernier : 0 ; une catégorie après la première (RX) compte 15 % de moins.
@@ -1038,10 +1043,89 @@
           </div>
           <label>Mouvement<select name="movement_id" required></select></label
           ><label>Date<input name="record_date" type="date" required /></label
-          ><label
+          ><label id="prvaluefield"
             ><span id="prvaluelabel">Charge (kg)</span
-            ><input id="prvalue" name="value" type="number" min="0.5" step="0.5" required /></label
-          ><label id="prrmfield"
+            ><input id="prvalue" name="value" type="number" min="0.5" step="0.5" required
+          /></label>
+          <div id="prenginefields" class="pr-engine-fields" hidden>
+            <label
+              >Format<select name="fixed_kind">
+                <option value="distance">Temps sur une distance</option>
+                <option value="time">Distance dans un temps</option>
+              </select></label
+            >
+            <label id="prfixeddistancefield"
+              >Distance<select name="fixed_distance">
+                <option value="250">250 m</option>
+                <option value="500">500 m</option>
+                <option value="1000">1 km</option>
+                <option value="2000">2 km</option>
+                <option value="5000">5 km</option>
+                <option value="10000">10 km</option>
+                <option value="21097.5">Semi-marathon</option>
+                <option value="42195">Marathon</option>
+                <option value="other">Autre distance…</option>
+              </select></label
+            >
+            <label id="prfixedtimefield"
+              >Durée<select name="fixed_time">
+                <option value="60">1 min</option>
+                <option value="120">2 min</option>
+                <option value="300">5 min</option>
+                <option value="600">10 min</option>
+                <option value="720">12 min (Cooper)</option>
+                <option value="1200">20 min</option>
+                <option value="1800">30 min</option>
+                <option value="3600">1 h</option>
+                <option value="other">Autre durée…</option>
+              </select></label
+            >
+            <div class="two" id="protherdistance">
+              <label
+                >Autre distance<input
+                  name="other_distance"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  inputmode="decimal" /></label
+              ><label
+                >Unité<select name="other_distance_unit">
+                  <option value="m">m</option>
+                  <option value="km">km</option>
+                </select></label
+              >
+            </div>
+            <label id="prothertime"
+              >Autre durée<input
+                name="other_time"
+                placeholder="mm:ss ou h:mm:ss"
+                inputmode="numeric"
+                autocomplete="off"
+            /></label>
+            <label id="prtimefield"
+              >Temps réalisé<input
+                name="duration"
+                placeholder="mm:ss ou h:mm:ss"
+                inputmode="numeric"
+                autocomplete="off"
+            /></label>
+            <div class="two" id="prdistancefield">
+              <label
+                >Distance réalisée<input
+                  name="distance"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  inputmode="decimal" /></label
+              ><label
+                >Unité<select name="distance_unit">
+                  <option value="m">m</option>
+                  <option value="km">km</option>
+                </select></label
+              >
+            </div>
+          </div>
+          <label id="prrmfield"
             >Nombre de RM<select name="rep_count" required>
               <option value="1">1 RM</option>
               <option value="2">2 RM</option>

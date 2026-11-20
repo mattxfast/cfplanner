@@ -1,4 +1,4 @@
-// Score de forme de l'athlète (page PR) : 7 piliers notés de 0 à 100, puis un score global pondéré.
+// Score de forme de l'athlète (page PR) : 8 piliers notés de 0 à 100, puis un score global pondéré.
 // Calcul pur (sans base de données) : le Worker lui passe le profil, les PR, les séances et les classements de box.
 //
 // - Régularité : séances des 8 dernières semaines (objectif : 4 par semaine) et semaines actives.
@@ -6,6 +6,7 @@
 //   à plusieurs répétitions), rapporté au poids de corps et comparé à des repères débutant / intermédiaire / avancé /
 //   élite, selon le sexe ; ajustement selon l'âge (masters après 35 ans, jeunes avant 18 ans).
 // - Gym : PR en répétitions des mouvements de gymnastique de référence, comparés aux mêmes 4 niveaux.
+// - Engine : PR de course et de rameur sur les épreuves de référence (temps sur une distance, Cooper 12 min).
 // - Conditionnement : place dans les classements des WOD de box (8 dernières semaines, catégorie prise en compte).
 // - Polyvalence : variété des mouvements et des familles (Lift, Force, Gym, Engine) cochés dans les séances.
 // - Progression : PR battus (et premiers PR) des 90 derniers jours.
@@ -14,11 +15,12 @@ import {movementKey} from "./ai.js";
 
 export const FITNESS_VERSION = "forme-v1";
 const WEIGHTS = {
-  regularite: 20,
+  regularite: 15,
   force: 15,
   halterophilie: 15,
   gym: 15,
-  conditionnement: 15,
+  engine: 10,
+  conditionnement: 10,
   polyvalence: 10,
   progression: 10,
 };
@@ -27,6 +29,7 @@ const LABELS = {
   force: "Force",
   halterophilie: "Haltérophilie",
   gym: "Gym",
+  engine: "Engine",
   conditionnement: "Conditionnement",
   polyvalence: "Polyvalence",
   progression: "Progression",
@@ -68,6 +71,19 @@ const GYM = {
   "push up": {levels: [10, 25, 45, 70], women: 0.6},
   pistol: {levels: [2, 8, 15, 25], women: 0.9},
 };
+// Repères ENGINE (hommes) : temps en secondes sur une distance, ou distance en mètres dans un temps (test de Cooper),
+// débutant / intermédiaire / avancé / élite ; femmes : temps × 1,12, distances × 0,88.
+const ENGINE = [
+  {sport: "run", kind: "distance", fixed: 1000, levels: [300, 240, 210, 180]},
+  {sport: "run", kind: "distance", fixed: 5000, levels: [1800, 1440, 1260, 1080]},
+  {sport: "run", kind: "distance", fixed: 10000, levels: [3900, 3120, 2700, 2340]},
+  {sport: "run", kind: "time", fixed: 720, levels: [2000, 2400, 2800, 3200]},
+  {sport: "row", kind: "distance", fixed: 500, levels: [120, 105, 95, 88]},
+  {sport: "row", kind: "distance", fixed: 1000, levels: [255, 225, 205, 195]},
+  {sport: "row", kind: "distance", fixed: 2000, levels: [540, 480, 435, 405]},
+];
+const engineSport = name =>
+  /rameur|row|aviron|erg/i.test(name) ? "row" : /course|run|running|footing|jogging/i.test(name) ? "run" : "";
 const DAY = 86400000;
 const days = (a, b) => Math.round((new Date(a + "T12:00:00Z") - new Date(b + "T12:00:00Z")) / DAY);
 const round = v => Math.round(v);
@@ -181,6 +197,43 @@ export function computeFitness(d) {
       : {score: null, hint: "Enregistre un PR en répétitions (pull-ups, T2B, HSPU, DU…)."};
   }
 
+  // Engine : meilleur PR sur chaque épreuve de référence (course 1 km, 5 km, 10 km, Cooper 12 min ; rameur 500 m,
+  // 1 km, 2 km), en vitesse (distance / temps) pour comparer aux repères ; l'âge s'applique comme pour la force.
+  {
+    const best = new Map();
+    for (const r of d.records || []) {
+      if (r.measurement_method !== "distance" || !r.fixed_kind) continue;
+      const sport = engineSport(r.name),
+        ref = ENGINE.find(
+          x =>
+            x.sport === sport && x.kind === r.fixed_kind && Math.abs(Number(r.fixed_value) - x.fixed) <= x.fixed * 0.02
+        );
+      if (!ref) continue;
+      const v = Number(r.value),
+        key = ENGINE.indexOf(ref),
+        prev = best.get(key);
+      if (!prev || (ref.kind === "distance" ? v < prev.value : v > prev.value)) best.set(key, {ref, value: v});
+    }
+    const women = sex === "F" ? 1 : sex === "M" ? 0 : 0.5,
+      scored = [...best.values()].map(({ref, value}) => {
+        const levels =
+            ref.kind === "distance"
+              ? ref.levels.map(t => ref.fixed / (t * (1 + 0.12 * women)))
+              : ref.levels.map(m => m * (1 - 0.12 * women)),
+          perf = ref.kind === "distance" ? ref.fixed / value : value;
+        return levelPoints(perf * factor, levels);
+      });
+    pillars.engine = scored.length
+      ? {
+          score: round(scored.reduce((n, x) => n + x, 0) / scored.length),
+          detail: `${scored.length} épreuve${scored.length > 1 ? "s" : ""} de référence (course 1 km, 5 km, 10 km, 12 min ; rameur 500 m, 1 km, 2 km)`,
+        }
+      : {
+          score: null,
+          hint: "Enregistre un PR Engine de référence : course 1 km, 5 km, 10 km ou 12 min, rameur 500 m, 1 km ou 2 km.",
+        };
+  }
+
   // Conditionnement : place dans la catégorie (1 = meilleur), pénalité pour les catégories après la première (RX).
   {
     const results = (d.boxResults || []).filter(x => x.total >= 3);
@@ -227,19 +280,23 @@ export function computeFitness(d) {
         const key =
           r.movement_id +
           ":" +
-          (r.measurement_method === "load" || r.measurement_method === "force" ? r.rep_count || 1 : "");
+          (r.measurement_method === "load" || r.measurement_method === "force"
+            ? r.rep_count || 1
+            : (r.fixed_kind || "") + (r.fixed_value ?? ""));
+        // Temps sur une distance : un temps plus court est un PR battu.
+        const better = (a, b) => (r.fixed_kind === "distance" ? a < b : a > b);
         const recent = days(today, r.record_date) <= 90,
           prev = best.get(key);
         if (recent) {
           if (prev === undefined) {
             points += 0.5;
             firsts++;
-          } else if (Number(r.value) > prev) {
+          } else if (better(Number(r.value), prev)) {
             points += 1;
             beaten++;
           }
         }
-        if (prev === undefined || Number(r.value) > prev) best.set(key, Number(r.value));
+        if (prev === undefined || better(Number(r.value), prev)) best.set(key, Number(r.value));
       }
       pillars.progression = {
         score: round(Math.min(100, points * 20)),

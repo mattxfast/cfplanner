@@ -3240,6 +3240,18 @@ button:disabled {
   font-weight: 700;
   color: var(--ink-soft);
 }
+/* PR ENGINE : allure (au km, ou au 500 m pour le rameur) sous la valeur. */
+.pr-pace {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.pr-history-row .pr-pace {
+  display: inline;
+  margin-left: 6px;
+}
 /* Rubrique sans PR : le message occupe toute la largeur de la grille. */
 #view-prs .pr-category-body .section-empty {
   grid-column: 1 / -1;

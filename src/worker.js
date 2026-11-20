@@ -113,7 +113,10 @@ const addDays = (s, n) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-function validatePr(movement, value, repCountInput) {
+// PR ENGINE : « temps sur une distance » (fixed_kind distance : fixed_value en mètres, valeur = temps en secondes,
+// le plus court est le meilleur) ou « distance dans un temps » (fixed_kind time : fixed_value en secondes, valeur =
+// distance en mètres). Sans format (anciens PR) : distance seule, en mètres.
+function validatePr(movement, value, repCountInput, b = {}) {
   if (!Number.isFinite(value) || value <= 0) return {error: "Valeur de record invalide."};
   if (movement.measurement_method === "load" || movement.measurement_method === "force") {
     if (value > 10000) return {error: "Valeur de record invalide."};
@@ -128,8 +131,23 @@ function validatePr(movement, value, repCountInput) {
     return {repCount: null};
   }
   if (movement.measurement_method === "distance") {
+    const kind = b.fixed_kind ? String(b.fixed_kind) : "",
+      fixed = Number(b.fixed_value);
+    if (kind === "distance") {
+      if (!Number.isFinite(fixed) || fixed < 10 || fixed > 100000)
+        return {error: "La distance doit être comprise entre 10 m et 100 km."};
+      if (!Number.isInteger(value) || value > 360000) return {error: "Temps invalide (100 h au plus)."};
+      return {repCount: null, fixedKind: kind, fixedValue: Math.round(fixed * 10) / 10};
+    }
+    if (kind === "time") {
+      if (!Number.isInteger(fixed) || fixed < 10 || fixed > 86400)
+        return {error: "La durée doit être comprise entre 10 s et 24 h."};
+      if (value > 100000) return {error: "La distance doit être inférieure ou égale à 100 000 mètres."};
+      return {repCount: null, fixedKind: kind, fixedValue: fixed};
+    }
+    if (kind) return {error: "Format de PR invalide."};
     if (value > 100000) return {error: "La distance doit être inférieure ou égale à 100 000 mètres."};
-    return {repCount: null};
+    return {repCount: null, fixedKind: null, fixedValue: null};
   }
   return {error: "Méthode de mesure du mouvement invalide."};
 }
@@ -458,6 +476,13 @@ async function ensureV2Schema(env) {
       if (!has("body_weight_kg")) await env.DB.prepare("ALTER TABLE users ADD COLUMN body_weight_kg REAL").run();
       if (!has("birth_date")) await env.DB.prepare("ALTER TABLE users ADD COLUMN birth_date TEXT").run();
       if (!has("sex")) await env.DB.prepare("ALTER TABLE users ADD COLUMN sex TEXT NOT NULL DEFAULT ''").run();
+    });
+    await runMigration("v29-engine-prs", async () => {
+      // PR ENGINE : format « temps sur une distance » ou « distance dans un temps » et sa valeur fixe.
+      const columns = await env.DB.prepare("PRAGMA table_info(personal_records)").all(),
+        has = name => columns.results.some(column => column.name === name);
+      if (!has("fixed_kind")) await env.DB.prepare("ALTER TABLE personal_records ADD COLUMN fixed_kind TEXT").run();
+      if (!has("fixed_value")) await env.DB.prepare("ALTER TABLE personal_records ADD COLUMN fixed_value REAL").run();
     });
   })().catch(err => {
     schemaReady = null;
@@ -1926,7 +1951,7 @@ async function api(r, e, p) {
   }
   if (r.method === "GET" && p === "/api/prs") {
     const x = await e.DB.prepare(
-      "SELECT pr.id,pr.movement_id,mc.name AS movement_name,mc.measurement_method,pr.record_date,pr.value,pr.rep_count,pr.created_at FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? ORDER BY pr.record_date,pr.created_at"
+      "SELECT pr.id,pr.movement_id,mc.name AS movement_name,mc.measurement_method,pr.record_date,pr.value,pr.rep_count,pr.fixed_kind,pr.fixed_value,pr.created_at FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? ORDER BY pr.record_date,pr.created_at"
     )
       .bind(u.id)
       .all();
@@ -1945,13 +1970,22 @@ async function api(r, e, p) {
         .first();
     if (!movement) return json({error: "Mouvement introuvable dans le catalogue."}, 404);
     if (!validDate(date) || date > localToday()) return json({error: "Date de PR invalide."}, 400);
-    const validation = validatePr(movement, value, b.rep_count);
+    const validation = validatePr(movement, value, b.rep_count, b);
     if (validation.error) return json({error: validation.error}, 400);
     const id = cid || uid();
     await e.DB.prepare(
-      "INSERT INTO personal_records(id,user_id,movement_id,record_date,value,rep_count) VALUES(?,?,?,?,?,?)"
+      "INSERT INTO personal_records(id,user_id,movement_id,record_date,value,rep_count,fixed_kind,fixed_value) VALUES(?,?,?,?,?,?,?,?)"
     )
-      .bind(id, u.id, movementId, date, value, validation.repCount)
+      .bind(
+        id,
+        u.id,
+        movementId,
+        date,
+        value,
+        validation.repCount,
+        validation.fixedKind ?? null,
+        validation.fixedValue ?? null
+      )
       .run();
     return json({ok: true, id});
   }
@@ -1969,12 +2003,21 @@ async function api(r, e, p) {
       .first();
     if (!owned) return json({error: "PR introuvable."}, 404);
     if (!validDate(date) || date > localToday()) return json({error: "Date de PR invalide."}, 400);
-    const validation = validatePr(movement, value, b.rep_count);
+    const validation = validatePr(movement, value, b.rep_count, b);
     if (validation.error) return json({error: validation.error}, 400);
     await e.DB.prepare(
-      "UPDATE personal_records SET movement_id=?,record_date=?,value=?,rep_count=? WHERE id=? AND user_id=?"
+      "UPDATE personal_records SET movement_id=?,record_date=?,value=?,rep_count=?,fixed_kind=?,fixed_value=? WHERE id=? AND user_id=?"
     )
-      .bind(movementId, date, value, validation.repCount, m[1], u.id)
+      .bind(
+        movementId,
+        date,
+        value,
+        validation.repCount,
+        validation.fixedKind ?? null,
+        validation.fixedValue ?? null,
+        m[1],
+        u.id
+      )
       .run();
     return json({ok: true});
   }
@@ -2016,7 +2059,7 @@ async function api(r, e, p) {
       from = addDays(today, -55);
     const [records, sessionsRows, names, catalog, boxRows] = await Promise.all([
       e.DB.prepare(
-        "SELECT pr.movement_id,pr.value,pr.rep_count,pr.record_date,pr.created_at,mc.name,mc.measurement_method FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? ORDER BY pr.record_date LIMIT 2000"
+        "SELECT pr.movement_id,pr.value,pr.rep_count,pr.fixed_kind,pr.fixed_value,pr.record_date,pr.created_at,mc.name,mc.measurement_method FROM personal_records pr JOIN movement_catalog mc ON mc.id=pr.movement_id WHERE pr.user_id=? ORDER BY pr.record_date LIMIT 2000"
       )
         .bind(u.id)
         .all(),

@@ -9,7 +9,7 @@ dire « fais l'idée 7 ».
 - Nouvelle idée : l'ajouter dans la bonne rubrique avec le **numéro suivant le plus grand existant**.
 - *En italique* : la décision de Matt quand il y en a une.
 
-Prochain numéro libre : **32**
+Prochain numéro libre : **33**
 
 ## Fiabilité et exploitation
 
@@ -40,6 +40,7 @@ Prochain numéro libre : **32**
 - [ ] **16.** WOD du jour : privilégier les mouvements peu travaillés ces dernières semaines.
 - [ ] **18.** Affichage dynamique sur un écran dans la box (WOD du jour, scores, anniversaires, mot du jour, événements) : voir le détail plus bas.
 - [x] **31.** Score de fitness de l'athlète (0–100) : régularité, force (PR rapportés au poids de corps), gym, engine, polyvalence, progression ; radar par pilier et score global, calculé à partir des données déjà saisies (profil à compléter : poids, sexe, année de naissance, facultatifs). — fait le 20/11/2026 (page PR)
+- [x] **32.** PR Engine en « temps sur une distance » ou « distance dans un temps » (allure au km / au 500 m, historique, courbe) et pilier Engine du score de forme. — fait le 20/11/2026
 
 ## Look and feel
 

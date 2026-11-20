@@ -43,6 +43,7 @@ test("forme : piliers et score global", () => {
       rec("Back Squat", "force", 150, "2026-11-01"),
       rec("Snatch", "load", 80, "2026-10-01"),
       rec("Pull-up", "reps", 15, "2026-10-15"),
+      {...rec("Rameur", "distance", 432, "2026-11-10"), fixed_kind: "distance", fixed_value: 2000},
     ],
     sessionDates,
     movementNames: ["Back Squat", "Snatch", "Pull-up", "Deadlift"],
@@ -59,7 +60,8 @@ test("forme : piliers et score global", () => {
   assert.equal(p.gym, 63, "15 pull-ups");
   assert.equal(p.conditionnement, 71, "1er / 5 en RX, 3e / 5 en 2e catégorie");
   assert.equal(p.polyvalence, 53, "4 mouvements, 3 familles sur 3");
-  assert.equal(p.progression, 40, "1 PR battu, 2 premiers PR (le squat d'août date de plus de 90 jours)");
+  assert.equal(p.engine, 81, "rameur 2 km en 7:12 : entre avancé (7:15) et élite (6:45)");
+  assert.equal(p.progression, 50, "1 PR battu, 3 premiers PR (le squat d'août date de plus de 90 jours)");
   assert.ok(r.score > 0 && r.score <= 100);
   assert.equal(r.complete, true);
   assert.deepEqual(r.profile_missing, []);
@@ -140,7 +142,35 @@ test("forme : profil d'athlète enregistré et score calculé par le serveur", a
   assert.equal(r.status, 200);
   const force = r.data.pillars.find(x => x.key === "force");
   assert.ok(force.score > 50, "squat 1,5 × PdC pour une femme : niveau intermédiaire à avancé");
-  assert.equal(r.data.pillars.length, 7);
+  assert.equal(r.data.pillars.length, 8);
   const other = await bob.get("/fitness-score");
   assert.equal(other.data.pillars.find(x => x.key === "force").score, null, "chacun son score");
+});
+
+test("PR Engine : temps sur une distance et distance dans un temps", async () => {
+  const admin = client(worker.base);
+  await admin.post("/login", {email: ADMIN_EMAIL, password: "MotDePasse-Test-123"});
+  await admin.post("/admin/movements", {name: "Rameur", measurement_method: "distance"});
+  const row = (await alice.get("/movement-catalog")).data.movements.find(m => m.name === "Rameur").id;
+  const pr = extra => alice.post("/prs", {movement_id: row, record_date: today(), ...extra});
+  assert.equal((await pr({fixed_kind: "distance", fixed_value: 5, value: 100})).status, 400, "distance trop courte");
+  assert.equal((await pr({fixed_kind: "distance", fixed_value: 2000, value: 432.5})).status, 400, "temps en secondes");
+  assert.equal((await pr({fixed_kind: "time", fixed_value: 5, value: 1000})).status, 400, "durée trop courte");
+  assert.equal((await pr({fixed_kind: "vitesse", fixed_value: 60, value: 300})).status, 400, "format inconnu");
+  assert.equal((await pr({fixed_kind: "distance", fixed_value: 2000, value: 450})).status, 200);
+  assert.equal((await pr({fixed_kind: "distance", fixed_value: 2000, value: 432})).status, 200);
+  assert.equal((await pr({fixed_kind: "time", fixed_value: 720, value: 3000})).status, 200);
+  const records = (await alice.get("/prs")).data.records.filter(x => x.movement_id === row);
+  assert.deepEqual(
+    records.map(x => [x.fixed_kind, x.fixed_value, x.value]),
+    [
+      ["distance", 2000, 450],
+      ["distance", 2000, 432],
+      ["time", 720, 3000],
+    ]
+  );
+  const score = await alice.get("/fitness-score");
+  const engine = score.data.pillars.find(x => x.key === "engine");
+  assert.ok(engine.score > 0, "pilier Engine calculé à partir des PR de rameur");
+  assert.equal((await bob.get("/prs")).data.records.length, 0, "chacun ses PR");
 });

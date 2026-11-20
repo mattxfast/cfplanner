@@ -89,14 +89,17 @@ Une planification n'est pas une séance réalisée : elle sert de repère dans l
 
 ### Records personnels (PR)
 
-**Score de forme** (rubrique « SCORE DE FORME » en tête de la page, repliable ; `GET /api/fitness-score`, calcul dans `src/fitness.js`, version `forme-v1`) : un score de 0 à 100 et un niveau (Débutant, En progression, Intermédiaire, Avancé, Élite), un grand radar centré (noms complets des piliers) et, replié par défaut sous « Détail des 7 piliers », le détail des 7 piliers notés de 0 à 100 :
+**PR Engine** (famille Distance) : deux formats à la saisie — « temps sur une distance » (250 m, 500 m, 1 km, 2 km, 5 km, 10 km, semi, marathon ou autre ; temps en mm:ss ou h:mm:ss, le plus court est le meilleur) ou « distance dans un temps » (1, 2, 5, 10, 12 min Cooper, 20, 30 min, 1 h ou autre ; distance en m ou km, la plus longue est la meilleure). Une carte par mouvement et par format (comme les RM), avec l'allure calculée (au 500 m pour le rameur, au km sinon ; masquée quand elle répète le temps) ; historique et courbe en mn:s pour les temps. Les anciens PR de distance seule restent affichés. Serveur : colonnes `personal_records.fixed_kind` (`distance` ou `time`) et `fixed_value` (m ou s), migration V29 ; valeurs validées (10 m à 100 km, 10 s à 24 h, temps entier en secondes).
 
-- **Régularité** (20 %) : séances des 8 dernières semaines (objectif 4 par semaine, 80 points) et semaines actives (20 points).
+**Score de forme** (rubrique « SCORE DE FORME » en tête de la page, repliable ; `GET /api/fitness-score`, calcul dans `src/fitness.js`, version `forme-v1`) : un score de 0 à 100 et un niveau (Débutant, En progression, Intermédiaire, Avancé, Élite), un grand radar centré (noms complets des piliers) et, replié par défaut sous « Détail des 8 piliers », le détail des 8 piliers notés de 0 à 100 :
+
+- **Régularité** (15 %) : séances des 8 dernières semaines (objectif 4 par semaine, 80 points) et semaines actives (20 points).
 - **Force** (15 %) et **Haltérophilie** (15 %) : meilleur 1RM de chaque mouvement de référence (squats, deadlift, bench, presses, thruster ; snatch, clean, jerk, OHS), estimé par la formule d'Epley pour un PR à plusieurs répétitions, rapporté au poids de corps et comparé à des repères par niveau (débutant 25, intermédiaire 50, avancé 75, élite 100), propres au sexe (moyenne hommes / femmes si non précisé) ; ajustement d'âge (+1 % par an après 35 ans, 30 % au plus ; +1,5 % par an avant 18 ans).
 - **Gym** (15 %) : PR en répétitions (pull-ups, butterfly, C2B, T2B, HSPU, muscle-ups, DU, push-ups, pistols) comparés aux mêmes niveaux.
-- **Conditionnement** (15 %) : place dans sa catégorie aux classements des WOD de box des 8 dernières semaines (au moins 3 participants ; −15 % par catégorie après la première, RX).
+- **Engine** (10 %) : PR de course et de rameur sur les épreuves de référence (course 1 km, 5 km, 10 km, 12 min de Cooper ; rameur 500 m, 1 km, 2 km), comparés en vitesse à des repères par niveau selon le sexe (temps femmes × 1,12, distances × 0,88), avec le même ajustement d'âge.
+- **Conditionnement** (10 %) : place dans sa catégorie aux classements des WOD de box des 8 dernières semaines (au moins 3 participants ; −15 % par catégorie après la première, RX).
 - **Polyvalence** (10 %) : mouvements différents cochés sur 8 semaines (objectif 12) et familles couvertes (Lift, Force, Gym, Engine).
-- **Progression** (10 %) : PR battus (1 point) et premiers PR (½ point) des 90 derniers jours (5 points = 100).
+- **Progression** (10 %) : PR battus (1 point ; pour un temps sur une distance, un temps plus court) et premiers PR (½ point) des 90 derniers jours (5 points = 100).
 
 Un pilier sans données est « à compléter » (avec la marche à suivre) et sort du calcul ; le score global, moyenne pondérée des piliers renseignés, demande au moins 2 piliers. Sous le détail, un lien discret « Comment est-il calculé ? » ouvre une fenêtre qui explique le calcul pilier par pilier. Le profil d'athlète (Mon compte → Profil : poids de corps, sexe, date de naissance, facultatifs, validés par le serveur : 25 à 300 kg, au moins 10 ans ; migration V28, colonnes `users.body_weight_kg`, `birth_date`, `sex`) sert uniquement à ce score, visible de l'athlète seul.
 

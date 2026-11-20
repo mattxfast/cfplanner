@@ -4,17 +4,81 @@
 function isLoadBased(method) {
   return method === "load" || method === "force";
 }
+// PR ENGINE : « temps sur une distance » (fixed_kind distance : fixed_value en m, valeur = temps en s, le plus court
+// gagne) ou « distance dans un temps » (fixed_kind time : fixed_value en s, valeur = distance en m) ; sans format
+// (anciens PR) : distance seule en m. Un PR = un mouvement + son format (comme les RM des charges).
+const lowerIsBetter = record => record.measurement_method === "distance" && record.fixed_kind === "distance";
 function prKey(record) {
-  return (
-    record.movement_id + ":" + (isLoadBased(record.measurement_method) ? record.rep_count : record.measurement_method)
-  );
+  const format = isLoadBased(record.measurement_method)
+    ? record.rep_count
+    : record.measurement_method === "distance" && record.fixed_kind
+      ? record.fixed_kind + "=" + Number(record.fixed_value)
+      : record.measurement_method;
+  return record.movement_id + ":" + format;
+}
+// 75 → « 1:15 », 3725 → « 1:02:05 ».
+function formatDuration(sec) {
+  const t = Math.round(Number(sec)),
+    h = Math.floor(t / 3600),
+    m = Math.floor((t % 3600) / 60),
+    s = t % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0");
+}
+// Durée fixe d'un format : « 12 min », « 1 h », « 1:30 ».
+function formatFixedDuration(sec) {
+  const t = Number(sec);
+  return t % 3600 === 0 ? t / 3600 + " h" : t % 60 === 0 ? t / 60 + " min" : formatDuration(t);
+}
+// 500 → « 500 m », 2800 → « 2,8 km », 21097.5 → « Semi-marathon ».
+function formatDistance(m) {
+  const v = Number(m);
+  if (v === 21097.5) return "Semi-marathon";
+  if (v === 42195) return "Marathon";
+  return v >= 1000
+    ? (v / 1000).toLocaleString("fr-FR", {maximumFractionDigits: 3}) + " km"
+    : v.toLocaleString("fr-FR", {maximumFractionDigits: 1}) + " m";
+}
+// « mm:ss » ou « h:mm:ss » → secondes (null si invalide).
+function parseDuration(text) {
+  const parts = String(text || "")
+    .trim()
+    .split(/[:h'’]/)
+    .map(x => x.trim());
+  if (!parts.length || parts.length > 3 || parts.some(x => !/^\d+$/.test(x))) return null;
+  const [h, m, s] =
+    parts.length === 3 ? parts.map(Number) : parts.length === 2 ? [0, ...parts.map(Number)] : [0, Number(parts[0]), 0];
+  if ((parts.length > 1 && s > 59) || (parts.length === 3 && m > 59)) return null;
+  const total = h * 3600 + m * 60 + s;
+  return total > 0 ? total : null;
 }
 function prValue(record) {
-  return isLoadBased(record.measurement_method)
-    ? Number(record.value).toLocaleString("fr-FR") + " kg"
-    : record.measurement_method === "distance"
-      ? Number(record.value).toLocaleString("fr-FR") + " m"
-      : Number(record.value).toLocaleString("fr-FR") + " reps";
+  if (isLoadBased(record.measurement_method)) return Number(record.value).toLocaleString("fr-FR") + " kg";
+  if (record.measurement_method === "distance")
+    return record.fixed_kind === "distance" ? formatDuration(record.value) : formatDistance(record.value);
+  return Number(record.value).toLocaleString("fr-FR") + " reps";
+}
+// Format d'un PR : « 3 RM », « 2 km », « 12 min » (rien pour les répétitions et les anciennes distances).
+function prFormatLabel(record) {
+  if (isLoadBased(record.measurement_method)) return record.rep_count + " RM";
+  if (record.measurement_method === "distance" && record.fixed_kind)
+    return record.fixed_kind === "distance"
+      ? formatDistance(record.fixed_value)
+      : formatFixedDuration(record.fixed_value);
+  return "";
+}
+// Allure d'un PR ENGINE : au 500 m pour le rameur, au km sinon.
+function prPace(record) {
+  if (record.measurement_method !== "distance" || !record.fixed_kind) return "";
+  const [meters, seconds] =
+    record.fixed_kind === "distance"
+      ? [Number(record.fixed_value), Number(record.value)]
+      : [Number(record.value), Number(record.fixed_value)];
+  if (!(meters > 0 && seconds > 0)) return "";
+  const rower = /rameur|row|aviron|erg/i.test(record.movement_name || ""),
+    per = rower ? 500 : 1000;
+  // Distance égale à l'unité d'allure (500 m au rameur, 1 km sinon) : l'allure répéterait le temps.
+  if (record.fixed_kind === "distance" && meters === per) return "";
+  return formatDuration((seconds * per) / meters) + " /" + (rower ? "500 m" : "km");
 }
 function renderPrChart(records) {
   const sorted = [...records].sort(
@@ -30,15 +94,21 @@ function renderPrChart(records) {
     max = Math.max(...values);
   const rawStep = (max || 1) / 4,
     magnitude = Math.pow(10, Math.floor(Math.log10(rawStep))),
-    normalized = rawStep / magnitude;
-  const step =
-    (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10) * magnitude;
+    normalized = rawStep / magnitude,
+    // Temps : graduations rondes en secondes, minutes ou heures.
+    timeSteps = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+  const step = lowerIsBetter(records[0])
+    ? timeSteps.find(x => x >= rawStep) || Math.ceil(rawStep / 3600) * 3600
+    : (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10) * magnitude;
   const axisMax = step * 4,
     plotHeight = height - top - bottom,
     plotWidth = width - left - right;
   const method = sorted[0].measurement_method,
-    unit = method === "load" || method === "force" ? "kg" : method === "distance" ? "m" : "reps";
-  const formatTick = n => Number(n.toFixed(6)).toLocaleString("fr-FR", {maximumFractionDigits: 2}) + " " + unit;
+    timed = lowerIsBetter(sorted[0]),
+    unit = method === "load" || method === "force" ? "kg" : timed ? "" : method === "distance" ? "m" : "reps";
+  // Temps (PR ENGINE sur une distance) : graduations en mn:s ; un temps qui baisse est un progrès.
+  const formatTick = n =>
+    timed ? formatDuration(n) : Number(n.toFixed(6)).toLocaleString("fr-FR", {maximumFractionDigits: 2}) + " " + unit;
   const yFor = value => height - bottom - (Number(value) / axisMax) * plotHeight;
   const grid = Array.from({length: 5}, (_, i) => {
     const value = step * i,
@@ -73,8 +143,8 @@ function renderPrChart(records) {
     width +
     " " +
     height +
-    '" role="img" aria-label="Évolution du record en ' +
-    unit +
+    '" role="img" aria-label="Évolution du record' +
+    (timed ? " (temps)" : " en " + unit) +
     ", axe vertical de 0 à " +
     esc(formatTick(axisMax)) +
     '">' +
@@ -99,9 +169,7 @@ function renderPrChart(records) {
           '" r="4" class="pr-point"><title>' +
           esc(p.date) +
           " : " +
-          esc(p.value) +
-          " " +
-          unit +
+          esc(formatTick(Number(p.value))) +
           "</title></circle>"
       )
       .join("") +
@@ -129,8 +197,10 @@ function renderPrCategory(method, items) {
         '</h3><div class="pr-value-line"><strong class="pr-best">' +
         prValue(x.best) +
         "</strong>" +
-        (isLoadBased(x.measurement_method) ? '<span class="pr-rm">' + x.rep_count + " RM</span>" : "") +
-        "</div></button>"
+        (prFormatLabel(x.best) ? '<span class="pr-rm">' + esc(prFormatLabel(x.best)) + "</span>" : "") +
+        "</div>" +
+        (prPace(x.best) ? '<small class="pr-pace">' + esc(prPace(x.best)) + "</small>" : "") +
+        "</button>"
     )
     .join("");
   // Rubrique au style des bandeaux de titre (administration, Mon compte), repliable.
@@ -197,7 +267,7 @@ function fitnessRadar(pillars) {
         return `<text class="fitness-radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${esc(p.label)}</text>`;
       })
       .join("");
-  return `<svg class="fitness-radar" viewBox="-150 -104 300 212" role="img" aria-label="Radar des piliers du score de forme">${grid}${axes}<polygon class="fitness-radar-value" points="${poly(pillars.map(p => p.score ?? 0))}"/>${labels}</svg>`;
+  return `<svg class="fitness-radar" viewBox="-150 -104 300 212" role="img" aria-label="Radar des 8 piliers du score de forme">${grid}${axes}<polygon class="fitness-radar-value" points="${poly(pillars.map(p => p.score ?? 0))}"/>${labels}</svg>`;
 }
 function renderFitness() {
   const d = fitnessData,
@@ -214,7 +284,7 @@ function renderFitness() {
     missing = d.profile_missing?.length
       ? `<div class="fitness-profile"><span>Pour un score juste, complète ton profil : ${esc(d.profile_missing.join(", "))}.</span><button type="button" class="smallbtn" data-fitness-profile>Compléter</button></div>`
       : "";
-  return `<section class="admin-group pr-category-group fitness-group ${collapsed ? "collapsed" : ""}" data-pr-category="${key}"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="${key}" aria-expanded="${!collapsed}"><span class="admin-collapse-indicator">${collapsed ? "＋" : "−"}</span><span>SCORE DE FORME</span><span class="fitness-total">${total}<small>/100</small></span></div><div class="admin-group-body"><div class="pr-category-body"><div class="fitness-panel card"><div class="fitness-summary">${fitnessRadar(d.pillars)}<div class="fitness-headline"><strong>${total}<small>/100</small></strong><span class="fitness-level">${esc(d.level || "Score à construire")}</span><p>${d.complete ? "Calculé sur tes 7 piliers." : "Calculé sur les piliers renseignés ; les autres sont à compléter."}</p></div></div>${missing}<details class="fitness-details" ${window.cfFitnessDetailOpen ? "open" : ""}><summary>Détail des 7 piliers</summary><div class="fitness-pillars">${pillars}</div></details><p class="fitness-note">Score personnel, visible de toi seul. <button type="button" class="fitness-how" data-fitness-how>Comment est-il calculé ?</button></p></div></div></div></section>`;
+  return `<section class="admin-group pr-category-group fitness-group ${collapsed ? "collapsed" : ""}" data-pr-category="${key}"><div class="admin-group-title" role="button" tabindex="0" data-toggle-pr-category="${key}" aria-expanded="${!collapsed}"><span class="admin-collapse-indicator">${collapsed ? "＋" : "−"}</span><span>SCORE DE FORME</span><span class="fitness-total">${total}<small>/100</small></span></div><div class="admin-group-body"><div class="pr-category-body"><div class="fitness-panel card"><div class="fitness-summary">${fitnessRadar(d.pillars)}<div class="fitness-headline"><strong>${total}<small>/100</small></strong><span class="fitness-level">${esc(d.level || "Score à construire")}</span><p>${d.complete ? "Calculé sur tes 8 piliers." : "Calculé sur les piliers renseignés ; les autres sont à compléter."}</p></div></div>${missing}<details class="fitness-details" ${window.cfFitnessDetailOpen ? "open" : ""}><summary>Détail des 8 piliers</summary><div class="fitness-pillars">${pillars}</div></details><p class="fitness-note">Score personnel, visible de toi seul. <button type="button" class="fitness-how" data-fitness-how>Comment est-il calculé ?</button></p></div></div></div></section>`;
 }
 function renderPrs() {
   const groups = new Map();
@@ -227,7 +297,9 @@ function renderPrs() {
   const items = [...groups.entries()]
     .map(([key, records]) => {
       records.sort((a, b) => a.record_date.localeCompare(b.record_date) || a.created_at.localeCompare(b.created_at));
-      const best = records.reduce((a, b) => (Number(b.value) > Number(a.value) ? b : a));
+      const better = (a, b) =>
+          lowerIsBetter(b) ? Number(b.value) < Number(a.value) : Number(b.value) > Number(a.value),
+        best = records.reduce((a, b) => (better(a, b) ? b : a));
       return {
         key,
         records,
@@ -236,6 +308,8 @@ function renderPrs() {
         movement_id: best.movement_id,
         measurement_method: best.measurement_method,
         rep_count: best.rep_count,
+        fixed_kind: best.fixed_kind,
+        fixed_value: best.fixed_value,
       };
     })
     .sort(
@@ -243,7 +317,9 @@ function renderPrs() {
         (catalogOrder.get(a.movement_id) ?? Number.MAX_SAFE_INTEGER) -
           (catalogOrder.get(b.movement_id) ?? Number.MAX_SAFE_INTEGER) ||
         (isLoadBased(a.measurement_method) ? Number(a.rep_count) : 0) -
-          (isLoadBased(b.measurement_method) ? Number(b.rep_count) : 0)
+          (isLoadBased(b.measurement_method) ? Number(b.rep_count) : 0) ||
+        String(a.fixed_kind || "").localeCompare(String(b.fixed_kind || "")) ||
+        Number(a.fixed_value || 0) - Number(b.fixed_value || 0)
     );
   // Une rubrique par famille ayant des mouvements au catalogue (même sans PR), avec son bouton ＋.
   const families = prCategoryOrder.filter(
@@ -297,11 +373,7 @@ function openPrHistory(key) {
     .sort((a, b) => b.record_date.localeCompare(a.record_date) || b.created_at.localeCompare(a.created_at));
   if (!records.length) return;
   const first = records[0],
-    label = isLoadBased(first.measurement_method)
-      ? first.rep_count + " RM"
-      : first.measurement_method === "distance"
-        ? "Distance"
-        : "Répétitions";
+    label = prFormatLabel(first) || (first.measurement_method === "distance" ? "Distance" : "Répétitions");
   $("#prhistorytitle").textContent = first.movement_name + " · " + label;
   $("#prhistorychart").innerHTML = renderPrChart(records);
   $("#prhistorylist").innerHTML =
@@ -313,6 +385,7 @@ function openPrHistory(key) {
           fmt(r.record_date) +
           "</span><strong>" +
           prValue(r) +
+          (prPace(r) ? ' <small class="pr-pace">' + esc(prPace(r)) + "</small>" : "") +
           '</strong><div class="entryactions"><button type="button" class="smallbtn" data-edit-pr="' +
           r.id +
           '" aria-label="Modifier ce PR" title="Modifier"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button><button type="button" class="smallbtn delete" data-delete-pr="' +
@@ -365,6 +438,63 @@ function syncPrForm() {
   $("#prrmfield").hidden = !load;
   f.elements.rep_count.required = load;
   f.elements.rep_count.disabled = !load;
+  // ENGINE : format (temps sur une distance / distance dans un temps), valeur fixe, puis temps ou distance réalisé.
+  const kind = f.elements.fixed_kind.value,
+    onDistance = distance && kind === "distance",
+    onTime = distance && kind === "time";
+  $("#prvaluefield").hidden = distance;
+  f.elements.value.required = !distance;
+  f.elements.value.disabled = distance;
+  $("#prenginefields").hidden = !distance;
+  $("#prfixeddistancefield").hidden = !onDistance;
+  $("#prfixedtimefield").hidden = !onTime;
+  $("#protherdistance").hidden = !(onDistance && f.elements.fixed_distance.value === "other");
+  $("#prothertime").hidden = !(onTime && f.elements.fixed_time.value === "other");
+  $("#prtimefield").hidden = !onDistance;
+  $("#prdistancefield").hidden = !onTime;
+}
+// Valeurs du formulaire ENGINE → {fixed_kind, fixed_value, value} (ou {error}).
+function readEnginePr(f) {
+  const el = f.elements,
+    kind = el.fixed_kind.value,
+    meters = (v, unit) => Number(String(v).replace(",", ".")) * (unit === "km" ? 1000 : 1);
+  if (kind === "distance") {
+    const fixed =
+        el.fixed_distance.value === "other"
+          ? meters(el.other_distance.value, el.other_distance_unit.value)
+          : Number(el.fixed_distance.value),
+      time = parseDuration(el.duration.value);
+    if (!(fixed > 0)) return {error: "Indique la distance."};
+    if (!time) return {error: "Indique ton temps au format mm:ss ou h:mm:ss."};
+    return {fixed_kind: kind, fixed_value: Math.round(fixed * 10) / 10, value: time};
+  }
+  const fixed = el.fixed_time.value === "other" ? parseDuration(el.other_time.value) : Number(el.fixed_time.value),
+    dist = meters(el.distance.value, el.distance_unit.value);
+  if (!fixed) return {error: "Indique la durée au format mm:ss ou h:mm:ss."};
+  if (!(dist > 0)) return {error: "Indique la distance parcourue."};
+  return {fixed_kind: kind, fixed_value: fixed, value: Math.round(dist * 10) / 10};
+}
+// Formulaire ENGINE pré-rempli pour la modification d'un PR.
+function fillEnginePr(f, record) {
+  const el = f.elements;
+  el.fixed_kind.value = record.fixed_kind === "distance" ? "distance" : "time";
+  if (record.fixed_kind === "distance") {
+    const preset = [...el.fixed_distance.options].some(o => Number(o.value) === Number(record.fixed_value));
+    el.fixed_distance.value = preset ? String(Number(record.fixed_value)) : "other";
+    if (!preset) {
+      el.other_distance.value = record.fixed_value;
+      el.other_distance_unit.value = "m";
+    }
+    el.duration.value = formatDuration(record.value);
+  } else {
+    if (record.fixed_kind === "time") {
+      const preset = [...el.fixed_time.options].some(o => Number(o.value) === Number(record.fixed_value));
+      el.fixed_time.value = preset ? String(Number(record.fixed_value)) : "other";
+      if (!preset) el.other_time.value = formatDuration(record.fixed_value);
+    }
+    el.distance.value = record.value;
+    el.distance_unit.value = "m";
+  }
 }
 // Ouvre le formulaire de PR : vide pour une création, pré-rempli pour la modification d'un PR existant.
 // method : famille choisie avec le ＋ d’une rubrique (seuls ses mouvements sont proposés).
@@ -382,6 +512,7 @@ function openPrForm(record = null, method = "") {
     f.elements.record_date.value = record.record_date;
     f.elements.value.value = record.value;
     if (record.rep_count) f.elements.rep_count.value = String(record.rep_count);
+    if (record.measurement_method === "distance") fillEnginePr(f, record);
   }
   $("#prformtitle").textContent = record ? "Modifier le PR" : "Nouveau PR";
   $("#prformsubmit").textContent = record ? "Enregistrer les modifications" : "Enregistrer le PR";
@@ -395,6 +526,7 @@ function openPrForm(record = null, method = "") {
 }
 $("#closepr").onclick = () => $("#prdialog").close();
 $("#prform").elements.movement_id.onchange = syncPrForm;
+for (const name of ["fixed_kind", "fixed_distance", "fixed_time"]) $("#prform").elements[name].onchange = syncPrForm;
 $("#prform").onsubmit = async e => {
   e.preventDefault();
   const f = e.target,
@@ -409,6 +541,14 @@ $("#prform").onsubmit = async e => {
     value: Number(f.elements.value.value),
     rep_count: isLoadBased(movement.measurement_method) ? Number(f.elements.rep_count.value) : null,
   };
+  if (movement.measurement_method === "distance") {
+    const engine = readEnginePr(f);
+    if (engine.error) {
+      $("#prformerror").textContent = engine.error;
+      return;
+    }
+    Object.assign(body, engine);
+  }
   try {
     await api(f.elements.pr_id.value ? "/prs/" + f.elements.pr_id.value : "/prs", {
       method: f.elements.pr_id.value ? "PUT" : "POST",
