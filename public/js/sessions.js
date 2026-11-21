@@ -160,8 +160,8 @@ function openSessionDetail(id) {
     .filter(Boolean)
     .join(" · ");
   $("#sessiondetailbody").innerHTML =
-    // Le réalisé en texte simple, comme le contenu dans le détail d’un WOD ; score et mouvements, titrés, dessous.
-    (s.actual_comment ? `<p>${esc(s.actual_comment)}</p>` : "") +
+    // Contenu réalisé, puis score et mouvements, chacun avec son libellé.
+    (s.actual_comment ? part("Contenu de la séance :", s.actual_comment) : "") +
       (hasScore
         ? part(
             "Score :",
