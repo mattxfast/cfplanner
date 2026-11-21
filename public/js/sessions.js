@@ -131,15 +131,12 @@ function renderSessions() {
         })
     );
 }
-// Détail d’une séance de l’historique, en fenêtre : contenu prévu, score, réalisé et mouvements travaillés.
+// Détail d’une séance de l’historique, en fenêtre : réalisé, score et mouvements travaillés (pas le contenu prévu :
+// la séance peut être tout autre chose que ce qui était prévu).
 function openSessionDetail(id) {
   const s = sessions.find(x => x.id === id);
   if (!s) return;
-  const weeklyContent =
-      weeklyWodPrograms.find(x => x.wod_id === s.wod_id && x.week_start === mondayOf(s.session_date))?.content || "",
-    daily = s.daily_wod_id ? dailyWodsById.get(s.daily_wod_id) : null,
-    planned = weeklyContent || (daily ? dailyBody(daily) : "") || s.planned_comment,
-    movements = [
+  const movements = [
       ...movementChecks
         .filter(c => c.session_id === s.id)
         .map(
@@ -163,14 +160,13 @@ function openSessionDetail(id) {
     .filter(Boolean)
     .join(" · ");
   $("#sessiondetailbody").innerHTML =
-    (planned ? part(weeklyContent ? "Prévu cette semaine :" : "Prévu :", planned) : "") +
+    (s.actual_comment ? part("Réalisé :", s.actual_comment) : "") +
       (hasScore
         ? part(
             "Score :",
             formatScore(s.score_type, s.score_value) + (s.score_category_name ? " · " + s.score_category_name : "")
           )
         : "") +
-      (s.actual_comment ? part("Réalisé :", s.actual_comment) : "") +
       (movements.length ? part("Mouvements travaillés :", [...new Set(movements)].join(", ")) : "") ||
     `<p class="muted">Pas de détail pour cette séance.</p>`;
   $("#sessiondetailedit").onclick = () => {
